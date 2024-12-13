@@ -6,7 +6,7 @@ The pip install does not come with this functionality however. It provides the b
 
 It comes with a relatively robust set of premade elements, which can be used for a basic interface, however they can also be extended (for that, see the Home Assistant inkBoard integration, for example). You can also add the folders `/fonts`, `/icons` and `/pictures` to the directory you are running from, and when referencing a font for a button, for example, PSSM will look in that folder for the font file.
 
-I have not done extensive testing with pssm outside of inkBoard, so I cannot promise everything will work standalone out of the box. This mainly pertains to instantiating various Elements which declare async classes inside their `__init__`, which may cause issues when no event loop is running yet. If you run into problems like this, please open an issue with the problematic element and the logs.
+I have not done extensive testing with pssm outside of inkBoard, so I cannot promise everything will work standalone out of the box. This mainly pertains to instantiating various Elements which declare async classes inside their `__init__`, which may cause issues when no event loop is running yet. If you run into problems like this, please open an issue with the problematic element and the logs. Generally though, if the screen is declared before any elements, this should function fine.
 
 ## Install
 `pip install pssm`
