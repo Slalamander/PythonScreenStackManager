@@ -6,8 +6,6 @@ However, you may want to inspect it to get the variables that are to be passed t
 
 #!/usr/bin/env python
 
-import sys
-import os
 import asyncio
 import concurrent.futures
 import logging
@@ -39,7 +37,6 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 _LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from inkBoard.integrations.HomeAssistantClient.client import HAclient as client
     from .. import elements
     from ..elements.baseelements import Element
 
@@ -82,10 +79,8 @@ class PSSMScreen:
     """
     
     generatorPool = concurrent.futures.ThreadPoolExecutor(None,const.GENERATOR_THREADPOOL)
-    # _instance = None
 
     def __new__(cls, *args, **kwargs):
-        # if PSSMScreen._instance is None:
         if not hasattr(PSSMScreen,"_instance"):
             PSSMScreen._instance = object.__new__(cls)
             return PSSMScreen._instance
@@ -105,8 +100,6 @@ class PSSMScreen:
                 backlight_behaviour : Optional[Literal["Manual", "On Interact", "Always"]] = None, backlight_time_on : Union[float, DurationType] = None):
 
         ##Placeholder loop to have the atttribute set
-        # self.__mainLoop = asyncio.BaseEventLoop()
-
         Style.screen = self
 
         try:
@@ -577,9 +570,7 @@ class PSSMScreen:
         if shorthand in self.__shorthandFunctions:
             _LOGGER.error(f"A function with shorthand {shorthand} is already registered. It will not be added.")
             return
-        # if "element:" in shorthand:
-        #     logger.error(f"Using 'element:' in shorthand functions is not allowed.")
-        #     return
+
         if ":" in shorthand:
             msg = "Using ':' in a shorthand is not allowed. Register a function group instead to use it."
             raise ValueError(msg)
@@ -618,7 +609,6 @@ class PSSMScreen:
                 raise ShorthandNotFound from exce
             except ShorthandNotFound:
                 raise
-            # func = parser(func_str, attribute, options)
             return parser(func_str, attribute, options)
 
         elif shorthand in self.__shorthandFunctions:
@@ -631,7 +621,6 @@ class PSSMScreen:
             raise KeyError("Parsing an element function shorthand requires element_id to be defined")
         
         elt_id = options["element_id"]
-        # elt = self.elementRegister.get(options["element_id"],None)
         if elt_id not in self.__elementRegister | self.__popupRegister:
             msg = f"No element or popup with id {options['element_id']} is registered."
             raise ElementNotRegistered(msg)
@@ -647,7 +636,6 @@ class PSSMScreen:
         else:
             msg = f"{elt.__class__} elements do not have a shorthand function for {shorthand}."# Cannot set {attribute} for {elt}"
             raise ShorthandNotFound(msg=msg)
-            # _LOGGER.exception(AttributeError(msg))
             
         return
 
@@ -668,7 +656,6 @@ class PSSMScreen:
         """
         
         if self.printing:
-            # self._perform_element_attribute_check
             _LOGGER.debug(f"Screen is already printing, not adding attribute check for element {element}, attribute: {attribute}")
             return
 
@@ -761,9 +748,7 @@ class PSSMScreen:
                 self._printGather.cancel("Quit was requested")
             if not isinstance(exce, ReloadWarning):
                 self.generatorPool.shutdown(False, cancel_futures=True)
-            
 
-                # sys.exit()
         return
 
     #endregion
@@ -940,17 +925,15 @@ class PSSMScreen:
         )
 
     async def _async_simple_print(self, element : "elements.Element", skipGen=False, apply_background : bool = False):
-        
+        ##Not removing the code below here. I'd still want to implement this function.
         raise NotImplementedError("async_simple_print is not implemented, please use `simple_print_element()`")
 
         if not skipGen:
             # First, the element must be generated
             # element.generator()
             if element.isGenerating:
-                # tools._block_run_coroutine(element._await_generator())
                 await element._await_generator()
             else:
-                # element.generate()
                 element.async_generate()
         # Then, we print it
         if element.area == None or element.imgData == None:
@@ -980,12 +963,6 @@ class PSSMScreen:
         else:
             img = element.imgData.copy()
 
-        # What follows is a Workaround :
-        ##This doesn't work for some reason? Not sure why
-        # await asyncio.to_thread(
-        #     self.device.print_pil,imgData=img, x=x, y=y, isInverted=element.isInverted
-        #     )
-
         ##This doesn't quite work, probably problems with threads or whatever
         self.device.print_pil(imgData=img, x=x, y=y, isInverted=element.isInverted
             )
@@ -1014,14 +991,9 @@ class PSSMScreen:
                         _LOGGER.debug("Element is still generating")
 
         if self.mainLoop.is_running():
-            # asyncio.run_coroutine_threadsafe(self.print_stack(area=self.area, forceLayoutGen=True),
-            #                                 self.mainLoop)
             asyncio.run_coroutine_threadsafe(self._end_batch_write(),
                                 self.mainLoop)
-            # if loop.is_running():
-            #     asyncio.create_task(self.print_stack(area=self.area, forceLayoutGen=True))
         else:
-            # asyncio.run(self.print_stack(area=self.area, forceLayoutGen=True))
             asyncio.run(self._end_batch_write())
                 
         _LOGGER.debug("Stopped screen batch")
@@ -1039,8 +1011,6 @@ class PSSMScreen:
         _LOGGER.debug("Screen batch is done and everything was generated")
         await self.print_stack(self.area,False)
         _LOGGER.debug("Screen batch is done and should be printed")
-        # asyncio.run_coroutine_threadsafe(self.print_stack(area=self.area, forceLayoutGen=True),
-        #             self.mainLoop)
 
 
     def add_element(self, element, skipPrint=False, skipRegistration=False):
@@ -1122,7 +1092,6 @@ class PSSMScreen:
         """
         ##May need to rewrite this to properly handle errors? See add_element I think
         try:
-            # loop = asyncio.get_running_loop()
             loop = self.mainLoop
             if loop == None or not loop.is_running(): raise RuntimeError
 
@@ -1298,18 +1267,6 @@ class PSSMScreen:
             ## But it is not needed anymore since hardware inversion emulation has been implemented.
             ## If it works weirdly this may need to be enabled again for Ereaders, but on the emulator it looks very similar now to how it worked on the kobo's.
 
-            # [(x,y),(w,h)] = area
-            # popupArea = self.popupsOnTop.area
-            # intersect = getRectanglesIntersection(area,popupArea)
-            # if intersect == area:
-            #     ##Popup fully covers the element
-            #     return
-            # # newSize = (w-(w-intersect[1][0]),h-(h-intersect[1][1]))
-            # ix = min(x,intersect[0][0])
-            # iy = min(y,intersect[0][1])
-            # iw = w if intersect[1][0] == w else w - intersect[1][0] #min(w, intersect[1][0])
-            # ih = h if intersect[1][1] == h else h - intersect[1][1] #min(h, intersect[1][1])
-            # invArea = [(ix,iy),(iw,ih)]
             self.device.do_screen_refresh(
                 isInverted=not initial_mode,
                 area=area,
@@ -1672,7 +1629,6 @@ class PSSMScreen:
 
         elt_action = elt._get_action(action)
         if isinstance(elt,elements.Layout):
-            # if elt.tap_action is not None:
             if elt_action:
                 func, kwargs = elt_action
                 if asyncio.iscoroutinefunction(func):
