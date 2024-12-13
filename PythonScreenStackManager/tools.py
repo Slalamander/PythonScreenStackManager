@@ -23,8 +23,6 @@ from mdi_pil import ALLOWED_MDI_IDENTIFIERS, MDI_WEATHER_ICONS as MDI_WEATHER_CO
 
 from . import constants as const
 from .constants import PATH_TO_PSSM
-# from .constants import const.CUSTOM_FOLDERS, const.PSSM_COLORS, \
-#             const.SHORTHAND_FONTS, const.SHORTHAND_ICONS, PATH_TO_PSSM
 
 
 from .pssm_types import *
@@ -72,34 +70,6 @@ class Singleton(ABCMeta):
 
 class customproperty(property):
     "Base class for making custom property decorators."
-
-    # def __init__(self, 
-    #             fget=None, 
-    #             fset=None, 
-    #             fdel=None, 
-    #             doc=None):
-    #     """Attributes of 'our_decorator'
-    #     fget
-    #         function to be used for getting 
-    #         an attribute value
-    #     fset
-    #         function to be used for setting 
-    #         an attribute value
-    #     fdel
-    #         function to be used for deleting 
-    #         an attribute
-    #     doc
-    #         the docstring
-    #     """
-    #     self.getter(fget)
-
-    #     self.fget
-
-    #     self.fset = fset
-    #     self.fdel = fdel
-    #     if doc is None and fget is not None:
-    #         doc = fget.__doc__
-    #     self.__doc__ = doc
 
     def __get__(self, obj, objtype=None):
         if obj is None:
@@ -298,9 +268,6 @@ def _block_run_coroutine(coro : Coroutine, loop : asyncio.BaseEventLoop) -> Any:
         The result of the awaited coroutine.
     """
 
-
-
-    # if loop == None or not loop.is_running():
     if loop == None:
         loop = asyncio.get_running_loop()
 
@@ -312,8 +279,6 @@ def _block_run_coroutine(coro : Coroutine, loop : asyncio.BaseEventLoop) -> Any:
     w = w.result()
     logger.trace(f"{coro} is finished.")
     return res 
-    # if loop == None:
-        # loop
 
 
 def insert_string(string, char, pos):
@@ -325,7 +290,7 @@ def insert_string(string, char, pos):
 ##Don't use m anyways since it's the symbol for meters. Just use min
 time_patterns = {
     "hours": r'(?P<hours>[\d.]+)\s*(?:h|hrs?|hours?)',
-    "minutes": r'(?P<minutes>[\d.]+)\s*(?:min|(minutes?))', #r'(?P<mins>[\d.]+)\s*(?:m|(mins?)|(minutes?))',
+    "minutes": r'(?P<minutes>[\d.]+)\s*(?:min|(minutes?))',
     "seconds": r'(?P<seconds>[\d.]+)\s*(?:s|secs?|seconds?)',
     "milliseconds": r'(?P<milliseconds>[\d.]+)\s*(?:ms|milliseconds?)',
 }
@@ -415,7 +380,6 @@ def parse_duration_string(string : Union[str, int, float]) -> float:
         msg = f"Could not parse duration {string} into time values. Please check if you used the right notations and everything is in order from largest to smallest."
         logger.exception(ValueError(msg))
         return
-        # raise ValueError(msg)
     secs = 0
     for unit, t in match_dict.items():
         mult = second_multipliers[unit]
@@ -545,7 +509,9 @@ def is_valid_dimension(dimStr:PSSMdimension, variables : list[str] =[]) -> Union
     -------
     Union[bool,Exception]
         True if it is a valid PSSM dimension. Otherwise, returns an exception with info on why it is invalid.
-    """    
+    """
+    ##This function should be updated to raise the errors. Any caller should aptly handle them I think.
+
     ##set these to 1, since the values do not matter here
     if isinstance(dimStr,(tuple,list)):
         for dim in dimStr:
@@ -556,16 +522,13 @@ def is_valid_dimension(dimStr:PSSMdimension, variables : list[str] =[]) -> Union
     if isinstance(dimStr,(int,float)):
         return True
     
-    # w, h, W, H, Q = 1, 1, 1, 1, 1
     # p, P = 1, 1 #Pixel calculations are allowed too it seems 
     if "?" in dimStr:
         if dimStr[0] == "?":
             # dimStr[0] = "Q"
             dimStr = dimStr.replace("?","Q")
         else:
-            #logger.error(f"{dimStr} is not a valid positional string. Questionmarks (?), if present, must always be the first character.")
             return SyntaxError(f"{dimStr} is not a valid positional string. Questionmarks (?), if present, must always be the first character.")
-    # variables.update({"W":1,"H":1,"w":1, "h":1,"P":1,"p":1})
     varDict = {"W":1,"H":1,"w":1, "h":1,"P":1,"p":1, "Q":1}
     for var in variables:
         if len(var) > 1: 
@@ -574,15 +537,12 @@ def is_valid_dimension(dimStr:PSSMdimension, variables : list[str] =[]) -> Union
     try:
         res = eval(dimStr,varDict)      #@IgnoreExceptions
     except NameError as exce:
-        #logger.error(f"{dimStr} is not a valid dimensional string: {exce}")
         return NameError(f"{exce} in dimensional string {dimStr}. Valid non numbers are {varDict.keys()}")  #@IgnoreExceptions
     
     except SyntaxError as exce:
-        #logger.error(f"{dimStr} can not be evaluated as a python operation: {exce}")
         return SyntaxError(f"{dimStr} can not be evaluated as a python operation: {exce}")
     else:
         if not isinstance(res,(int,float)):
-            #logger.error(f"{dimStr} did not yield a single number as result. Result was {res}, which is type {type(res)}. Ensure the string yields a float or integer value.")
             return TypeError(f"{dimStr} Result is not an integer or float. Returned {res}")
         
     return True
@@ -632,7 +592,6 @@ def parse_known_image_file(file):
         return const.SHORTHAND_ICONS[file]
     else:
         if file[0:4] in ALLOWED_MDI_IDENTIFIERS:
-            # file = parse_MDI_Icon(file)
             return file
         elif PATH_TO_PSSM.__str__() in file:
             ##This should catch special icons like meteocons, since those are in a folder within pssm, not the icon folder in the main program
@@ -658,7 +617,6 @@ def parse_known_fonts(font:str):
         else:
             return font
 
-# def is_valid_Color(color : Union[str,list,tuple], colorMode : str = None) -> bool:
 def is_valid_Color(color : ColorType) -> bool:
     """
     Tests if the supplied color is valid (i.e. can be processed by get_Color). 
@@ -843,7 +801,6 @@ def invert_Image(img : Image.Image) -> Image.Image:
         alpha = img.getchannel("A")
         img = ImageChops.invert(img)
         img.putalpha(alpha)
-        # img.paste(ImageOps.invert(img),mask=img)
     else:
         img = ImageOps.invert(img)
     return img
@@ -1176,8 +1133,8 @@ class DrawShapes:
 
         Returns
         -------
-        _type_
-            _description_
+        Image.Image
+            The image after pasting
         """
 
         if is_background:

@@ -14,12 +14,6 @@ if TYPE_CHECKING:
     from .elements.baseelements import Element
     from .devices import PSSMdevice
 
-__pdoc__ = {
-    "T": False,
-    "classproperty": False
-}
-
-
 
 #region General
 ColorType = Union[str,int,list,
@@ -29,20 +23,14 @@ ColorType = Union[str,int,list,
             ]
 "Types for valid colors in the supported color modes. Very broad, generally call tools.is_valid_color for actual validation."
 
-# PSSMdimension = NewType("PSSMdimension", Union[str,int,float,tuple,list]) 
 PSSMdimension =  Union[str,int,float,tuple[TypeVar("PSSMdimension")],list[TypeVar("PSSMdimension")]]
 "Possible types for dimensions. Accepts tuples and lists with dimension types as well."
-
-# PSSMcoordinates = tuple[TypeVar('x', int) ,TypeVar('y', int)]
-# "Typing for coordinates being passed by the screen to a function"
 
 xType = TypeVar('x', bound=int)
 yType = TypeVar('y', bound=int)
 wType = TypeVar('w', bound=int)
 hType = TypeVar('h', bound=int)
 
-# coo =  tuple[TypeVar('x') ,TypeVar('y')]
-# PSSMarea = tuple[tuple[TypeVar('x') ,TypeVar('y')],tuple[TypeVar('w') ,TypeVar('h')]]
 PSSMarea = tuple[tuple[TypeVar('x', bound=int),TypeVar('y', bound=int)],
                 tuple[TypeVar('w', bound=int) ,TypeVar('h', bound=int)]]
 "Type hint for pssm areas"

@@ -38,7 +38,7 @@ _sett_map = {'screen': {"rotation" : 'rotation',
                     }
 
 class screen_settings(TypedDict):
-    rotation : 'RotationValues' #Literal["UR", "CW", "CCW", "UD"]
+    rotation : 'RotationValues'
     """
     Screen rotation. Corresponds as follows: \n
     values:\n
@@ -153,9 +153,7 @@ class __settings():
         pass
 
     def __getitem__(self, key: Any) -> settings_type:
-        # print(f"getting key {key}")
         return _data[key]
-        # return super().__getitem__(key)
 
     def save(self):
         "Saves pssm settings to settings.json"

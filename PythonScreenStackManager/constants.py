@@ -142,7 +142,7 @@ SHORTHAND_FONTS : dict[fontType, Path] = {
     'notosans-bold' : __pssm_font_folder / "NotoSans-Medium.ttf",
     'merriweather-regular': __pssm_font_folder / "Merriweather-Regular.ttf",
     'merriweather-bold': __pssm_font_folder / "Merriweather-Bold.ttf",
-    'clock': __pssm_font_folder / "PoiretOne-Regular.ttf",#"AllertaStencil-Regular.ttf",
+    'clock': __pssm_font_folder / "PoiretOne-Regular.ttf",
     'mdi': __pssm_font_folder / "materialdesignicons-webfont.ttf"
 }
 "Paths to some default implemented fonts. Also has shorthands for default, clock and header fonts. Allows for other libraries to add to it."
