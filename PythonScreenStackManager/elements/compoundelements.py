@@ -3,8 +3,6 @@
     Includes elements which are compounded layouts for example, or have special update cycles.
 """
 
-import inspect
-import sys
 import logging
 import asyncio
 from datetime import datetime as dt, timezone as tz, tzinfo
@@ -227,17 +225,11 @@ class Tile(base._TileBase):
         self._layoutstr: str
         "The string representing the layout to parse, also the default values for horizontal/vertical, accounting for title being present or not"
         return
-        # super().__init__(layout=layout, **kwargs)
-
     #region
     @colorproperty
     def background_color(self) -> Union[ColorType,None]:
         "Background color of the element. Automatically set to None if background_shape is used."
         return self._background_color
-        
-    # @background_color.setter
-    # def background_color(self, value):
-    #     self._color_setter("_background_color", value)
 
     @property
     def _shapeColor(self) -> Union[ColorType,None]:
@@ -557,7 +549,6 @@ class Tile(base._TileBase):
                     self._layout = new_layout
                     skipNonLayoutGen=False
                     self._rebuild_area_matrix = True
-                    # if self.screen.printing:
                     self.set_parent_layouts(old_layout, self.layout)
 
                 self._reparse_layout = False
@@ -794,22 +785,10 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         "Background color of the clock"
         return self._clock_fill_color
 
-    # @clock_fill_color.setter
-    # def clock_fill_color(self,value: Optional[ColorType]):
-    #     self._clock_fill_color : Optional[ColorType]
-    #     self._color_setter("_clock_fill_color",value)
-    #     self._genClock = True
-
     @colorproperty
     def outline_color(self) -> Optional[ColorType]:
         "Color of the clock's outline"
         return self._outline_color
-
-    # @outline_color.setter
-    # def outline_color(self,value: Optional[ColorType]):
-    #     self._outline_color : Optional[ColorType]
-    #     self._color_setter("_outline_color",value)
-    #     self._genClock = True
 
     @property
     def outline_width(self) -> PSSMdimension:
@@ -828,14 +807,6 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         if self._hour_hand_color == None:
             return self.outline_color
         return self._hour_hand_color
-    
-    # @hour_hand_color.setter
-    # def hour_hand_color(self, value):
-    #     if Style.is_valid_color(value):
-    #         self.__hour_hand_color = value
-    #     else:
-    #         msg = f"{value} is not recognised as a valid color"
-    #         logger.exception(msg)
 
     @colorproperty
     def minute_hand_color(self):
@@ -843,14 +814,6 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         if self._minute_hand_color == None:
             return self.outline_color
         return self._minute_hand_color
-
-    # @minute_hand_color.setter
-    # def minute_hand_color(self, value):
-    #     if Style.is_valid_color(value):
-    #         self.__minute_hand_color = value
-    #     else:
-    #         msg = f"{value} is not recognised as a valid color"
-    #         logger.exception(msg)
 
     @property
     def show_ticks(self) -> bool:
@@ -872,15 +835,6 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         if self._tick_color == None:
             return self.outline_color
         return self._tick_color
-    
-    # @tick_color.setter
-    # def tick_color(self, value):
-    #     if Style.is_valid_color(value):
-    #         self.__tick_color = value
-    #         self._genClock = True
-    #     else:
-    #         msg = f"{value} is not recognised as a valid color"
-    #         logger.exception(ValueError(msg))
 
     @property
     def show_digital(self) -> bool:
@@ -929,15 +883,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         if self._digital_color == None:
             return self.outline_color
         return self._digital_color
-    
-    # @digital_color.setter
-    # def digital_color(self, value):
-    #     "Color of the digital time indicator"
-    #     if Style.is_valid_color(value):
-    #         self.__digital_color = value
-    #     else:
-    #         msg = f"{value} is not recognised as a valid color"
-    #         logger.exception(ValueError(msg))
+
     #endregion
 
     def _style_update(self, attribute: str, value):
@@ -1304,10 +1250,6 @@ class LineSlider(base._BaseSlider):
         "The color of the slider line"
         return self._color
     
-    # @color.setter
-    # def color(self, value):
-    #     self._color_setter("_color",value)
-    
     @property
     def width(self) -> PSSMdimension:
         "The width of the slider line"
@@ -1391,10 +1333,6 @@ class LineSlider(base._BaseSlider):
             return self.color
         else:
             return self._thumb_color
-        
-    # @thumb_color.setter
-    # def thumb_color(self, value):
-    #     self._color_setter("_thumb_color",value)
 
     @property
     def thumb_icon(self) -> Optional[str]:
@@ -1418,10 +1356,6 @@ class LineSlider(base._BaseSlider):
     def thumb_icon_color(self) -> ColorType:
         "The color of the thumb icon. If None a color is automatically applied."
         return self._thumb_icon_color
-    
-    # @thumb_icon_color.setter
-    # def thumb_icon_color(self, value : Optional[ColorType]):
-    #     self._color_setter("__thumb_icon_color",value)
 
     @property
     def end_points(self) -> Optional[Union[str,tuple[str,str]]]:
@@ -1457,10 +1391,7 @@ class LineSlider(base._BaseSlider):
     def end_colors(self) -> Optional[ColorType]:
         "The colors applied to the end icons. If None, will use the same color as the slider."
         return self._end_colors
-    
-    # @end_colors.setter
-    # def end_colors(self, value : Optional[Union[ColorType]]):
-    #     self._color_setter("_end_colors", value)
+
     #endregion
 
     def generator(self, area=None, skipNonLayoutGen=False):
@@ -1702,28 +1633,16 @@ class BoxSlider(base._BaseSlider):
     def active_color(self) -> ColorType:
         "The color of the bar indicating the value"
         return self._active_color
-    
-    # @active_color.setter
-    # def active_color(self, value : ColorType):
-    #     self._color_setter("_active_color", value=value)
 
     @colorproperty
     def inactive_color(self) -> ColorType:
         "The color of the inside part of the slider that is not covered by the active part"
         return self._inactive_color
-    
-    # @inactive_color.setter
-    # def inactive_color(self, value : ColorType):
-    #     self._color_setter("_inactive_color", value=value)
 
     @colorproperty
     def outline_color(self) -> ColorType:
         "Color of the box's outline"
         return self._outline_color
-    
-    # @outline_color.setter
-    # def outline_color(self, value : ColorType):
-    #     self._color_setter("_outline_color", value=value)
 
     @colorproperty
     def thumb_color(self) -> ColorType:
@@ -1738,10 +1657,6 @@ class BoxSlider(base._BaseSlider):
     def end_colors(self) -> ColorType:
         "Colors of the icons at the box's end"
         return self._end_colors
-    
-    # @end_colors.setter
-    # def end_colors(self, value : ColorType):
-    #     self._color_setter("_end_colors", value=value)
 
     @property
     def outline_width(self) -> PSSMdimension:

@@ -189,9 +189,7 @@ class DeviceButton(_DeviceMonitor, base.Button):
         if self.typing != None:
             value = self.typing(value)
 
-        # self._Button__text = f"{self.prefix}{value}{self.suffix}"
         new_text= f"{self.prefix}{value}{self.suffix}"
-        # asyncio.create_task(self.Async_update(updated=True))
         self.screen.mainLoop.create_task(
             self.async_update({"_Button__text": new_text})
         )
@@ -428,6 +426,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
 
     async def _monitor_device(self):
         condition = self.monitor.updateCondition
+        ##Should rewrite these to use features.
         battery = getattr(self.monitor,"battery",None)
         network = getattr(self.monitor,"network",None)
         backlight = getattr(self.monitor,"backlight",None)
@@ -448,7 +447,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
                     if backlight:
                         lightState = backlight.state
                         brightness = backlight.brightness
-                    # await condition.wait()
+
                     def condition_test():
                         ##Should automate this function I think, to take into account the features being monitored and be flexible with the features in general
                         conditions = []
@@ -598,10 +597,6 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         return icon
         
 
-##Menu select, but for the backlight behaviour only
-
-##Maybe an icon, but can also be for later
-##That changes the icon based on eval values, so like the ha icon
 class BacklightSlider(_DeviceMonitor, comps.Slider):
     """
     A slider that controls the backlight

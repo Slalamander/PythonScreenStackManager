@@ -38,8 +38,6 @@ class OSK(Layout):
             self.keymap['alt'] = json.load(json_file)
         self.lang = self.keymap['standard']["lang"]
         self.onKeyPress = onKeyPress
-        # for param in kwargs:
-        #     setattr(self, param, kwargs[param])
         self.view = 'standard'
         self.keymap_layouts['standard'] = self.build_layout(
                                             self.keymap['standard'])
@@ -337,13 +335,7 @@ class PopupInput(Popup):
         self.inputBtn = None
         self.okBtn = None
         
-        # for param in kwargs:
-        #     setattr(self, param, kwargs[param])
         self.build_layout()
-
-    # def generator(self,**kwargs):
-    #     self.make_area()
-    #     super().generator(**kwargs)
 
     def build_layout(self):
         titleBtn = Button(

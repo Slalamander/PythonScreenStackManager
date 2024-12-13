@@ -1,6 +1,5 @@
-import os
-import sys
-import json
+"Base elements for PSSM. Not all of these are usable as it, but are supposed to be used as parent classes."
+
 import asyncio
 from datetime import datetime as dt, timedelta
 from math import floor, ceil
@@ -225,13 +224,7 @@ class Element(ABC):
     def background_color(self) -> Union[ColorType,None]:
         "Color of the element background. Set to None to take on the color of its parent layout"
         return self._background_color
-    
-    # @background_color.setter
-    # def background_color(self,value: Optional[ColorType]):
-    #     if hasattr(self, "_background_color") and value == getattr(self,"_background_color"):
-    #         return
-    #     self._color_setter("_background_color", value,True,cls=Layout)
-    
+        
     @property
     def isInverted(self) -> bool:
         "True if the element is currently shown as inverted. Can be due to a temporary inversion (hardware inversion), a parent layout element or if inverted is true and it is printed as such."
@@ -355,7 +348,7 @@ class Element(ABC):
     #Tap-action
 
     @elementaction
-    def tap_action(self) -> InteractionFunctionType: #Callable[['Element',CoordType],Any]:
+    def tap_action(self) -> InteractionFunctionType: 
         """
         The function called when the element is tapped. Set to None to have nothing called.
         If set to a dict, the values for tap_action_data and tap_action_map will be overwritten if the respective key is present.
@@ -363,7 +356,7 @@ class Element(ABC):
         return self._tap_action 
     
     @elementaction
-    def hold_action(self) -> InteractionFunctionType: #Callable[['Element',CoordType],Any]:
+    def hold_action(self) -> InteractionFunctionType: 
         """
         The function called when the element is held. Set to None to have nothing called.
         If set to a dict, the values for hold_action_data and hold_action_map will be overwritten if the respective key is present.
@@ -371,7 +364,7 @@ class Element(ABC):
         return self._hold_action 
     
     @elementaction
-    def hold_release_action(self) -> InteractionFunctionType: #Callable[['Element',CoordType],Any]:
+    def hold_release_action(self) -> InteractionFunctionType:
         """
         The function called when the element is held. Set to None to have nothing called.
         If set to a dict, the values for hold_release_action_data and hold_release_action_map will be overwritten if the respective key is present.
@@ -1017,11 +1010,6 @@ class Element(ABC):
 
         loop = self.parentPSSMScreen.mainLoop
 
-        # if asyncio._get_running_loop() == None:
-        #     loop = self.parentPSSMScreen.mainLoop
-        # else:
-        #     loop = asyncio.get_running_loop()
-
         try:
             if not loop.is_running():
                 img = self.generator(**saved_args)
@@ -1236,43 +1224,21 @@ class Layout(Element):
         "Additional color property for Layouts. Not inherently used in the layout itself, but can be used in child elements, to give them a uniform style"
         return self._foreground_color
 
-    # @foreground_color.setter
-    # def foreground_color(self, value:  Union[ColorType,None]):
-    #     if hasattr(self, "_foreground_color") and value == getattr(self,"_foreground_color"):
-    #         return
-    #     self._color_setter("_foreground_color", value,True,cls=Layout)
 
     @colorproperty
     def accent_color(self) ->  Union[ColorType,None]:
         "Additional color property for Layouts. Not inherently used in the layout itself, but can be used in child elements, to give them a uniform style"
         return self._accent_color
 
-    # @accent_color.setter
-    # def accent_color(self, value:  Union[ColorType,None]):
-    #     if hasattr(self, "_accent_color") and value == getattr(self,"_accent_color"):
-    #         return
-    #     self._color_setter("_accent_color", value,True,cls=Layout)
 
     @colorproperty
     def background_color(self) ->  Union[ColorType,None]:
         return self._background_color
 
-    # @background_color.setter
-    # def background_color(self, value:  Union[ColorType,None]):
-    #     if hasattr(self, "_background_color") and value == getattr(self,"_background_color"):
-    #         return
-    #     self._color_setter("_background_color", value,True,cls=Layout)
-
     @colorproperty
     def outline_color(self) ->  Union[ColorType,None]:
         "Color of the elements outline. Set to None to use no outline (i.e. the background color)"
         return self._outline_color
-    
-    # @outline_color.setter
-    # def outline_color(self,value:  Union[ColorType,None]):
-    #     if hasattr(self, "_outline_color") and value == getattr(self,"_outline_color"):
-    #         return
-    #     self._color_setter("_outline_color", value,True,cls=Layout)
 
     @property
     def outline_width(self) -> PSSMdimension:
@@ -1330,7 +1296,7 @@ class Layout(Element):
                 raise TypeError("A layout row is supposed to be a list")
             elif len(row) == 0:
                 raise Exception("A layout row cannot be empty")
-            elif not isinstance(row[0], (str,int)): # and not isinstance(row[0], int):
+            elif not isinstance(row[0], (str,int)):
                 raise TypeError(
                     "The first element of a row (its height) should be a " +
                     "string or an integer"
@@ -1398,7 +1364,7 @@ class Layout(Element):
         if old_elts ^ new_elts: ##This checks if the sets have values that are unique to either set (i.e. value is in old_elt or new_elt, but not in both)
             self._call_on_add = set()
             for elt in new_elts - old_elts: ##This returns every element that is in new_elts and not in old_elts (i.e. all elements that are new)
-                if (#self.onScreen and 
+                if (
                         callable(getattr(elt,"on_add",None)) and not elt.onScreen):
 
                     self._call_on_add.add(elt)
@@ -1438,16 +1404,6 @@ class Layout(Element):
         for elt in self.create_element_list():
             if not elt.onScreen and callable(f := getattr(elt,"on_remove",None)):
                 f()
-
-    # def _color_setter(self,attribute:str, value : ColorType, allows_None : bool = True, cls : type = None):
-    #     "The general color setter, but updated to take care of updating colors of child elements if set to the shorthand"
-
-    #     ##Generally, this one should not be called if the value is the same as per how the color properties are set up
-    #     super()._color_setter(attribute, value, allows_None, cls)
-    #     if attribute[0] == "_": attribute = attribute.replace("_","",1)
-
-    #     self._update_child_colors(attribute)
-    #     return
     
     def _style_update(self, attribute: str, value):
         "Called when a style property is updated"
@@ -1470,7 +1426,6 @@ class Layout(Element):
         """
 
         colorMode = self.parentPSSMScreen.imgMode
-        # Style.get_color()
         color = Style.get_color(self.background_color, colorMode)
         
         if area is not None:
@@ -1520,8 +1475,6 @@ class Layout(Element):
                     {"xy":  [(0, 0), (w,h)],
                     "fill": "white",
                     "radius": r},
-                    # "width": outW,
-                    # "outline": outlineCol}, 
                 rescale=["xy","radius","width"])
             
             if "A" not in placeholder.mode:
@@ -1595,7 +1548,6 @@ class Layout(Element):
                             logger.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                             tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
                             logger.trace(f"{elt.id} finished generating: {elt.isGenerating}")
-                            # elt_img = elt.imgData
 
                         ##Don't need a new thread for generating since it should not ever be called in the mainloop
                         elt_img = elt.generator(area=elt_area, skipNonLayoutGen=skipNonLayoutGen)
@@ -1623,7 +1575,6 @@ class Layout(Element):
             if self.area == None or self._rebuild_area_matrix:
                 self.create_area_matrix()
                 if self._call_on_add:
-                # self.layout_added()
                     self.on_add()
                 await self.async_create_img_matrix(skipNonLayoutGen=False)
             else:
@@ -1723,11 +1674,9 @@ class Layout(Element):
 
                 if isinstance(converted_width, int):
                     true_elt_width = converted_width
-                    # next(rounders) ##I believe this doesn't have to shift as the rounding error only occurs for string conversions
                 else:
                     remaining_width = self.calculate_remaining_width(i,true_row_height)
-                    dim = str(remaining_width) + converted_width[1:]
-                    # round_fct = 
+                    dim = str(remaining_width) + converted_width[1:] 
                     true_elt_width = next(width_rounders)(eval(dim))
 
                     ##If overwriting the width to a pixel value here is required for something, it is in the extract_colwidth function, but idk why.
@@ -2081,7 +2030,6 @@ class _TileBase(Layout):
             logger.exception(TypeError(msg))
             return
         
-        # self.layout = parse_layout_string(value, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
         if value != self._tile_layout:
             self._reparse_layout = True
             self._tile_layout = value
@@ -2096,7 +2044,6 @@ class _TileBase(Layout):
             self.is_layout_valid(value)
         except FuncExceptions as exce:
             logger.error(f"Layout invalid: {exce}")
-            # raise Exception("Invalid layout")
             value = [["?",(None,"?")]]
         
         old_layout = self._layout
@@ -2108,7 +2055,6 @@ class _TileBase(Layout):
 
         self.set_parent_layouts(old_layout,self._layout)
 
-        # self._rebuild_area_matrix = True
 
     @property
     @abstractmethod
@@ -2215,49 +2161,16 @@ class _TileBase(Layout):
     def foreground_color(self) -> Union[ColorType]:
         "The main color to use for the icon and text. Can be overwritten by iconSettings and buttonSettings respectively."
         return self._foreground_color
-    
-    # @foreground_color.setter
-    # def foreground_color(self, value):
-    #     if hasattr(self, "_foreground_color") and value == getattr(self,"_foreground_color"):
-    #         return
-    #     self._color_setter("_foreground_color",value,True, cls=_TileBase)
 
     @colorproperty
     def accent_color(self) -> Union[ColorType]:
         "The main color to use for the icon and text. Can be overwritten by iconSettings and buttonSettings respectively."
         return self._accent_color
-    
-    # @accent_color.setter
-    # def accent_color(self, value):
-    #     if hasattr(self, "_accent_color") and value == getattr(self,"_accent_color"):
-    #         return
-    #     self._color_setter("_accent_color",value,True, cls=_TileBase)
 
-    # @colorproperty
-    # def background_color(self) ->  Union[ColorType,None]:
-    #     return self._background_color
-
-    # @background_color.setter
-    # def background_color(self, value:  Union[ColorType,None]):
-    #     if hasattr(self, "_background_color") and value == getattr(self,"_background_color"):
-    #         return
-    #     self._color_setter("_background_color",value,True, cls=_TileBase)
 
     @colorproperty
     def outline_color(self) ->  Union[ColorType,None]:
         return self._outline_color
-
-    # @outline_color.setter
-    # def outline_color(self, value:  Union[ColorType,None]):
-    #     if hasattr(self, "_outline_color") and value == getattr(self,"_outline_color"):
-    #         return
-    #     self._color_setter("_outline_color",value,True, cls=_TileBase)
-    #endregion
-
-    # def _color_setter(self,attribute:str, value : ColorType, allows_None : bool = True, cls : type = None):
-    #     ##Generally, this one should not be called if the value is the same as per how the color properties are set up
-    #     super()._color_setter(attribute, value, allows_None, cls)
-    #     self._reparse_colors = True
 
     def _style_update(self, attribute, value):
         self._reparse_colors = True
@@ -2524,7 +2437,7 @@ class Popup(Layout):
         if self.parentPSSMScreen != None:
             self.make_area()
 
-        self._tapEvent : asyncio.Event #= asyncio.Event(self.parentPSSMScreen.mainLoop)
+        self._tapEvent : asyncio.Event
         "Event that is set when the popup is tapped. Used to track when to automatically close it."
 
         if popupID == None:
@@ -2538,7 +2451,7 @@ class Popup(Layout):
     #region
     # ----------------------------- popup properties ----------------------------- #
     @Element.tap_action.getter
-    def tap_action(self) -> InteractionFunctionType: #Callable[['Element',CoordType],Any]:
+    def tap_action(self) -> InteractionFunctionType: 
         self._tapEvent.set()
         return self._tap_action
     
@@ -2727,13 +2640,7 @@ class PopupConfirm(Popup):
         self.userAction = 0
         self.okBtn = None
         self.cancelBtn = None
-        # for param in kwargs:
-        #     setattr(self, param, kwargs[param])
         self.build_layout()
-
-    # def generator(self,**kwargs):
-    #     self.make_area()
-    #     super().generator(**kwargs)
 
     def build_layout(self):
         titleBtn = Button(
@@ -2783,8 +2690,6 @@ class PopupConfirm(Popup):
             
 
     def waitForResponse(self, action=0):
-        # while self.userAction == 0:
-        #     self.parentPSSMScreen.device.wait(0.01)
         if action == 0:
             return
         
@@ -2845,32 +2750,17 @@ class PopupMenu(Popup):
     def header_color(self) -> ColorType:
         " Color of the header bar"
         return self._header_color
-    
-    # @header_color.setter
-    # def header_color(self, value : ColorType):
-    #     self._header_color : ColorType
-    #     self._color_setter("_header_color",value)
 
     @colorproperty
     def title_color(self):
         "Color of the title text"
         return self._title_color
 
-    # @title_color.setter
-    # def title_color(self, value : ColorType):
-    #     self._title_color : ColorType
-    #     self._color_setter("_title_color",value)
-
     @colorproperty
     def close_icon_color(self):
         "Color of the closing icon"
         return self._close_icon_color
 
-    # @close_icon_color.setter
-    # def close_icon_color(self, value : ColorType):
-    #     self._close_icon_color : ColorType
-    #     self._color_setter("_close_icon_color",value)
-    
     @property
     def menu_layout(self) -> Layout:
         "The layout element that makes up the body of the popup"
@@ -2990,18 +2880,13 @@ class PopupButtons(Popup):
         )
 
         cancelBtn = Icon(
-            #PATH_TO_PSSM + "/icons/close.png",
-            #"mdi:close",
             'close',
-            #"close", icon_color=False,
-            #PATH_TO_PSSM + "/icons/close-box-outline.png",
             centered = True, 
             tap_action=self.close_popup,
             background_color= self.background_color
             )
 
         lM = (None,1)
-        #buttonHeight = "?*1" if self.mainText != "" else "?*0.25"
         buttonLayout = ["?*1"]
         for element in self.userButtons:
             buttonLayout.append((element,"?"))
@@ -3023,13 +2908,8 @@ class PopupButtons(Popup):
 
     async def close_popup(self,elt=None, coords=None):
             await self.parentPSSMScreen.async_remove_popup()
-            # self.userAction = 1
-            # self.parentPSSMScreen.remove_element(self)
-            # self.parentPSSMScreen.refresh()
 
     def waitForResponse(self, action=0):
-        # while self.userAction == 0:
-        #     self.parentPSSMScreen.device.wait(0.01)
         if action == 0:
             return
         
@@ -3067,16 +2947,9 @@ class PopupDrawer(Popup):
         self.userAction = 0
         self._overlapParent = overlapParent
         self._showCloseArrow = showCloseArrow
-        #self.borders = borders
         
-        #Going to do (messy) area calculations 
-        # self._parentArea = parentElt.area
-        # self._width = self.parentArea[1][0]
-        # self._height = self.parentArea[1][1]        
+        #Going to do (messy) area calculations       
         self._closeButtonRes : float = 4 #The relative dimensions of the closing button
-
-        # for param in kwargs:
-        #     setattr(self, param, kwargs[param])
 
     #region 
     # -------------------------- Popupdrawer Properties -------------------------- #
@@ -3101,26 +2974,6 @@ class PopupDrawer(Popup):
             logger.error(f"{value} is not a valid drawer direction. Setting not applied")
         else:
             self._direction = value.lower()
-
-    # @property
-    # def width(self):
-    #     "The width of the drawer"
-    #     return self._width
-    
-    # @property
-    # def height(self):
-    #     "The height of the drawer"
-    #     return self._height
-
-    # @property
-    # def xPos(self) -> int:
-    #     "x coordinate of the drawer"
-    #     return self._xPos 
-
-    # @property
-    # def yPos(self) -> int:
-    #     "y coordinate of the drawer"
-    #     return self._yPos 
 
     @property
     def offset(self):
@@ -3176,14 +3029,11 @@ class PopupDrawer(Popup):
         show_close_arrow = self.showCloseArrow
         #Some offsets caused by the closing element within the drawer
         if self.direction == "up" or self.direction == "down":
-            #closeBtn_width = self.parentArea[1][0]
-            #closeBtn_height = closeBtn_width/self._closeButtonRes
             closeBtn_width = 0
             closeBtn_height = self.parentArea[1][0]/self._closeButtonRes
             if self.drawerLength == None:
                 itemArea = [self.parentArea[1][0],len(self.drawerElements)*self.parentArea[1][0]]
             else:
-                #itemArea = [self.parentArea[1][0],tools_convertYArgsToPX(self.drawer_length)]
                 itemArea = [self.parentArea[1][0],self._convert_dimension(self.drawerLength)]
         elif self.direction == "right" or self.direction=="left":
             closeBtn_height = 0
@@ -3191,7 +3041,6 @@ class PopupDrawer(Popup):
             if self.drawerLength == None:
                 itemArea = [self.parentArea[1][1]*len(self.drawerElements),self.parentArea[1][1]]
             else:
-                #itemArea = [tools_convertXArgsToPX(self.drawerLength),self.parentArea[1][1]]
                 itemArea = [self._convert_dimension(self.drawerLength),self.parentArea[1][1]]
 
         self._closeButtonDim = [closeBtn_width, closeBtn_height] if show_close_arrow else [0,0]
@@ -3214,8 +3063,6 @@ class PopupDrawer(Popup):
             self._closeRotation = 270
             self._offset = [0,0] if overlap_parent else [self.parentArea[1][0], 0]
 
-        #self.offset_dir = 1 if self.direction == "down" or self.direction == "right" else -1
-        
         self._width = offsetArea[0]
         self._height = offsetArea[1]
         self._horizontal_position = self.parentArea[0][0] + self.offset[0]
@@ -3228,7 +3075,6 @@ class PopupDrawer(Popup):
         if not self.isGenerating:
             self.make_area()
             self.build_layout()
-        #self.parentPSSMScreen.popupTimer(self)
         super().generator(**kwargs)
 
     async def async_generate(self, area=None, skipNonLayoutGen: bool = False) -> Coroutine[Any, Any, Coroutine[Any, Any, Image.Image]]:
@@ -3242,7 +3088,6 @@ class PopupDrawer(Popup):
 
         closeBtn = Icon(
             "arrow",
-            #PATH_TO_PSSM + "/icons/close-box-outline.png",
             centered = True,
             icon_color="gray10",
             tap_action=self.close_drawer,
@@ -3259,7 +3104,6 @@ class PopupDrawer(Popup):
                 layout.append(eltrow)
             
             if self.showCloseArrow:
-                #closeRow = [int(self.width/4), (None,"?/2"), (closeBtn, int(self.width/2)), (None,"?/2")]
                 closeRow = [int(self._closeButtonDim[1]), (None,"?/2"), (closeBtn, int(self._closeButtonDim[1]*2)), (None,"?/2")]
                 layout.insert(0, closeRow) if self.direction == "up" else layout.append(closeRow)
 
@@ -3269,8 +3113,6 @@ class PopupDrawer(Popup):
             for element in self.drawerElements:
                 layoutRow.append((element,"?"))
             if self.showCloseArrow:
-                #closeLay = Layout([["?/2"],[int(self.height/2), (closeBtn,"?")],["?/2"]])
-                #closeCol = (closeLay, int(self.height/4))
                 closeCol = (Layout([["?/2"],[int(self._closeButtonDim[0]*1.75), (closeBtn,"?")],["?/2"]]), int(self._closeButtonDim[0]))
                 if self.direction == "left":
                     layoutRow.insert(1, closeCol)
@@ -3411,16 +3253,6 @@ class Button(Element):
         "The color of the font"
         return self._font_color
 
-    ##When styles come in, boolean values are generally not as needed anyways
-    ##Auto setting it to a value generally looks bad in color anyways
-    # @font_color.setter
-    # def font_color(self, value: Union[str,list,tuple]):
-    #     if isinstance(value, bool):
-    #         self._font_color = value
-    #     else:
-    #         # self._color_setter("_font_color",value)
-    #         self.__class__.font_color
-    
     @property
     def font_size(self) -> Union[str,int]:
         "The size of the font"
@@ -3444,10 +3276,6 @@ class Button(Element):
     def outline_color(self) ->  Union[ColorType,None]:
         "Color of the elements outline. Set to None to use no outline (i.e. the background color)"
         return self._outline_color
-    
-    # @outline_color.setter
-    # def outline_color(self,value:  Union[ColorType,None]):
-    #     self._color_setter("_outline_color", value)
 
     @property
     def outline_width(self) -> PSSMdimension:
@@ -3715,8 +3543,6 @@ class Button(Element):
 
         if self.fit_text:
             loaded_font = self.fit_text_func(self.text, textArea, self.font)
-            # except:
-            #     logger.error(f"Error with font {self.font}")
         else:
             font_size = self.font_size
             if not isinstance(font_size, int):
@@ -3789,7 +3615,6 @@ class Button(Element):
         if self.inverted:
             img = tools.invert_Image(img)
 
-        # self._imgData = img
         self._textArea = textArea
         return img
 
@@ -3852,7 +3677,6 @@ class Button(Element):
             if text_height < min_size:
                 logger.debug(f"Could not fit {text} without violating min size {min_size}, height required is {text_height}" )
                 text_height = int(min_size)
-            # loaded_font = ImageFont.truetype(self.font, text_height)
             loaded_font = loaded_font.font_variant(size=text_height)
             text_length = loaded_font.getlength(text)
             logger.trace(f"Fitted text {text} with length {text_length} into area {area}")
@@ -4345,7 +4169,6 @@ class Icon(Element):
         for param in kwargs:
             if "alert" in param:
                 logger.warning(f"found leftover alert in icon, change to badge. Entity is {kwargs.get('entity', 'Not defined')}")
-            #setattr(self, param, kwargs[param])
 
     #region
     # -------------------------- Icon Element properties ------------------------- #      
@@ -4420,7 +4243,7 @@ class Icon(Element):
         self._rotation = value
 
     @colorproperty
-    def icon_color(self) -> Union[ColorType,bool]: #Union[str,int,float,bool]:
+    def icon_color(self) -> Union[ColorType,bool]:
         """
         Color of the icon, defaults to True, so you need to specify this as false to make images keep their color.
         If a boolean and an mdi icon, the color is set automatically for best contrast. 
@@ -4428,13 +4251,6 @@ class Icon(Element):
         Otherwise will use the provided value as color.
         """
         return self._icon_color
-    
-    # @icon_color.setter
-    # def icon_color(self, value : Union[ColorType,bool]):
-    #     if type(value) == bool:
-    #         self._icon_color = value
-    #     else:
-    #         self._color_setter("_icon_color", value,True)
 
     @property
     def background_shape(self) -> Literal[IMPLEMENTED_ICON_SHAPES_HINT]:
@@ -4456,9 +4272,6 @@ class Icon(Element):
             ##Mainly, remove spaces for underscores, and lower all text
             self._background_shape = value 
         else:
-            # if hasattr(ImageDraw,value):
-            #     self._background_shape = value
-            # else:
             logger.error(f"{value} is not a predefined icon background shape, nor is it set to ADVANCED. Setting shape to none")
             self._background_shape = None
 
@@ -5053,10 +4866,6 @@ class Line(Element):
     def line_color(self) -> ColorType:
         "The color of the line"
         return self._line_color
-    
-    # @line_color.setter
-    # def line_color(self, value):
-    #     self._color_setter("_line_color", value)
 
     @property
     def width(self) -> PSSMdimension:
@@ -5298,17 +5107,13 @@ class _BaseSlider(Element):
             self.__interactive = value
 
     @elementaction
-    def tap_action(self) -> InteractionFunctionType: #Callable[[Element,CoordType],Any]:
+    def tap_action(self) -> InteractionFunctionType:
         """
         Slider tap_action. First updates the slider position, then calls the set tap_action.
         tap_action can be set by changing tap_action without it interfering with the slider update (I think).
         Use Slider._tap_action to access the actual function after setting.
         """
         return self.__tap_action
-    
-    # @tap_action.setter
-    # def tap_action(self, value):
-    #     Element.tap_action.fset(self,value)
 
     #endregion
 
@@ -5542,7 +5347,6 @@ class _ElementSelect(Element):
         self.__generator = layout_element.generator
         "The generator of the original function"
 
-        # class_name = f"{layout_element.__class__.__name__}_select"
         class_name = f"{layout_element.__class__.__name__}_select"
         typeDict = {}
         saved = {}
@@ -5647,8 +5451,6 @@ class _ElementSelect(Element):
         if value == self._active_properties:
             return
         
-
-        # self._active_properties = value.copy()
         self._active_properties = tools.update_nested_dict(value, self._active_properties)
         self._reparse_colors = True
 
@@ -5663,7 +5465,6 @@ class _ElementSelect(Element):
             return
         
         self._inactive_properties = tools.update_nested_dict(value, self._inactive_properties)
-        # self._inactive_properties = value.copy()
         self._reparse_colors = True
 
     @elementaction
@@ -5688,68 +5489,30 @@ class _ElementSelect(Element):
     def foreground_color(self) -> Union[ColorType]:
         "Additional color attribute for styling, if not present in the original layout element"
         return self._foreground_color
-    
-    # @foreground_color.setter
-    # def foreground_color(self, value):
-    #     if hasattr(self, "_foreground_color") and value == getattr(self,"_foreground_color"):
-    #         return
-
-    #     self._color_setter("_foreground_color",value,True)
 
     @colorproperty
     def accent_color(self) -> Union[ColorType]:
         "Additional color attribute for styling, if not present in the original layout element"
         return self._accent_color
-    
-    # @accent_color.setter
-    # def accent_color(self, value):
-    #     if hasattr(self, "_accent_color") and value == getattr(self,"_accent_color"):
-    #         return
-    #     self._color_setter("_accent_color",value,True)
 
     @colorproperty
     def background_color(self) ->  Union[ColorType,None]:
         return self._background_color
 
-    # @background_color.setter
-    # def background_color(self, value:  Union[ColorType,None]):
-    #     if hasattr(self, "_background_color") and value == getattr(self,"_background_color"):
-    #         return
-    #     self._color_setter("_background_color",value,True)
-    #     return
 
     @colorproperty  ##Can't recall why I redefined these.
     def outline_color(self) ->  Union[ColorType,None]:
         return self._outline_color
 
-    # @outline_color.setter
-    # def outline_color(self, value:  Union[ColorType,None]):
-    #     if hasattr(self, "_outline_color") and value == getattr(self,"_outline_color"):
-    #         return
-    #     self._color_setter("_outline_color",value,True)
-
     @colorproperty
     def active_color(self) -> ColorType:
         "A color value that can be used to style the active element(s)"
         return self._active_color
-    
-    # @active_color.setter
-    # def active_color(self, value) -> ColorType:
-    #     if hasattr(self, "_active_color") and value == getattr(self,"_active_color"):
-    #         return
-        
-    #     self._color_setter("_active_color", value,True)
 
     @colorproperty
     def inactive_color(self) -> ColorType:
         "A color value that can be used to style the inactive element(s)"
         return self._inactive_color
-
-    # @inactive_color.setter
-    # def inactive_color(self, value) -> ColorType:
-    #     if hasattr(self, "_inactive_color") and value == getattr(self,"_inactive_color"):
-    #         return
-    #     self._color_setter("_inactive_color", value,True)
 
     def _color_setter(self,attribute:str, value : ColorType, allows_None : bool = True, cls : type = None):
         

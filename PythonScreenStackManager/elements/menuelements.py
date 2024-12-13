@@ -31,8 +31,6 @@ from .baseelements import logger, \
 if TYPE_CHECKING:
     from ..devices import PSSMdevice
 
-# screen = base.ScreenInstance
-
 class StatusBar(layouts.GridLayout):
     ##GridLayout cause: makes it easy to set orientation
     ##For space between icons and clock/data: use a None type and set the spacing to '?'
