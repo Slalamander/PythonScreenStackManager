@@ -500,6 +500,8 @@ class NavigationTile(base._TileBase):
 
     def __init__(self, tile_layout : str, icon : mdiType, name : str, **kwargs): 
         NavIcon = base.Icon(icon, background_shape="circle")
+        if icon == None:
+            NavIcon._icon = None
         NavText = base.Button(name, text_x_position="left")
         NavLine = base.Line(line_color=None, width=4, alignment="top")
 
