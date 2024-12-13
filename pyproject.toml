@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[project]
+name = "pssm"
+authors = [
+    { name="Slalamander" },
+]
+description = "A library that generates a gui in PIL Image objects."
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["gui", "pixels", "interface", "MaterialDesignIcon", "mdi icons"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "Pillow", "mdi-pil"
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/Slalamander/test"
+
+[tool.setuptools.dynamic]
+version = {attr = "PythonScreenStackManager.__version__"}

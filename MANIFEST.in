@@ -1,0 +1,2 @@
+graft ./PythonScreenStackManager/config
+graft ./PythonScreenStackManager/fonts
