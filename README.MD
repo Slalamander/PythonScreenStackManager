@@ -9,7 +9,7 @@ It comes with a relatively robust set of premade elements, which can be used for
 I have not done extensive testing with pssm outside of inkBoard, so I cannot promise everything will work standalone out of the box. This mainly pertains to instantiating various Elements which declare async classes inside their `__init__`, which may cause issues when no event loop is running yet. If you run into problems like this, please open an issue with the problematic element and the logs. Generally though, if the screen is declared before any elements, this should function fine.
 
 ## Install
-`pip install pssm`
+`pip install PythonScreenStackManager`
 
 # Documentation
 
