@@ -613,7 +613,6 @@ def parse_known_fonts(font:str):
     #     return font
     else:
         if "/" not in font:
-            print(f"Returning custom font {font}")
             return const.CUSTOM_FOLDERS["font_folder"] / font
         else:
             return font

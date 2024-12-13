@@ -2167,7 +2167,6 @@ class _TileBase(Layout):
         "The main color to use for the icon and text. Can be overwritten by iconSettings and buttonSettings respectively."
         return self._accent_color
 
-
     @colorproperty
     def outline_color(self) ->  Union[ColorType,None]:
         return self._outline_color
@@ -3578,7 +3577,8 @@ class Button(Element):
             else:
                 text_bg = self.background_color
             
-            textCol = tools.contrast_color(text_bg, img_mode)
+            # textCol = tools.contrast_color(text_bg, img_mode)
+            textCol = Style.contrast_color(text_bg, img_mode)
         else:
             textCol = Style.get_color(self.font_color, self.parentPSSMScreen.imgMode)
         
@@ -4465,7 +4465,8 @@ class Icon(Element):
             if self.background_color != True:
                 shape_color = Style.get_color(self.background_color, imgMode)
             else: 
-                shape_color = tools.contrast_color(layoutBackgroundColor,imgMode)
+                # shape_color = tools.contrast_color(layoutBackgroundColor,imgMode)
+                shape_color = Style.contrast_color(layoutBackgroundColor,imgMode)
                 if "L" in imgMode:
                     if shape_color[0] > 110 and shape_color[0] < 175: shape_color = Style.get_color("white",imgMode)
 
@@ -4521,7 +4522,7 @@ class Icon(Element):
             mdistr = mdi.parse_MDI_Icon(icon)
             
             if isinstance(self.icon_color, bool):
-                icon_color_value = tools.contrast_color(icon_bg, imgMode)
+                icon_color_value = Style.contrast_color(icon_bg, imgMode)
             else:
                 icon_color_value = Style.get_color(self.icon_color,imgMode)
 
@@ -4560,7 +4561,7 @@ class Icon(Element):
             except FileNotFoundError:
                 logger.warning(f"Image file {img} does not exist at path {self._iconData}")
                 self._fileError = True
-                icon_color_value = tools.contrast_color(icon_bg, imgMode)
+                icon_color_value = Style.contrast_color(icon_bg, imgMode)
             else:
                 ##Convert it here already to prevent problems with pasting etc. Cause like this is is guaranteed to have an alpha channel
                 if iconImg.mode != imgMode: iconImg = iconImg.convert(imgMode)
@@ -4578,14 +4579,14 @@ class Icon(Element):
                 
                 if self.icon_color:
                     if self.icon_color == True:
-                        icon_color_value = tools.contrast_color(icon_bg, imgMode)
+                        icon_color_value = Style.contrast_color(icon_bg, imgMode)
                     else:
                         icon_color_value = Style.get_color(self.icon_color,imgMode)
                     icondraw = ImageDraw.Draw(iconImg)
                     icondraw.bitmap((0,0),iconImg.getchannel("A"),icon_color_value)
                 else:
                     ##This is set for the badge default later on, not applied to the image itself.
-                    icon_color_value = tools.contrast_color(icon_bg, imgMode)
+                    icon_color_value = Style.contrast_color(icon_bg, imgMode)
                 
                 if "icon_coords" in self.shape_settings:
                     iconOriging = self.shape_settings["icon_coords"]
@@ -4604,7 +4605,7 @@ class Icon(Element):
                     loadedImg.paste(iconImg, iconOriging, iconImg)
         else:
             if isinstance(self.icon_color, bool):
-                icon_color_value = tools.contrast_color(icon_bg, imgMode)
+                icon_color_value = Style.contrast_color(icon_bg, imgMode)
             else:
                 icon_color_value = Style.get_color(self.icon_color,imgMode)
         self._iconColorValue = icon_color_value
@@ -4615,7 +4616,7 @@ class Icon(Element):
             self._iconData = mdi.parse_MDI_Icon(MISSING_ICON)
             loadedImg = Image.new(imgMode, (draw_size[0],draw_size[1]), None)
             loadedImg = mdi.draw_mdi_icon(loadedImg, MISSING_ICON)
-            icon_color_value = tools.contrast_color(icon_bg, imgMode)
+            icon_color_value = Style.contrast_color(icon_bg, imgMode)
             drawImg = False
 
         #Mirror the image if required        

@@ -56,6 +56,13 @@ class Style:
                 return "black"
             
     @classmethod
+    def contrast_color(cls, value, mode):
+        if value in SHORTHAND_COLORS:
+            value = SHORTHAND_COLORS[value]
+        
+        return tools.contrast_color(value, mode)
+            
+    @classmethod
     def is_valid_color(cls, value: ColorType) -> bool:
         """Returns whether the provided value is a valid value for a color property
 
