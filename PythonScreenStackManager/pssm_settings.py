@@ -122,19 +122,19 @@ for k, default_dict in _settings_keys.items():
 _data : settings_type = __data.copy()
 ##Also add a function for add_device_setting and save_settings
 
-if INKBOARD:
+# if INKBOARD:
 
-    from inkBoard.core import config
+#     from inkBoard.core import config
     
-    d = dict(config.configuration)
-    for key in _data["screen"]:
-        if getattr(config.screen,key,False):
-        # if key in config.screen:
-            _data["screen"][key] = config.screen[key]
+#     d = dict(config.configuration)
+#     for key in _data["screen"]:
+#         if getattr(config.screen,key,False):
+#         # if key in config.screen:
+#             _data["screen"][key] = config.screen[key]
 
-    for key in _data["device"]:
-        if getattr(config.device,key,False):
-            _data["device"][key] = config.device[key]
+#     for key in _data["device"]:
+#         if getattr(config.device,key,False):
+#             _data["device"][key] = config.device[key]
 
 class __settings():
     "Helper class for settings. Mainly implements functions to easily save them."
