@@ -1,14 +1,13 @@
 """
-A minimal working example for pssm. Can be run by itself, or by calling `run()`
-File needs to be put outside the pssm module folder.
+A minimal working example for pssm. Can be run by itself, or by calling `run()`.
+This file (should) be the same as the example.py module in PythonScreenStackManager
 """
 
 print("Welcome to the PythonScreenStackManager (pssm) example.")
-import asyncio
 
-import PythonScreenStackManager as pssm
+import PythonScreenStackManager as PSSM
 from PythonScreenStackManager.devices import windowed
-from PythonScreenStackManager import elements, pssm_types
+from PythonScreenStackManager import elements, pssm_types, pssm
 
 device = windowed.Device(resizeable=True)
 
@@ -19,7 +18,7 @@ def change_text(element: elements.Element, coordinates: pssm_types.CoordType):
     new_text = f"You clicked on x: {coordinates[0]} y: {coordinates[1]}"
     element.update({"text": new_text})
 
-screen = pssm.set_screen(device)
+screen = pssm.PSSMScreen(device)
 
 #Most base elements can be set up before defining the screen.
 #However, more complex ones may need to have a screen instance defined. This is done when calling pssm.get_screen below
@@ -29,15 +28,10 @@ button = elements.Button("Welcome to pssm", background_color="grey", tap_action=
 layout = [["?"],["H*0.5", (None,"?"), (button, "W*0.5"), (None,"?")],["?"]]
 layout = elements.Layout(layout)
 
-async def main():
-    
-    await screen.async_add_element(layout)
-    await screen.start_screen_printing()
+screen.add_element(layout)
 
 def run():
-    "Starts an asyncio loop and runs inkBoard"
-    print("Click on the gray square and see what happens")
-    asyncio.run(main())
+    screen.start_screen_printing()
 
 if __name__ == "__main__":
     run()
