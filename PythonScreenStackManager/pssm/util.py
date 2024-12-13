@@ -19,76 +19,6 @@ def parse_known_image_file(file):
 
 _LOGGER = logging.getLogger(__name__)
 
-
-class o_colorproperty(Generic[T]):
-    """
-    Decorator that can be used to indicate a class property is a color property. It also automatically applied the logic to allow using color shorthands to reference colors from parents.
-    Does not provide functionality to automatically add a setter, but is used to aggregate all color properties such that they can be easily gotten by calling a classes color_properties
-
-    Usage
-    ------
-    ```
-    @property
-    @colorproperty
-    def myColor(self):
-        return self._myColor
-    ```
-
-    Most important is to use the decorator after the `@property` decorator.
-    Also, it is best to make any colorProperty return a private variable, i.e. use a single `_` and append the name of the property. Using double `__` causes problems when parsing parent colors.
-    """    
-
-    _found_properties = set()
-
-    __element_classes : dict[str,set] = {}
-    _base_element_class: "Element"
-    
-    def __init__(self, property_obj: Callable[..., T]):
-        
-        self.method = property_obj
-        method = property_obj
-        cls, prop = method.__qualname__.split(".")
-        o_colorproperty.__add_class_color(cls, prop)
-        return
-
-    def __call__(self, element : "Element") -> Any:
-        val = self.method(element)
-
-        if isinstance(val, str) and element.parentLayout != None:
-            if val in getattr(element.parentLayout,"_color_shorthands",{}):
-                prop = element.parentLayout._color_shorthands[val]
-                val = getattr(element.parentLayout, prop)
-
-        return val 
-    
-    def __setattr__(self, name, value):
-        return super().__setattr__(name, value)
-
-    @classmethod
-    def _get_class_colors(cls, elt_cls):
-        
-        if elt_cls.__name__ not in cls.__element_classes:
-            cols = set()
-        else:
-            cols = cls.__element_classes[elt_cls.__name__].copy()
-
-        for base in elt_cls.__bases__:
-            # if not issubclass(base, Element):
-            if not issubclass(base,cls._base_element_class):
-                continue
-
-            base_cols = cls._get_class_colors(base)
-            cols.update(base_cols)
-        return cols
-
-    @classmethod
-    def __add_class_color(cls, elt_cls : str, property_name : str):
-        if elt_cls in cls.__element_classes:
-            cls.__element_classes[elt_cls].add(property_name)
-        else:
-            cls.__element_classes[elt_cls] = set([property_name])
-        cls._found_properties.add(property_name)
-
 class colorproperty(customproperty):
     """Decorator to indicate a property is defines the color of an element.
     
@@ -236,7 +166,6 @@ class colorproperty(customproperty):
             cols = cls.__element_classes[elt_cls].copy()
 
         for base in elt_cls.__bases__:
-            # if not issubclass(base, Element):
             if not issubclass(base,cls._base_element_class):
                 continue
 
@@ -306,16 +235,10 @@ class elementaction(customproperty):
             an attribute
         doc
             the docstring
-        """
-        # self.fget = fget      
+        """   
 
         if fset == None:
             fset = self._function_setter
-        # self.fset = fset
-        # self.fdel = fdel
-        # if doc is None and fget is not None:
-        #     doc = fget.__doc__
-        # self.__doc__ = doc
         super().__init__(fget,fset,fdel,doc)
 
     def __set_name__(self, owner, name):
@@ -360,7 +283,6 @@ class elementaction(customproperty):
         
         elif not isinstance(value, (dict,MappingProxyType)):
             msg = f"{element} {attribute} is of incorrect type. Must be a callable, string, dict or None. Is {type(value)}"
-            # _LOGGER.exception(TypeError(msg))
             _LOGGER.exception(msg)
             func = None
         else:
@@ -398,7 +320,6 @@ class elementaction(customproperty):
         
         if not isinstance(func,Callable) and func != None:
             msg = f"{element} {func} is not a function"
-            # _LOGGER.exception(TypeError(msg))
             raise TypeError(msg)
             func = None
         
