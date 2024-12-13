@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 include-package-data = true
 
 [project]
-name = "pssm"
+name = "PythonScreenStackManager"
 authors = [
     { name="Slalamander" },
 ]
