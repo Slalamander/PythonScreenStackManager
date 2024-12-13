@@ -24,7 +24,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-Homepage = "https://github.com/Slalamander/test"
+Homepage = "https://github.com/Slalamander/PythonScreenStackManager"
 
 [tool.setuptools.dynamic]
 version = {attr = "PythonScreenStackManager.__version__"}
