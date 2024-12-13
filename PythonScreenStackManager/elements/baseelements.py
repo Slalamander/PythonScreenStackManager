@@ -8,7 +8,7 @@ import logging
 import re
 from itertools import cycle
 from functools import partial
-from typing import Callable, Union, Optional, Literal, get_args, \
+from typing import TYPE_CHECKING, Callable, Union, Optional, Literal, get_args, \
                     TypeVar, Any, TypedDict, Generic, Coroutine
 from types import MappingProxyType
 import inspect
@@ -39,7 +39,6 @@ from ..tools import DummyTask, DrawShapes
 from ..pssm.styles import Style
 from ..pssm.util import colorproperty, elementaction
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ..pssm.screen import PSSMScreen as Screen
     
@@ -138,7 +137,7 @@ class Element(ABC):
         self.__id: str
         self.__unique_id: str
 
-        if asyncio._get_running_loop() == None and ScreenClass != None:
+        if asyncio._get_running_loop() == None and Screen != None:
             ##Locks need to actually be created in a running loop.
             ##May even have to check if the loop should be changed back later.
             asyncio.set_event_loop(self.parentPSSMScreen.mainLoop)

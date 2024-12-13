@@ -122,7 +122,7 @@ for k, default_dict in _settings_keys.items():
 _data : settings_type = __data.copy()
 ##Also add a function for add_device_setting and save_settings
 
-if not INKBOARD:
+if INKBOARD:
 
     from inkBoard.core import config
     

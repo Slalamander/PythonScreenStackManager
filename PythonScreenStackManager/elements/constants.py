@@ -77,7 +77,7 @@ DEFAULT_NETWORK_STYLE : Literal["lines","signal"] = "lines"
 #endregion
 
 ##Should set these from device I think (i.e. lcd's with default background black I believe)
-if not INKBOARD:
+if INKBOARD:
     from inkBoard.core import config
 
     cf = config.styles

@@ -17,8 +17,8 @@ from ..tools import DummyTask, parse_duration_string
 from ..pssm_settings import SETTINGS
 from ..pssm_types  import RotationValues
 
-logger = logging.getLogger(__name__)
-logger.debug("Importing Base device")
+_LOGGER = logging.getLogger(__name__)
+_LOGGER.debug("Importing Base device")
 
 background_color = "white"
 foreground_color = "black"
@@ -31,9 +31,6 @@ if TYPE_CHECKING:
 
 NetworkDict = TypedDict("NetworkDict",
                         {"connected": bool, "wifiOn":bool, "signal": str, "MAC": Optional[str], "SSID": Optional[str]})
-
-__pdoc__ = {}
-__pdoc__["NetworkDict"] = False
 
 class PSSMdevice(ABC):
     """
@@ -67,7 +64,7 @@ class PSSMdevice(ABC):
                 screenMode: str, imgMode: str, defaultColor : "ColorType",
                 name="PSSM Device"):
 
-        logger.debug("Setting up base device")
+        _LOGGER.debug("Setting up base device")
 
         if not isinstance(features, DeviceFeatures):
             raise TypeError("features must be an instance of dataclass DeviceFeatures.")
@@ -217,7 +214,7 @@ class PSSMdevice(ABC):
     @last_printed_PIL.setter
     def last_printed_PIL(self, value : Image.Image):
         if not isinstance(value,Image.Image):
-            logger.error(f"last_printed_PIL must be a pillow image instance. {value} is not")
+            _LOGGER.error(f"last_printed_PIL must be a pillow image instance. {value} is not")
             raise ValueError
         
         self._last_printed_PIL = value
@@ -246,6 +243,7 @@ class PSSMdevice(ABC):
         """
         #When overwriting this, calling the super() function first is adviced
         #Also backlight shorthands are registered by the screen itself, so those do not need to be done.
+        #Setting the attribute will in the furure likely be handled by the screen itself
         if hasattr(self,"_Screen"):
             raise AttributeError("A device's screen instance can only be set once.")
         self._Screen = ScreenInstance
@@ -288,8 +286,6 @@ class PSSMdevice(ABC):
         """
         pass
 
-
-    # @abstractmethod
     def do_screen_refresh(self, isInverted=False, isFlashing=True, isInvertionPermanent=True, area=[(0,0),("W","H")], useFastInvertion=False):
         """
         Refreshes the screen. On ereaders, this can help get rid of ghosting.
@@ -300,11 +296,13 @@ class PSSMdevice(ABC):
             area (list[(x,y),(w,h)]): area to refresh. Defaults to the entire screen.
             useFastInversion (bool): perform a fast invertion of this area.
         """
+        ##This function is a leftover from the pure Eink version. Will be deprecated
+        _LOGGER.warning("This base device function is deprecated")
         pass
 
     def do_screen_clear(self):
         "Completely clear the screen"
-        pass
+        _LOGGER.warning("This base device function is deprecated")
 
     async def _rotate(self, rotation : RotationValues):
         """
@@ -317,9 +315,9 @@ class PSSMdevice(ABC):
             The rotation to set the screen to.
         """
         if not self.has_feature(FEATURES.FEATURE_ROTATION):
-            logger.error(f"Device platform {self.platform} does not support rotation during runtime")
+            _LOGGER.error(f"Device platform {self.platform} does not support rotation during runtime")
         else:
-            logger.warning(f"Device platform {self.platform} seems to support rotation during runtime but it is not implemented")
+            _LOGGER.warning(f"Device platform {self.platform} seems to support rotation during runtime but it is not implemented")
         ##When writing a function for this, do not forget to write the new value to the SETTINGS variable too, so that it can be saved if so desired.
 
     @abstractmethod
@@ -343,13 +341,13 @@ class PSSMdevice(ABC):
 
     def power_off(self,*args):
         "Powers off the device. Does nothing if the device does not support the power feature."
-        logger.warning("Device does not support power off. Saving Settings though.")
+        _LOGGER.warning("Device does not support power off. Saving Settings though.")
         self.parentPSSMScreen.save_settings()
         return
     
     def reboot(self,*args):
         "Reboots the device. Does nothing if the device does not support the power feature."
-        logger.warning("Device does not support rebooting")
+        _LOGGER.warning("Device does not support rebooting")
         self.parentPSSMScreen.save_settings()
         return
 
@@ -358,13 +356,6 @@ class PSSMdevice(ABC):
         This function is called by pssm when the quit function is called.
         Used to save any device specific settings or perform other tasks that need doing before quitting. May also be called in power_off/reboot
         """
-
-    def _reload(self, *args):
-        """"
-        This function is called by pssm when the reload function is called.
-        Used to save any device specific settings or perform other tasks that need doing before reloading. May also be called in power_off/reboot
-        """
-        return
 
     #endregion
 
@@ -379,7 +370,7 @@ class Network(ABC):
     def __init__(self, device : "PSSMdevice"):
         ##Should be replaced, init should call whatever methods get the ip adress etc.
         self._device = device
-        logger.trace("Setting up base device network class")
+        _LOGGER.trace("Setting up base device network class")
 
     #region Network properties            
     @property
@@ -439,7 +430,7 @@ class Backlight(ABC):
     '''
     def __init__(self, device: "PSSMdevice", defaultBrightness : int = 50, defaultTransition : float = 0):
         ##Ensuring the backlight is off when the dashboard starts, so the brightness and state are correct
-        logger.trace("Setting up base device backlight class")
+        _LOGGER.trace("Setting up base device backlight class")
         self._updateCondition = asyncio.Condition()
         """
         Asyncio condition that updates when the backlight changes.
@@ -486,7 +477,7 @@ class Backlight(ABC):
             with suppress(RuntimeError):
                 asyncio.create_task(self.notify_condition())
         else:
-            logger.error("Default brightness must be between 0 and 100")
+            _LOGGER.error("Default brightness must be between 0 and 100")
 
     @property
     def minimumLevel(self) -> int:
@@ -509,7 +500,7 @@ class Backlight(ABC):
             SETTINGS["device"]["backlight_default_transition"] = value
             asyncio.create_task(self.notify_condition())
         else:
-            logger.error("Default transition time must be 0 or larger")
+            _LOGGER.error("Default transition time must be 0 or larger")
 
     @property
     def behaviour(self) -> Literal["Manual", "On Interact", "Always"]:
@@ -527,7 +518,7 @@ class Backlight(ABC):
 
         if not isinstance(value, (float,int, str)):
             msg = f"{value} is not a numerical value"
-            logger.error(TypeError(msg))
+            _LOGGER.error(TypeError(msg))
             return
         
         s = parse_duration_string(value)
@@ -626,7 +617,7 @@ class Battery(ABC):
         state : Literal[&quot;full&quot;,&quot;charging&quot;,&quot;discharging&quot;]
             the initial battery state
         """
-        logger.debug("Setting up base device battery class")
+        _LOGGER.debug("Setting up base device battery class")
         self._device = device
         self._batteryCharge = charge
         self._batteryState = state
@@ -665,7 +656,7 @@ class Battery(ABC):
         if battery_state[1] in {"full","charging","discharging"}:
             self._batteryState = battery_state[1]
         else:
-            logger.warning(f"{battery_state[1]} is not a valid value for the batteryState")
+            _LOGGER.warning(f"{battery_state[1]} is not a valid value for the batteryState")
 #endregion
 
 class BaseDeviceFunctionError(Exception):

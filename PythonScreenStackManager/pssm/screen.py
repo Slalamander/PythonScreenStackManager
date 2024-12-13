@@ -1516,7 +1516,6 @@ class PSSMScreen:
             else:
                 await self.__async_simple_touch_handler(self.interactQueue)
             
-
     async def __async_simple_touch_handler(self, queue: asyncio.Queue):
         "Handles devices that only support taps and optionally long presses."
         while self.printing:
@@ -1530,7 +1529,6 @@ class PSSMScreen:
             
             await asyncio.sleep(0)
             self._interactEvent.set()
-
 
     async def __async_touch_handler(self, queue: asyncio.Queue):
             "Handles devices that can report on touch and release"

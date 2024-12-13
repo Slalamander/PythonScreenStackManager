@@ -201,7 +201,8 @@ KTcapsLock = 4
 KTcontrol = 5
 KTalt = 6
 
-if not INKBOARD:
+if INKBOARD:
+    ##This implementation will be changed once styles have been implemented fully.
 
     from inkBoard.constants import RAISE as iBraise, INKBOARD_COLORS, INKBOARD_ICON
 

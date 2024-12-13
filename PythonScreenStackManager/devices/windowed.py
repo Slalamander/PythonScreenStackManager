@@ -134,7 +134,8 @@ class Device(PSSMdevice):
                 features: DeviceFeatures = None):
 
         if features == None:
-            features = DeviceFeatures(**{"interactive": interactive, "backlight": backlight_features, "network": network_features})
+            features = DeviceFeatures(**{FEATURES.FEATURE_INTERACTIVE: interactive, FEATURES.FEATURE_PRESS_RELEASE: interactive,
+                                        FEATURES.FEATURE_BACKLIGHT: backlight_features, FEATURES.FEATURE_NETWORK: network_features})
 
         super().__init__(features, 
                         screenWidth, screenHeight, 0, 0,
