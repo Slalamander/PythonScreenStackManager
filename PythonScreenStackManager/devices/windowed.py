@@ -171,9 +171,6 @@ class Device(PSSMdevice):
         self.window.bind("<Configure>", self._window_configure)
         self.window.protocol("WM_DELETE_WINDOW", self._window_closed)
 
-        # self.__canvas = tk.Canvas(self.window, background="gray", height=screenHeight, width=screenWidth, highlightthickness=0, cursor=cursor)
-        # self.__canvas.pack(fill="both", expand=1)
-
         self.__canvas = canvas
         canvas.configure(cursor=cursor, height=screenHeight, width=screenWidth)
         
@@ -221,8 +218,6 @@ class Device(PSSMdevice):
     @property
     def screenImage(self) -> Image.Image:
         "The actual image pictured on the screen, as gotten from PSSM. (I.e. the stack)"
-        ##Check if this one is actually used in the windowed version
-        ##Yes it is, for keeping the screen image, without any alterations from the printTK function
         return self._screenImage
     
     @property
@@ -292,7 +287,8 @@ class Device(PSSMdevice):
 
     async def __call_in_main_thread(self, func : Callable, *args, **kwargs):
         ##Shorthand function such that a task can be created in the mainloop to execute the function
-
+        ##Users should not interact with this, as interacting with the window is not recommended.
+        ##inkBoard designer uses tkthread for this.
         func(*args, **kwargs)
 
     def print_pil(self, img : Image.Image,x:int,y:int,isInverted=False):
@@ -381,7 +377,6 @@ class Device(PSSMdevice):
     def canvas_event(self,event : tk.Event):
         "Gets events from tkinter and passes them to PSSM."
         logger.trace(f"Got event {event} from tkinter, passing to PSSM")
-        # if isinstance(event,tk.EventType.ButtonPress):
         if event.type == tk.EventType.ButtonPress:
             touch_type = const.TOUCH_PRESS
         elif event.type == tk.EventType.ButtonRelease:
@@ -447,7 +442,6 @@ class Device(PSSMdevice):
             filename = f"inkBoard_{self.name}_Screenshot_" + date
         else:
             filename = "inkBoard_Screenshot_" + date
-        # if self.__settings["saveas"]:
         filename = f"{folder}{filename}.png"
         self.last_printed_PIL.save(filename)
         logger.debug(f"Screenshot saved as {filename}")
@@ -536,12 +530,6 @@ class Network(BaseNetwork):
         else:
             self.__get_network = get_linux_network
 
-        # if asyncio._get_running_loop() is not None:
-        #     asyncio.get_running_loop()
-        #     asyncio.create_task(self.__async_setup())
-        # else:
-        #     asyncio.run(self.__async_setup())
-
         self.__update_network_properties()
 
     async def __async_setup(self):
@@ -559,7 +547,6 @@ class Network(BaseNetwork):
         signal = signal.removesuffix("%")
         self._signal = int(signal)
         if self.connected:
-            # asyncio.create_task(self.__async_get_ip())
             self.__get_ip()
         else:
             self._IP = None
@@ -570,21 +557,6 @@ class Network(BaseNetwork):
 
     async def async_update_network_properties(self):
         await asyncio.to_thread(self.__update_network_properties)
-        return
-
-        netw = await asyncio.to_thread(self.__get_network)
-        self._connected = netw["connected"]
-        self._macAddr = netw["MAC"]
-        self._SSID = netw["SSID"]
-        self._wifiOn = netw["wifiOn"]
-        signal = netw["signal"]
-        signal = signal.removesuffix("%")
-        self._signal = int(signal)
-        
-        if self.connected:
-            await self.__async_get_ip()
-        else:
-            self._IP = None
         return
 
     def __get_ip(self) -> str:
