@@ -29,12 +29,14 @@ True if PSSM is being imported from inkBoard, to guide some constants and stylin
 n1 = sys.argv[0]
 entry_point = Path(n1).parts[-1]
 
-if ("inkBoard" in __package__   ##For internal imports
-    or "inkBoard" in __main__.__file__ or "inkBoard" in entry_point   ##General usage
-    or (hasattr(__main__,"debugpy") and __main__.cli.options.target == "inkBoard")): ##Debugging (in VScode using debugpy at least)
-    #or "inkBoard" in sys.modules ##Leaving this out for now as it would yield True for any point inkBoard is imported in.
-    INKBOARD = True
-
+try:
+    if ("inkBoard" in __package__   ##For internal imports
+        or "inkBoard" in getattr(__main__,"__file__","pssm") or "inkBoard" in entry_point   ##General usage
+        or (hasattr(__main__,"debugpy") and __main__.cli.options.target == "inkBoard")): ##Debugging (in VScode using debugpy at least)
+        #or "inkBoard" in sys.modules ##Leaving this out for now as it would yield True for any point inkBoard is imported in.
+        INKBOARD = True
+except:
+    pass
 
 
 RAISE = False
