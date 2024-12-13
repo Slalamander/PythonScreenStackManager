@@ -609,10 +609,11 @@ def parse_known_fonts(font:str):
         return font
     if font.lower() in const.SHORTHAND_FONTS:
         return const.SHORTHAND_FONTS[font.lower()]
-    elif PATH_TO_PSSM + "/fonts/" in font:
-        return font
+    # elif PATH_TO_PSSM / "fonts" in font:
+    #     return font
     else:
         if "/" not in font:
+            print(f"Returning custom font {font}")
             return const.CUSTOM_FOLDERS["font_folder"] / font
         else:
             return font

@@ -3195,7 +3195,7 @@ class Button(Element):
         self.background_color = background_color
         self.outline_color = outline_color
         self.outline_width = outline_width
-        self._font = font
+        self.font = font
         self.font_size = font_size
         self.radius = radius
         self.font_color = font_color
