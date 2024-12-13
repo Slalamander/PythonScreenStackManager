@@ -12,6 +12,10 @@ baseelements.Screen = PSSMScreen
 util.Element = baseelements.Element
 util.Style = Style
 
+def get_screen():
+    "Returns the screen instance"
+    return PSSMScreen.get_screen()
+
 def _reset():
     "Resets pssm"
 

@@ -91,6 +91,8 @@ class PSSMScreen:
     @staticmethod
     def get_screen() -> "PSSMScreen":
         "Returns the screen instance"
+        if not hasattr(PSSMScreen, "_instance"):
+            raise AttributeError("No screen instance has been defined yet")
         return PSSMScreen._instance
 
     def __init__(self, device : PSSMdevice,  
