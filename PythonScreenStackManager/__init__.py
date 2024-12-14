@@ -4,7 +4,7 @@
     Rewritten to use asyncio by Slalamander, among other changes
 """
 
-__version__ = "0.2.1"
+__version__ = "0.2."
 "PythonScreenStackManager version. For now the s is in front to indicate it is the version continued by Slalamander"
 
 import __main__
@@ -19,10 +19,11 @@ if TYPE_CHECKING:
     from .pssm import screen
     from .devices import PSSMdevice
 
-logging.TRACE = 5
-logging.addLevelName(logging.TRACE, "TRACE")
-logging.Logger.trace = partialmethod(logging.Logger.log, logging.TRACE)
-logging.trace = partial(logging.log, logging.TRACE)
+if not hasattr(logging,"VERBOSE"):
+    logging.VERBOSE = 5
+    logging.addLevelName(logging.VERBOSE, "VERBOSE")
+    logging.Logger.verbose = partialmethod(logging.Logger.log, logging.VERBOSE)
+    logging.verbose = partial(logging.log, logging.VERBOSE)
 
 logger = logging.getLogger(name=__name__)
 logger.debug(f"{logger.name} has loglevel {logging.getLevelName(logger.getEffectiveLevel())}")

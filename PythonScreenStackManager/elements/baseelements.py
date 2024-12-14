@@ -1066,7 +1066,7 @@ class Element(ABC):
 
     async def _await_generator(self):
         "Helper coroutine that can be used to wait for an element's generator to finish."
-        logger.trace(f"Waiting for {self.id} to finish generating")
+        logger.verbose(f"Waiting for {self.id} to finish generating")
         async with self._generatorLock:
             await asyncio.sleep(0)
         
@@ -1074,7 +1074,7 @@ class Element(ABC):
     
     async def _await_update(self):
         "Helper coroutine that can be used to wait for an element's update to finish."
-        logger.trace(f"Waiting for {self.id} to finish updating")
+        logger.verbose(f"Waiting for {self.id} to finish updating")
         async with self._updateLock:
             await asyncio.sleep(0)
         return
@@ -1382,7 +1382,7 @@ class Layout(Element):
 
     def on_add(self, call_all = False):
         "Function that is called when the layout is added to a screen object"
-        logger.trace(f"called layout on add will loop through {len(self.create_element_list())} elements; has {self.parentPSSMScreen} as screen")
+        logger.verbose(f"called layout on add will loop through {len(self.create_element_list())} elements; has {self.parentPSSMScreen} as screen")
 
         if call_all:
             for elt in self.create_element_list():
@@ -1536,7 +1536,7 @@ class Layout(Element):
                             if elt.isGenerating:
                                 logger.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                                 tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
-                                logger.trace(f"{elt.id} finished generating: {elt.isGenerating}")
+                                logger.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
                             elt_img = elt.generator(elt_area)
                         else:
                             elt_img = elt.imgData
@@ -1547,7 +1547,7 @@ class Layout(Element):
                             ##See the tool for  the solution
                             logger.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                             tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
-                            logger.trace(f"{elt.id} finished generating: {elt.isGenerating}")
+                            logger.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
 
                         ##Don't need a new thread for generating since it should not ever be called in the mainloop
                         elt_img = elt.generator(area=elt_area, skipNonLayoutGen=skipNonLayoutGen)
@@ -1603,7 +1603,7 @@ class Layout(Element):
                             if elt.isGenerating:
                                 logger.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                                 await elt._await_generator()
-                                logger.trace(f"{elt.id} finished generating: {elt.isGenerating}")
+                                logger.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
                                 elt_img = elt.imgData
                             else:
                                 elt_img = await elt.async_generate(elt_area)
@@ -1611,7 +1611,7 @@ class Layout(Element):
                             if elt.isGenerating:
                                 logger.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                                 await elt._await_generator()
-                                logger.trace(f"{elt.id} finished generating: {elt.isGenerating}")
+                                logger.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
                                 elt_img = elt.imgData
                             elt_img = elt.imgData
                     else:
@@ -3497,7 +3497,7 @@ class Button(Element):
             area = self.area
 
         if area == None:
-            logger.trace(f"Element {self} has no area asigned. Returning")
+            logger.verbose(f"Element {self} has no area asigned. Returning")
             ##No area assigned yet, wait till it is done by a layout
             return
 
@@ -3679,7 +3679,7 @@ class Button(Element):
                 text_height = int(min_size)
             loaded_font = loaded_font.font_variant(size=text_height)
             text_length = loaded_font.getlength(text)
-            logger.trace(f"Fitted text {text} with length {text_length} into area {area}")
+            logger.verbose(f"Fitted text {text} with length {text_length} into area {area}")
         
         self._current_font_size = text_height
         if self.resize:
@@ -4388,7 +4388,7 @@ class Icon(Element):
 
             if value in valid_strings:
                 loc = valid_locs[valid_strings.index(value)]
-                logger.trace(f"Badge location provided as {input}, set as {loc}")
+                logger.verbose(f"Badge location provided as {input}, set as {loc}")
                 self._badge_location = loc
             else:
                 logger.error(f"Unable to decode {input} as a valid badge location, location set to {DEFAULT_BADGE_LOCATION}. Use one of {valid_locs} as shorthand or {valid_strings} (where spaces, dashes and underscores are removed and input is converted to lowercase)")
@@ -4440,7 +4440,7 @@ class Icon(Element):
             self._area = area
 
         if area == None:
-            logger.trace(f"Element {self} has no area asigned. Returning")
+            logger.verbose(f"Element {self} has no area asigned. Returning")
             return
         
         [(x, y), (w, h)] = area
@@ -4518,7 +4518,7 @@ class Icon(Element):
 
         if self.icon != None and mdi.is_mdi(self.icon):
             icon = self.icon
-            logger.trace(f"Parsing mdi icon {icon}")
+            logger.verbose(f"Parsing mdi icon {icon}")
             mdistr = mdi.parse_MDI_Icon(icon)
             
             if isinstance(self.icon_color, bool):
@@ -4594,7 +4594,7 @@ class Icon(Element):
                     iconOriging = (
                         int((draw_size[0]-iconImg.width)/2), 
                         int((draw_size[1]-iconImg.height)/2))
-                logger.trace(f"Pasting an icon image with size {iconImg.size} onto an image with size {loadedImg.size} onto origin {iconOriging}")
+                logger.verbose(f"Pasting an icon image with size {iconImg.size} onto an image with size {loadedImg.size} onto origin {iconOriging}")
                 if iconImg.mode == "RGBA" and loadedImg.mode == "RGBA":
                     loadedImg.alpha_composite(iconImg, iconOriging)
                 elif "A" in iconImg.mode and not "A" in loadedImg.mode:
@@ -4647,11 +4647,11 @@ class Icon(Element):
                 badgeDict.setdefault("location", self.badge_location)
 
             ##I think this needs to be rewritten for quite a bit since multiple badge properties are not taken into account
-            logger.trace(f"Badge dict is {badgeDict}")
+            logger.verbose(f"Badge dict is {badgeDict}")
             loadedImg = self.add_badge(loadedImg, parentIconSize=draw_size, **badgeDict)
 
         if self.invert_icon:
-            logger.trace(f"Inverting an icon")
+            logger.verbose(f"Inverting an icon")
             loadedImg = tools.invert_Image(loadedImg)
             drawImg = False
 
@@ -4718,7 +4718,7 @@ class Icon(Element):
         y0 = int(y0)
 
         circle_coo = [(x0,y0),(x1,y1)]
-        logger.trace(f"Drawing circle size {circle_diameter} at coordinates {location}: {circle_coo} on image with size {size}, margin {margin} ({getattr(self, 'entity_id', 'no entity')})")
+        logger.verbose(f"Drawing circle size {circle_diameter} at coordinates {location}: {circle_coo} on image with size {size}, margin {margin} ({getattr(self, 'entity_id', 'no entity')})")
         if background_color != None:
             background_color_tuple = Style.get_color(background_color,colorMode)
         else:
@@ -4780,7 +4780,7 @@ class Icon(Element):
 
         imgMode = img.mode
         (w,h) = size
-        logger.trace(f"Saving inverted {self.icon} icon onto image with colormode {imgMode}")
+        logger.verbose(f"Saving inverted {self.icon} icon onto image with colormode {imgMode}")
         
         if isinstance(background_color,tuple): 
             inv_background = background_color[0]
@@ -5148,7 +5148,7 @@ class _BaseSlider(Element):
         elif rel_touch > self.valueRange[1]:
             rel_touch = self.valueRange[1]
             
-        logger.trace(f"Slider position set to {rel_touch}")
+        logger.verbose(f"Slider position set to {rel_touch}")
 
         await self.async_set_position(rel_touch)
 
@@ -5840,7 +5840,7 @@ class _IntervalUpdate(ABC):
                 self.callback())
         while self._waitTime > 0:
             w = self._waitTime
-            logger.trace(f"{self} waiting for {w} seconds to call {self.callback}")
+            logger.verbose(f"{self} waiting for {w} seconds to call {self.callback}")
             await asyncio.sleep(w)
             asyncio.create_task(
                 self.callback())

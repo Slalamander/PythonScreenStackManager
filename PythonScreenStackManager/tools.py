@@ -271,13 +271,13 @@ def _block_run_coroutine(coro : Coroutine, loop : asyncio.BaseEventLoop) -> Any:
     if loop == None:
         loop = asyncio.get_running_loop()
 
-    logger.trace(f"Blocking till coroutine {coro} finishes")
+    logger.verbose(f"Blocking till coroutine {coro} finishes")
 
     f = asyncio.run_coroutine_threadsafe(coro, loop)
     res = f.result()
     w = asyncio.run_coroutine_threadsafe(asyncio.sleep(0), loop)
     w = w.result()
-    logger.trace(f"{coro} is finished.")
+    logger.verbose(f"{coro} is finished.")
     return res 
 
 

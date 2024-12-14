@@ -376,7 +376,7 @@ class Device(PSSMdevice):
 
     def canvas_event(self,event : tk.Event):
         "Gets events from tkinter and passes them to PSSM."
-        logger.trace(f"Got event {event} from tkinter, passing to PSSM")
+        logger.verbose(f"Got event {event} from tkinter, passing to PSSM")
         if event.type == tk.EventType.ButtonPress:
             touch_type = const.TOUCH_PRESS
         elif event.type == tk.EventType.ButtonRelease:
@@ -625,7 +625,7 @@ class Backlight(BaseBacklight):
             return
         
         alpha = int(self.max_alpha - self.max_alpha*(level/100))
-        logger.trace(f"Backlight brightness to {level}%; Alpha channel is {alpha}")
+        logger.verbose(f"Backlight brightness to {level}%; Alpha channel is {alpha}")
         blImg = self.backlightImage
         blImg.putalpha(alpha) 
         self.blTk = ImageTk.PhotoImage(blImg)
@@ -688,7 +688,7 @@ class Backlight(BaseBacklight):
     async def turn_on_async(self, brightness : int = None, transition: float = None):
         """Async function to provide support for transitions at turn on. Does NOT perform sanity checks"""
 
-        logger.trace(f"Async turning on in {transition} seconds")
+        logger.verbose(f"Async turning on in {transition} seconds")
         
         if brightness == None:
             brightness = self.defaultBrightness

@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     import asyncio
     from ..pssm_types import ColorType
 
+
+
 NetworkDict = TypedDict("NetworkDict",
                         {"connected": bool, "wifiOn":bool, "signal": str, "MAC": Optional[str], "SSID": Optional[str]})
 
@@ -370,7 +372,7 @@ class Network(ABC):
     def __init__(self, device : "PSSMdevice"):
         ##Should be replaced, init should call whatever methods get the ip adress etc.
         self._device = device
-        _LOGGER.trace("Setting up base device network class")
+        _LOGGER.verbose("Setting up base device network class")
 
     #region Network properties            
     @property
@@ -430,7 +432,7 @@ class Backlight(ABC):
     '''
     def __init__(self, device: "PSSMdevice", defaultBrightness : int = 50, defaultTransition : float = 0):
         ##Ensuring the backlight is off when the dashboard starts, so the brightness and state are correct
-        _LOGGER.trace("Setting up base device backlight class")
+        _LOGGER.verbose("Setting up base device backlight class")
         self._updateCondition = asyncio.Condition()
         """
         Asyncio condition that updates when the backlight changes.

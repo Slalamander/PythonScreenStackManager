@@ -785,7 +785,7 @@ class PSSMScreen:
             raise ValueError("pil_image for stack print cannot be None")
         
         await asyncio.to_thread(self.device.print_pil, pil_image, x,y, isInverted=self.isInverted)
-        _LOGGER.trace("Printed stack")
+        _LOGGER.verbose("Printed stack")
 
     async def generate_stack(self,area=None, forceLayoutGen=False) -> Image.Image:
         """
@@ -1195,7 +1195,7 @@ class PSSMScreen:
             Save only or save + print? (Only used if inverDuration <= 0), by default False
         """   
 
-        _LOGGER.trace("Inverting an element")
+        _LOGGER.verbose("Inverting an element")
         if element is None:
             _LOGGER.warning("Cannot invert Element, No element given")
             return False
@@ -1541,7 +1541,7 @@ class PSSMScreen:
         res
             _description_
         """
-        _LOGGER.trace("Handling a click")
+        _LOGGER.verbose("Handling a click")
         n = len(self.stack)
         coro_list = []
         self._lastCoords = (x,y)
@@ -1555,7 +1555,7 @@ class PSSMScreen:
                     coro_list.append(self.on_interact(**self.on_interact_data, screen = self, coords = InteractEvent(x,y, action)))
                 else:                    
                     coro_list.append(asyncio.to_thread(self.on_interact, **self.on_interact_data, **{"screen": self, "coords":  InteractEvent(x,y, action)}))
-                _LOGGER.trace("Added screen interact function to click coro list")
+                _LOGGER.verbose("Added screen interact function to click coro list")
             except (TypeError, KeyError, IndexError, OSError) as exce:
                 _LOGGER.error(f"adding on_interact function {self.on_interact} raised exception: {exce}")
             
@@ -1564,7 +1564,7 @@ class PSSMScreen:
             _LOGGER.debug("on_interact is False")
         
         if self.popupsOnTop:
-            _LOGGER.trace("Passing click to the popup on top")
+            _LOGGER.verbose("Passing click to the popup on top")
             popup = self.popupsOnTop[-1]
             if tools.coords_in_area(x, y, popup.area):
                 for p in self.popupsOnTop: # if p != popup:
@@ -1595,7 +1595,7 @@ class PSSMScreen:
 
                 if tools.coords_in_area(x, y, elt.area):
                     if hasattr(elt,"tap_action") and elt != None:
-                        _LOGGER.trace("Got element with tap_action")
+                        _LOGGER.verbose("Got element with tap_action")
                         coro_list.extend(
                             await self._dispatch_click_to_element(InteractEvent(x,y, action), elt) )
                         _LOGGER.debug("tap_action added to coro list")
@@ -1603,13 +1603,13 @@ class PSSMScreen:
 
         _LOGGER.debug(f"There are {len(coro_list)} coros in the list")
         if coro_list:
-            _LOGGER.trace("Going to await coro list")
+            _LOGGER.verbose("Going to await coro list")
             L = await asyncio.gather(*coro_list, return_exceptions=True)
             for i, res in enumerate(L):
                 if isinstance(res,Exception): 
                     _LOGGER.error(f"{coro_list[i]} returned an exception: {res} ")
                     if const.RAISE: raise res
-            _LOGGER.trace(f"Click  {x,y} coroutine gather returned with {L}")
+            _LOGGER.verbose(f"Click  {x,y} coroutine gather returned with {L}")
             
     def __stop_printing(self):
         "This is not implemnted (And should probably not be used?)"
@@ -1666,7 +1666,7 @@ class PSSMScreen:
                         msg = f"Something went wrong in {elt} tap_action {elt.tap_action}: {exce}"
                         _LOGGER.error(msg)
                 
-        _LOGGER.trace(f"Returning coro list of size {len(coro_list)}")
+        _LOGGER.verbose(f"Returning coro list of size {len(coro_list)}")
         return coro_list
     
     
@@ -1906,12 +1906,12 @@ class PSSMScreen:
         if not self.device.backlight.state or self.device.backlight.brightness != brightness:
             self.device.backlight.turn_on(brightness, transition)
         
-        _LOGGER.trace(f"Turning backlight off again in {time_on} seconds")
+        _LOGGER.verbose(f"Turning backlight off again in {time_on} seconds")
         
 
         try:
             await asyncio.sleep(time_on)  #@IgnoreException
-            _LOGGER.trace("Done sleeping, turning off backlight")
+            _LOGGER.verbose("Done sleeping, turning off backlight")
             self.device.backlight.turn_off(transition)
         except asyncio.CancelledError:
             pass

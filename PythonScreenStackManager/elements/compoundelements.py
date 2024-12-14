@@ -1018,7 +1018,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             end=360
         )
 
-        logger.trace(f"Clock updated for {timedt.strftime('%H:%M')}")
+        logger.verbose(f"Clock updated for {timedt.strftime('%H:%M')}")
         self._imgData = ImageOps.pad(img,(w,h), color=img_background)
         return self.imgData
 
