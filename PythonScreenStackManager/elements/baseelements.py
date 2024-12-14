@@ -22,7 +22,7 @@ from mdi_pil import mdiType
 
 from .. import constants as const
 from ..constants import FuncExceptions, PATH_TO_PSSM, \
-                DEFAULT_FEEDBACK_DURATION, CUSTOM_FOLDERS
+                DEFAULT_FEEDBACK_DURATION
 
 from .constants import DEFAULT_FONT, DEFAULT_FONT_BOLD, \
     DEFAULT_FONT_SIZE, DEFAULT_BADGE_LOCATION, MISSING_PICTURE_ICON, MISSING_ICON, DEFAULT_ICON, \
@@ -3835,7 +3835,7 @@ class Picture(ImageElement):
                 p = img
             else:
                 if img[0] == "/" or img[0:2] != "./":
-                    p = CUSTOM_FOLDERS["picture_folder"] / img
+                    p = const.CUSTOM_FOLDERS["picture_folder"] / img
                 else:
                     p = Path(img)
                 
@@ -4009,14 +4009,14 @@ class Picture(ImageElement):
                 if not "fill" in drawArgs:
                     ##Gotta use parentBackgroundColor since the background_shape will be used as a mask too.
                     drawArgs["fill"] = self.parentBackgroundColor if self.background_color == None else self.background_color
-                # (shape_img, _) = draw_func(img, drawArgs=drawArgs, paste=False)
+                    # if drawArgs["fill"] == None: drawArgs["fill"] = "black"
                 (shape_img, _) = draw_func(Image.new("RGBA", (w,h)), drawArgs=drawArgs, paste=False)
 
             ##This would assume no transparency data in the image
             ##So fix this using a paste with mask I think.
 
         if self.background_shape != None:
-            pic_area = shape_img.getbbox()
+            pic_area = shape_img.getbbox() if shape_img.getbbox() else (0,0,w,h)
         else:
             pic_area = (0,0,w,h)
         pic_size = (pic_area[2]-pic_area[0], pic_area[3]-pic_area[1])

@@ -91,6 +91,8 @@ class PSSMdevice(ABC):
         self._viewHeight = viewHeight
         self._screenMode = screenMode
         self._imgMode = imgMode
+        if defaultColor == None:
+            defaultColor = "white"
         self._defaultColor = defaultColor
         
         self._name = name

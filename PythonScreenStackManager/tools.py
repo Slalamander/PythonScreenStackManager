@@ -781,6 +781,9 @@ def contrast_color(color : ColorType, colorMode) -> tuple:
         The tuple color value.
     """
 
+    if color == None:
+        return get_Color("black", colorMode)
+
     col_tuple = get_Color(color, colorMode=colorMode)
 
     if "A" in colorMode:

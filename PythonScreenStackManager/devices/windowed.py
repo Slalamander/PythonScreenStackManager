@@ -34,8 +34,9 @@ if tk._default_root:
 else:
     root = tk.Tk()
 
-canvas = tk.Canvas(root, background="gray",highlightthickness=0, name=CANVASNAME)
-canvas.pack(fill="both", expand=1)
+if CANVASNAME not in root.children:
+    canvas = tk.Canvas(root, background="gray",highlightthickness=0, name=CANVASNAME)
+    canvas.pack(fill="both", expand=1)
 
 def get_windows_network() -> NetworkDict:
     "Gets info on the currently connected network on windows machines"
