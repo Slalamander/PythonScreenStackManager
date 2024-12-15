@@ -4235,7 +4235,7 @@ class Icon(Element):
 
     @property
     def rotation(self) -> Union[int,float]:
-        "The rotation of the icon. Positive for counterclockwise, negative for clockwise."
+        "The rotation of the icon in degrees. Positive for counterclockwise, negative for clockwise."
         return self._rotation
     
     @rotation.setter
