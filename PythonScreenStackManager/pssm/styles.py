@@ -47,8 +47,8 @@ class Style:
         elif colormode == "screen":
             colormode = cls.screen.colorMode
         
-        if isinstance(value,str) and value in SHORTHAND_COLORS:
-            return SHORTHAND_COLORS[value]
+        if isinstance(value,str) and value.lower() in SHORTHAND_COLORS:
+            return SHORTHAND_COLORS[value.lower()]
         else:
             try:
                 return tools.get_Color(value,colormode)
@@ -57,8 +57,8 @@ class Style:
             
     @classmethod
     def contrast_color(cls, value, mode):
-        if value in SHORTHAND_COLORS:
-            value = SHORTHAND_COLORS[value]
+        if isinstance(value,str) and value.lower() in SHORTHAND_COLORS:
+            value = SHORTHAND_COLORS[value.lower()]
         
         return tools.contrast_color(value, mode)
             
@@ -80,7 +80,7 @@ class Style:
         bool
             Whether the color is valid
         """        
-        if isinstance(value,str) and value in SHORTHAND_COLORS:
+        if isinstance(value,str) and value.lower() in SHORTHAND_COLORS:
             return True
         else:
             return tools.is_valid_Color(value)
