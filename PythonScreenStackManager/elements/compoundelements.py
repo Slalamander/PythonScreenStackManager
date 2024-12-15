@@ -869,7 +869,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
     @digital_font.setter
     def digital_font(self, value : str):
         try:
-            f = tools.tools_parseKnownFonts(value)
+            f = tools.parse_known_fonts(value)
             f = ImageFont.truetype(f)
         except OSError:
             msg = f"Could not open font from value {value}"
@@ -946,7 +946,9 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
                     th = 2*pi*(t/12)
                     tick_coords = tools.rotation_matrix(tick_O,th,center)
                     draw.line(
-                        tick_coords, fill="black", width=hour_width
+                        tick_coords, 
+                        fill=self.tick_color, 
+                        width=hour_width
                     )
 
             draw.pieslice(
@@ -1005,7 +1007,8 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
 
         draw.line(
             hour_coo,
-            fill=clock_line,
+            # fill=clock_line,
+            fill=self.hour_hand_color,
             width=hour_width
         )
 
