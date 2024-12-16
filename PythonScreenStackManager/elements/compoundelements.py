@@ -1518,20 +1518,6 @@ class LineSlider(base._BaseSlider):
         paste_coords =(floor(thumb_center[0]-c.width/2), floor(thumb_center[1]-c.height/2))
         rectangle.alpha_composite(c,paste_coords)
 
-        # if self.end_points != None:
-        #     col = drawcolor if self.end_colors == None else Style.get_color(self.end_colors)
-        #     for idx, icon in enumerate(self.end_points):
-        #         if icon == None:
-        #             continue
-
-        #         if self.orientation == "vertical":
-        #             coords = (w/2, self.lineCoords[1-idx][1] + ((-1)**idx)*(w/4))
-        #             size = int(w/2)
-        #         else:
-        #             coords = (self.lineCoords[idx][0] - ((-1)**idx)*(h/4), h/2)
-        #             size = int(h/2)                
-        #         rectangle = mdi.draw_mdi_icon(rectangle, icon, icon_coords=coords, icon_size=size, icon_color=col )
-
         if self.inverted:
             rectangle = tools.invert_Image(rectangle)
         self._imgData = rectangle
@@ -1668,9 +1654,9 @@ class BoxSlider(base._BaseSlider):
         "Show a small line at the end of the active bar with color thumb_color. Set to None for no thumb"
         return self._thumb_color
 
-    @thumb_color.setter
-    def thumb_color(self, value : ColorType):
-        self._color_setter("_thumb_color", value=value)
+    # @thumb_color.setter
+    # def thumb_color(self, value : ColorType):
+    #     self._color_setter("_thumb_color", value=value)
 
     @colorproperty
     def end_colors(self) -> ColorType:
@@ -1794,7 +1780,19 @@ class BoxSlider(base._BaseSlider):
                     "fill": Style.get_color(self.inactive_color,colorMode)
                     }
         (rectangle, _) = DrawShapes.draw_rounded_rectangle(rectangle,drawArgs,rescale=["xy","radius","width"])
-        
+
+        if self.end_points != None:
+            col = Style.get_color(self.active_color,colorMode) if self.end_colors == None else Style.get_color(self.end_colors, colorMode)
+            for idx, icon in enumerate(self.end_points):
+                if icon == None:
+                    continue
+
+                if self.orientation == "vertical":
+                    coords = (w/2, self.lineCoords[1-idx][1] + ((-1)**idx)*(boxW/2))
+                else:
+                    coords = (self.lineCoords[idx][0] - ((-1)**idx)*(boxW/2), h/2)
+                rectangle = mdi.draw_mdi_icon(rectangle, icon, icon_coords=coords, icon_size=endP_size, icon_color=col )
+
         self._sliderBaseImg = rectangle.copy()
 
         if active_length > 0:
@@ -1805,7 +1803,7 @@ class BoxSlider(base._BaseSlider):
                         "width": 0
                         }
             (paste_rectangle, _) = DrawShapes.draw_rounded_rectangle(rectangle,actArgs,rescale=["xy","radius","width"], paste=False)
-            rectangle.paste(paste_rectangle,mask=paste_rectangle)
+            rectangle.alpha_composite(paste_rectangle)
 
             thumb_width = margin
             if self.thumb_color != None:
@@ -1820,7 +1818,7 @@ class BoxSlider(base._BaseSlider):
                 draw = ImageDraw.Draw(rectangle)
                 draw.line(
                     xy=xy,
-                    fill=self.thumb_color,
+                    fill= col,
                     width= thumb_width,
                     joint="curve"
                 )
@@ -1832,19 +1830,8 @@ class BoxSlider(base._BaseSlider):
                     "width": self._convert_dimension(self.outline_width,{"l":line_length})
                     }
         (paste_rectangle, _) = DrawShapes.draw_rounded_rectangle(rectangle,drawArgs,rescale=["xy","radius","width"],paste=False)
-
-        rectangle.paste(paste_rectangle,mask=paste_rectangle)
-        if self.end_points != None:
-            col = Style.get_color(self.active_color,colorMode) if self.end_colors == None else Style.get_color(self.end_colors, colorMode)
-            for idx, icon in enumerate(self.end_points):
-                if icon == None:
-                    continue
-
-                if self.orientation == "vertical":
-                    coords = (w/2, self.lineCoords[1-idx][1] + ((-1)**idx)*(boxW/2))
-                else:
-                    coords = (self.lineCoords[idx][0] - ((-1)**idx)*(boxW/2), h/2)
-                rectangle = mdi.draw_mdi_icon(rectangle, icon, icon_coords=coords, icon_size=endP_size, icon_color=col )
+        
+        rectangle.alpha_composite(paste_rectangle)
 
         if self.inverted:
             rectangle = tools.invert_Image(rectangle)
