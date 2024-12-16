@@ -2993,7 +2993,7 @@ class Counter(base._TileBase):
             self.value = value
             await self.async_update(updated=True)        
         if self.on_count != None:
-            coros.append(tools.wrap_to_coroutine(self.on_count,self,value, **self.on_count_kwargs))
+            coros.append(tools.wrap_to_coroutine(self.on_count, self, value, **self.on_count_kwargs))
 
         L = await asyncio.gather(*coros, return_exceptions=True)
         for res in L:
