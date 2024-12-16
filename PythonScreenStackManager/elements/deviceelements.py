@@ -235,7 +235,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         if tap_action == "show_client_popup" and "tap_action_data" not in kwargs:
             tap_action = {"action": "element:show-popup", "element_id": "device-menu"}
 
-        base.Icon.__init__(self, icon="mdi:cog", tap_action = tap_action, **kwargs)
+        base.Icon.__init__(self, icon = "mdi:cog", tap_action = tap_action, **kwargs)
         self.icon_feature = icon_feature 
         self.badge_feature = badge_feature
         
@@ -247,13 +247,13 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         self.backlight_icons = backlight_icons
         self.color_from_brightness = color_from_brightness
     
-        if icon_feature not in {"battery","network", "backlight"}:
+        if icon_feature not in {FEATURES.FEATURE_BATTERY, FEATURES.FEATURE_NETWORK, FEATURES.FEATURE_BACKLIGHT} | {"battery","network", "backlight"}:
             self._icon = icon_feature
-        elif icon_feature == "battery":
+        elif icon_feature in {FEATURES.FEATURE_BATTERY, "battery"}:
             self._icon = "mdi:battery"
-        elif icon_feature == "network":
+        elif icon_feature in {FEATURES.FEATURE_NETWORK, "network"}:
             self._icon = "mdi:wifi-refresh"
-        elif icon_feature == "backlight":
+        elif icon_feature in {FEATURES.FEATURE_BACKLIGHT, "backlight"}:
             self._icon = "mdi:lightbulb"
     
         self.icon_states = icon_states
@@ -479,22 +479,22 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         ##Don't need to monitor if anything did change. This function is only called by monitor_device which means it needs to be updated anyhow
         _LOGGER.debug("Updating DeviceStatus Icon")
         newAttributes = {}
-        if self.icon_feature == "battery":
+        if self.icon_feature == FEATURES.FEATURE_BATTERY:
             _icon = self.make_battery_icon()
-        elif self.icon_feature == "network":
+        elif self.icon_feature == FEATURES.FEATURE_NETWORK:
             _icon = self.make_network_icon()
-        elif self.icon_feature == "backlight":
+        elif self.icon_feature == FEATURES.FEATURE_BACKLIGHT:
             _icon = self.make_backlight_icon()
         else:
             _icon = self.icon_feature
 
         newAttributes["_icon"] = _icon
 
-        if self.badge_feature == "battery":
+        if self.badge_feature == FEATURES.FEATURE_BATTERY:
             badge_icon = self.make_battery_icon()
-        elif self.badge_feature == "network":
+        elif self.badge_feature == FEATURES.FEATURE_NETWORK:
             badge_icon = self.make_network_icon()
-        elif self.badge_feature == "backlight":
+        elif self.badge_feature == FEATURES.FEATURE_BACKLIGHT:
             badge_icon = self.make_backlight_icon()
         else:
             badge_icon = self.badge_feature
