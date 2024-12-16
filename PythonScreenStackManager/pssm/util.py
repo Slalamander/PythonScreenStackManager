@@ -407,6 +407,7 @@ class elementactionwrapper:
             if len(args) == 2 and isinstance(args[0], Element) and isinstance(args[1], InteractEvent):
                 return func(**kwargs)
             elif args and isinstance(args[0], Element):
+                ##May revert this later on. Not sure if it is a smart wrapper
                 return func(*args[1:], **kwargs)
             return func(*args, **kwargs)
         return wrapper
