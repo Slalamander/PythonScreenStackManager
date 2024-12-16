@@ -18,11 +18,11 @@ def get_screen():
 
 def _reset():
     "Resets pssm"
-
     assert not PSSMScreen._instance.printing, "Resetting not allowed during printing"
 
     _reset_elt_class(baseelements.Element)
     ##Don't forget to reset Style stuff too.
+    Style._color_shorthands = {}
     del PSSMScreen._instance
     return
 
