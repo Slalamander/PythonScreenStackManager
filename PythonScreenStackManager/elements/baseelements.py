@@ -64,7 +64,8 @@ IMPLEMENTED_ICON_SHAPES : dict[shapeType, tuple[DrawShapes,float]] = {
                         "rounded_square": (DrawShapes.draw_rounded_square, DrawShapes.get_relative_size("rounded_square")), 
                         "rounded_rectangle": (DrawShapes.draw_rounded_rectangle, DrawShapes.get_relative_size("rounded_rectangle")),
                         "octagon": (DrawShapes.draw_octagon, DrawShapes.get_relative_size("octagon")),
-                        "hexagon": (DrawShapes.draw_hexagon, DrawShapes.get_relative_size("hexagon"))}
+                        "hexagon": (DrawShapes.draw_hexagon, DrawShapes.get_relative_size("hexagon")),
+                        }   ##Maybe implement None as a string into this for easier parsing; currently seems to cause some issues tho
 "Preimplemented background shapes to draw icons on. each key has a value tuple with (drawfunction, relative_iconsize)"
 
 IMPLEMENTED_ICON_SHAPES_HINT = Literal[None, "circle", "square", "rounded_square", "rounded_rectangle", "octagon", "hexagon","ADVANCED"]
@@ -3716,7 +3717,7 @@ class ImageElement(Element):
     
     @background_shape.setter
     def background_shape(self, value:Union[str,None]):
-        if value == None:
+        if value == None or value.lower() == "none":
             self._background_shape = None
         elif value == "ADVANCED":
             _LOGGER.debug("Advanced icon shape applied")
@@ -4096,7 +4097,7 @@ class Picture(ImageElement):
 BADGE_LOCATIONS = Literal[None, "UR", "UL", "LL", "LR"]
 "Type hint for possible badge locations"
 
-class Icon(Element):
+class Icon(ImageElement):
     """
     An icon, built from an mdi icon or an image. Optionally add a badge. Takes all options from Element too.
     If an image file is supplied, it is automatically converted to the same sizing as mdi icons use, so the icon margins are constant.
@@ -4263,28 +4264,28 @@ class Icon(Element):
         """
         return self._icon_color
 
-    @property
-    def background_shape(self) -> Literal[IMPLEMENTED_ICON_SHAPES_HINT]:
-        f"""
-        The shape of the icons background. If not set, no shape is used and background color is used as the background color of the entire element of the area.
-        Can be one of {IMPLEMENTED_ICON_SHAPES} or ADVANCED. See background_shapeDict for usage of advanced (Not fully tested, so be aware)
-        """
-        return self._background_shape
+    # @property
+    # def background_shape(self) -> Literal[IMPLEMENTED_ICON_SHAPES_HINT]:
+    #     f"""
+    #     The shape of the icons background. If not set, no shape is used and background color is used as the background color of the entire element of the area.
+    #     Can be one of {IMPLEMENTED_ICON_SHAPES} or ADVANCED. See background_shapeDict for usage of advanced (Not fully tested, so be aware)
+    #     """
+    #     return self._background_shape
     
-    @background_shape.setter
-    def background_shape(self, value:Union[str,None]):
-        if value == None:
-            self._background_shape = None
-        elif value == "ADVANCED":
-            _LOGGER.debug("Advanced icon shape applied")
-            self._background_shape = value
-        elif value.strip().lower().replace(" ","_") in IMPLEMENTED_ICON_SHAPES:
-            ##Maybe add some string stuff like lower in here to allower for minor changes in what people fill in.
-            ##Mainly, remove spaces for underscores, and lower all text
-            self._background_shape = value 
-        else:
-            _LOGGER.error(f"{value} is not a predefined icon background shape, nor is it set to ADVANCED. Setting shape to none")
-            self._background_shape = None
+    # @background_shape.setter
+    # def background_shape(self, value:Union[str,None]):
+    #     if value == None:
+    #         self._background_shape = None
+    #     elif value == "ADVANCED":
+    #         _LOGGER.debug("Advanced icon shape applied")
+    #         self._background_shape = value
+    #     elif value.strip().lower().replace(" ","_") in IMPLEMENTED_ICON_SHAPES:
+    #         ##Maybe add some string stuff like lower in here to allower for minor changes in what people fill in.
+    #         ##Mainly, remove spaces for underscores, and lower all text
+    #         self._background_shape = value 
+    #     else:
+    #         _LOGGER.error(f"{value} is not a predefined icon background shape, nor is it set to ADVANCED. Setting shape to none")
+    #         self._background_shape = None
 
     @property
     def shape_settings(self) -> dict:
