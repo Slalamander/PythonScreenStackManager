@@ -293,11 +293,8 @@ class DeviceMenu(UniquePopupMenu):
             title = self.device.name
 
         super().__init__(title=title, popupID = "device-menu", **kwargs)
+        return
         
-
-    async def async_show(self, elt : base.Element, *args, **kwargs):
-        await super().async_show(*args, **kwargs)
-
     def build_menu(self):
         fSize = "0.4*h"
         buttonSettings = {"text_x_position": "left", "font_size":fSize}
@@ -396,6 +393,7 @@ class ScreenMenu(UniquePopupMenu):
         id = "screen-menu"
 
         super().__init__(title = title,  popupID = id, **kwargs)
+        return
     
     #region
     @property
