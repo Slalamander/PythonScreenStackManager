@@ -1151,8 +1151,9 @@ class PSSMScreen:
             _LOGGER.warning('Cannot remove element, no element given')
             return
         
-        if callable(f := getattr(element,"on_remove",None)):
-            ##Maybe these should be regular functions, like on_add
+        if isinstance(element, elements.Layout):
+            await asyncio.to_thread(element.remove_element)
+        elif callable(f := getattr(element,"on_remove",None)):
             a = tools.wrap_to_coroutine(f)
             asyncio.create_task(a)
 
@@ -1198,7 +1199,8 @@ class PSSMScreen:
             Save only or save + print? (Only used if inverDuration <= 0), by default False
         """   
 
-        _LOGGER.verbose("Inverting an element")
+        _LOGGER.verbose(f"Inverting element {element}")
+        ##This calls screen refresh etc, so this will have to be handled.
         if element is None:
             _LOGGER.warning("Cannot invert Element, No element given")
             return False
