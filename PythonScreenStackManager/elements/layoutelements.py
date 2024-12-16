@@ -502,7 +502,7 @@ class NavigationTile(base._TileBase):
         NavIcon = base.Icon(icon, background_shape="circle", _isNavElt=True, NavTile = self)
         if icon == None:
             NavIcon._icon = None
-        NavText = base.Button(name, text_x_position="left", _isNavElt=True, NavTile = self)
+        NavText = base.Button(name, text_x_position="left", fit_text=True, _isNavElt=True, NavTile = self)
         NavLine = base.Line(line_color=None, width=4, alignment="top", _isNavElt=True, NavTile = self)
 
         self.__elements = {"icon": NavIcon, "name": NavText, "line": NavLine}
