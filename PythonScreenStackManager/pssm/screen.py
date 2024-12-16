@@ -82,10 +82,10 @@ class PSSMScreen:
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(PSSMScreen,"_instance"):
-            PSSMScreen._instance = object.__new__(cls)
-            return PSSMScreen._instance
+            cls._instance = object.__new__(cls)
+            return cls._instance
         else:
-            screen = PSSMScreen._instance
+            screen = cls._instance
             return screen
     
     @staticmethod
