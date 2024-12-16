@@ -1399,11 +1399,14 @@ class Layout(Element):
 
         self._call_on_add = set()
 
-    def on_remove(self):
+    def remove_element(self):
+        "Called when a layout is removed. Handles calling the on_remove for the correct elements, and itself."
         for elt in self.create_element_list():
             if not elt.onScreen and callable(f := getattr(elt,"on_remove",None)):
                 f()
-    
+        if callable(f := getattr(self,"on_remove",None)):
+            f()
+
     def _style_update(self, attribute: str, value):
         "Called when a style property is updated"
         if attribute in self.color_properties:

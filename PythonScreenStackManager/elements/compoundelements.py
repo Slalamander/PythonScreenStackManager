@@ -2568,7 +2568,7 @@ class DropDown(base.Button):
         if self.closed_icon != None and not self.menuOpen:
             icon_coords = (int(img.width-img.height/2),int(img.height/2))
             img = mdi.draw_mdi_icon(img, self.closed_icon, icon_coords=icon_coords, icon_color=self.font_color)
-        elif self.opened_icon != None and self.menuOpen:
+        elif self.opened_icon and self.menuOpen:
             icon_coords = (int(img.width-img.height/2),int(img.height/2))
             img = mdi.draw_mdi_icon(img,self.opened_icon, icon_coords=icon_coords, icon_color=self.font_color)
         self._imgData = img
@@ -2625,9 +2625,10 @@ class DropDown(base.Button):
             loop=self.parentPSSMScreen.mainLoop
         )
 
-    async def _menu_closed(self):
+    def _menu_closed(self):
         _LOGGER.debug("Closing popup")
         self.__menuOpen = False
+        self.update(updated=True)
 
     async def open_menu(self, elt : base.Element = None, coords : tuple = None):
         "Open the menu"
@@ -2662,11 +2663,12 @@ class DropDown(base.Button):
 
         await asyncio.gather(
             self._menuPopup.async_show(),
-            self.async_update(forceGen=True)
+            self.async_update(updated=True)
         )
 
     async def close_menu(self, *args):
         await self._menuPopup.async_close()
+        self.__menuOpen = False
 
 class Counter(base._TileBase):
     """
