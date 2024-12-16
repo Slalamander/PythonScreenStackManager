@@ -740,7 +740,6 @@ class PSSMScreen:
             if self.mainLoop.is_running():
                 if not self._printGather.done(): 
                     self._printGather.cancel("Quit was requested")
-                # self._eStop.set_exception(ReloadWarning)
                 self._eStop.set_exception(exce)
         except Exception as e:
             _LOGGER.error(f"Something went wrong quitting inkBoard: {e}")

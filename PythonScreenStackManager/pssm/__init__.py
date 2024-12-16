@@ -1,7 +1,7 @@
 """Main handler for PSSM. Also takes care of ensuring imports are ordered correctly."""
-import sys
+import concurrent.futures
 
-from .screen import PSSMScreen
+from .screen import PSSMScreen, const
 from .styles import Style
 from . import util
 
@@ -24,6 +24,7 @@ def _reset():
     ##Don't forget to reset Style stuff too.
     Style._color_shorthands = {}
     del PSSMScreen._instance
+    PSSMScreen.generatorPool = concurrent.futures.ThreadPoolExecutor(None,const.GENERATOR_THREADPOOL)
     return
 
 def _reset_elt_class(elt_cls: type[baseelements.Element]):
