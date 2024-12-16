@@ -212,7 +212,7 @@ class StatusBar(layouts.GridLayout):
 
         all_elements = self._statusbar_elements | {"clock": self.__ClockElement}
 
-        for elt_name, props in value:
+        for elt_name, props in value.items():
             if elt_name not in all_elements:
                 _LOGGER.warning(f"{self}: No element registerd under {elt_name}, not applying properties")
                 continue
