@@ -406,6 +406,8 @@ class elementactionwrapper:
         def wrapper(*args, **kwargs):
             if len(args) == 2 and isinstance(args[0], Element) and isinstance(args[1], InteractEvent):
                 return func(**kwargs)
+            elif args and isinstance(args[0], Element):
+                return func(*args[1:], **kwargs)
             return func(*args, **kwargs)
         return wrapper
 
@@ -420,6 +422,8 @@ class elementactionwrapper:
         def method_wrapper(self, *args, **kwargs):
             if len(args) == 2 and isinstance(args[0], Element) and isinstance(args[1], InteractEvent):
                 return func(self, **kwargs)
+            elif args and isinstance(args[0], Element):
+                return func(self, *args[1:], **kwargs)
             return func(self, *args, **kwargs)
         return method_wrapper
 
