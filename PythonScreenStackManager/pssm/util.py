@@ -402,6 +402,16 @@ class elementactionwrapper:
 
     def __new__(cls, func):
 
+        if inspect.iscoroutinefunction(func):
+            @wraps(func)
+            async def method_wrapper(self, *args, **kwargs):
+                if len(args) == 2 and isinstance(args[0], Element) and isinstance(args[1], InteractEvent):
+                    return await func(self, **kwargs)
+                elif args and isinstance(args[0], Element):
+                    return await func(self, *args[1:], **kwargs)
+                return await func(self, *args, **kwargs)
+            return method_wrapper
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             if len(args) == 2 and isinstance(args[0], Element) and isinstance(args[1], InteractEvent):
@@ -419,6 +429,16 @@ class elementactionwrapper:
         For classmethods, usage is the same as decorating staticmethods.
         """        
 
+        if inspect.iscoroutinefunction(func):
+            @wraps(func)
+            async def method_wrapper(self, *args, **kwargs):
+                if len(args) == 2 and isinstance(args[0], Element) and isinstance(args[1], InteractEvent):
+                    return await func(self, **kwargs)
+                elif args and isinstance(args[0], Element):
+                    return await func(self, *args[1:], **kwargs)
+                return await func(self, *args, **kwargs)
+            return method_wrapper
+
         @wraps(func)
         def method_wrapper(self, *args, **kwargs):
             if len(args) == 2 and isinstance(args[0], Element) and isinstance(args[1], InteractEvent):
@@ -426,5 +446,7 @@ class elementactionwrapper:
             elif args and isinstance(args[0], Element):
                 return func(self, *args[1:], **kwargs)
             return func(self, *args, **kwargs)
+
+
         return method_wrapper
 

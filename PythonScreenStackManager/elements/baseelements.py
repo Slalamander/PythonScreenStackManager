@@ -36,7 +36,7 @@ from .. import tools
 from ..tools import DummyTask, DrawShapes
 
 from ..pssm.styles import Style
-from ..pssm.util import colorproperty, elementaction
+from ..pssm.util import colorproperty, elementaction, elementactionwrapper
 
 if TYPE_CHECKING:
     from ..pssm.screen import PSSMScreen as Screen
@@ -5175,7 +5175,8 @@ class _BaseSlider(Element):
     def set_position(self, new_position):
         self.parentPSSMScreen.mainLoop.create_task(self.async_set_position(new_position))
 
-    async def _set_position_action(self, *args, new_position):
+    @elementactionwrapper.method
+    async def _set_position_action(self, new_position):
         "Set position function that can be used as a tap_action (so long as new_position is defined as a keyword)"
         asyncio.create_task(self.async_set_position(new_position=new_position))
 
