@@ -71,17 +71,6 @@ class colorproperty(customproperty):
             obj = colorproperty(fget, fset,fdel, doc, allows_none=False)
             return obj
 
-    # def __call__(self, element : "Element") -> Any:
-        
-    #     val = self.fget(element)
-
-    #     if isinstance(val, str) and element.parentLayout != None:
-    #         if val in getattr(element.parentLayout,"_color_shorthands",{}):
-    #             prop = element.parentLayout._color_shorthands[val]
-    #             val = getattr(element.parentLayout, prop)
-
-    #     return val 
-
     def __get__(self, obj: "Element", objtype=None):
         if obj is None:
             return self
