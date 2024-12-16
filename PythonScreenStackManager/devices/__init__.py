@@ -301,12 +301,13 @@ class PSSMdevice(ABC):
             useFastInversion (bool): perform a fast invertion of this area.
         """
         ##This function is a leftover from the pure Eink version. Will be deprecated
-        _LOGGER.warning("This base device function is deprecated")
+        _LOGGER.debug("This base device function is deprecated")
+        # raise DeprecationWarning("This base device function is deprecated")
         pass
 
     def do_screen_clear(self):
         "Completely clear the screen"
-        _LOGGER.warning("This base device function is deprecated")
+        _LOGGER.debug("This base device function is deprecated")
 
     async def _rotate(self, rotation : RotationValues):
         """
