@@ -5008,7 +5008,7 @@ class _BaseSlider(Element):
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
         return Element.action_shorthands | {"set-position": "_set_position_action"}
 
-    def __init__(self, orientation : Literal["horizontal","vertical"], position : Union[int,float]=50, 
+    def __init__(self, orientation : Literal["horizontal","vertical"], position : Union[int,float]=None, 
                 minimum : float = 0, maximum : float = 100, value_type : Union[type[float],type[int],Literal["int","float"]] = float, 
                 show_feedback : bool = False, interactive : bool = True, tap_action=None,
                 **kwargs):
@@ -5017,9 +5017,11 @@ class _BaseSlider(Element):
 
         self.interactive=interactive
         self.orientation = orientation
-        self.position=position
         self.minimum=minimum
         self.maximum = maximum
+        if not position:
+            position = self.minimum
+        self.position = position
         self.value_type = value_type
 
     #region
