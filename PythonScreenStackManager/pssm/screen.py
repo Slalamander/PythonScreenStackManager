@@ -859,7 +859,7 @@ class PSSMScreen:
         else:
             return img
 
-    def simple_print_element(self, element : "Element", skipGen=False, apply_background : bool = False, safe_print : bool = True):
+    def simple_print_element(self, element : "Element", skipGen=False, area: PSSMarea = None, apply_background : bool = False, safe_print : bool = True):
         """
         Prints the Element without adding it to the stack, if not in it.
         Does not honor isBatch (you can simplePrint even during batch mode)
@@ -888,7 +888,10 @@ class PSSMScreen:
             _LOGGER.warning(f"Cannot print element {element.id} before it has  an area set.")
             return
         
-        [(x, y), (w, h)] = element.area
+        if area:
+            [(x, y), (w, h)] = area
+        else:
+            [(x, y), (w, h)] = element.area
 
         if not self.printing:
             _LOGGER.warning("Cannot print to screen when not printing")
