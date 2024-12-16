@@ -1459,7 +1459,22 @@ class LineSlider(base._BaseSlider):
             width=self._convert_dimension(self.width,{"l":line_length})
         )
 
+        if self.end_points != None:
+            col = drawcolor if self.end_colors == None else Style.get_color(self.end_colors)
+            for idx, icon in enumerate(self.end_points):
+                if icon == None:
+                    continue
+
+                if self.orientation == "vertical":
+                    coords = (w/2, self.lineCoords[1-idx][1] + ((-1)**idx)*(w/4))
+                    size = int(w/2)
+                else:
+                    coords = (self.lineCoords[idx][0] - ((-1)**idx)*(h/4), h/2)
+                    size = int(h/2)                
+                rectangle = mdi.draw_mdi_icon(rectangle, icon, icon_coords=coords, icon_size=size, icon_color=col )
+
         self._lineImage = rectangle.copy()
+
 
         thumbsize = (self.thumb_width,self.thumb_height)
         ##Will probably need to check if this still functions with the drawing and parsing
@@ -1503,19 +1518,19 @@ class LineSlider(base._BaseSlider):
         paste_coords =(floor(thumb_center[0]-c.width/2), floor(thumb_center[1]-c.height/2))
         rectangle.alpha_composite(c,paste_coords)
 
-        if self.end_points != None:
-            col = drawcolor if self.end_colors == None else Style.get_color(self.end_colors)
-            for idx, icon in enumerate(self.end_points):
-                if icon == None:
-                    continue
+        # if self.end_points != None:
+        #     col = drawcolor if self.end_colors == None else Style.get_color(self.end_colors)
+        #     for idx, icon in enumerate(self.end_points):
+        #         if icon == None:
+        #             continue
 
-                if self.orientation == "vertical":
-                    coords = (w/2, self.lineCoords[1-idx][1] + ((-1)**idx)*(w/4))
-                    size = int(w/2)
-                else:
-                    coords = (self.lineCoords[idx][0] - ((-1)**idx)*(h/4), h/2)
-                    size = int(h/2)                
-                rectangle = mdi.draw_mdi_icon(rectangle, icon, icon_coords=coords, icon_size=size, icon_color=col )
+        #         if self.orientation == "vertical":
+        #             coords = (w/2, self.lineCoords[1-idx][1] + ((-1)**idx)*(w/4))
+        #             size = int(w/2)
+        #         else:
+        #             coords = (self.lineCoords[idx][0] - ((-1)**idx)*(h/4), h/2)
+        #             size = int(h/2)                
+        #         rectangle = mdi.draw_mdi_icon(rectangle, icon, icon_coords=coords, icon_size=size, icon_color=col )
 
         if self.inverted:
             rectangle = tools.invert_Image(rectangle)
@@ -1564,6 +1579,7 @@ class LineSlider(base._BaseSlider):
         thumb = self._thumbImage.copy()
         paste_coords =(floor(thumb_center[0]-thumb.width/2), floor(thumb_center[1]-thumb.height/2))
 
+        ##How to deal with endpoints?
         line.alpha_composite(thumb,paste_coords)
 
         self._imgData = line
