@@ -4063,6 +4063,7 @@ class Picture(ImageElement):
         if self.background_shape != None:
             mask = shape_img.crop(shape_img.getbbox()).getchannel("A")
             mask = Image.eval(mask, lambda p: 255 if p > 0 else 0)
+
             ##Using a new image gets rid of the artefacts since the actual shape is not there.
             img_new = Image.new(shape_img.mode,shape_img.size, None)
             img_new.paste(img, box=pic_area, mask=mask)
@@ -4624,7 +4625,7 @@ class Icon(ImageElement):
 
         if self.fileError:
             ##Gotta test this one out too to check if the icon gets a seeable color
-            _LOGGER.error(f"Could not find icon matching {self.icon} for icon {self.id}")
+            _LOGGER.error(f"{self}: Could not find icon matching {self.icon}")
             self._iconData = mdi.parse_MDI_Icon(MISSING_ICON)
             loadedImg = Image.new(imgMode, (draw_size[0],draw_size[1]), None)
             loadedImg = mdi.draw_mdi_icon(loadedImg, MISSING_ICON)
