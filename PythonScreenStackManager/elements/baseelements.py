@@ -5176,7 +5176,7 @@ class _BaseSlider(Element):
         "Set position function that can be used as a tap_action (so long as new_position is defined as a keyword)"
         asyncio.create_task(self.async_set_position(new_position=new_position))
 
-CheckStateDict = TypedDict("CheckStateDict", {True: dict, False: dict})
+CheckStateDict = TypedDict("CheckStateDict", {'True': dict, 'False': dict})
 
 class _BoolElement(Element):
     """
@@ -5209,7 +5209,7 @@ class _BoolElement(Element):
         self.on_set = on_set
         self.state_attributes = state_attributes
 
-        for param,value in self.state_attributes[self.state].items():
+        for param,value in self.state_attributes[str(self.state)].items():
             setattr(self,param,value)
 
     #region
@@ -5235,10 +5235,14 @@ class _BoolElement(Element):
     @state_attributes.setter
     def state_attributes(self, value : CheckStateDict):
         value : CheckStateDict
-        for k in CheckStateDict.__required_keys__:
-            if k not in value:
-                value[k] = {}
-        self.__state_attributes = value
+        val_dict = {"True": {}, "False": {}}
+        
+        for k, v in value.items():
+            key = str(k).title()
+            if key in val_dict:
+                val_dict[key] = v
+
+        self.__state_attributes = val_dict
 
     @Element.tap_action.getter
     def tap_action(self) -> list[Callable[["_BoolElement",tuple[int,int]],Any]]:
@@ -5279,6 +5283,7 @@ class _BoolElement(Element):
         if new_state != self.state:
             self.__state = new_state
             coro_list = []
+            new_state = str(new_state)
             if self.on_set != None:
                 coro_list.append(tools.wrap_to_coroutine(self.on_set,self,new_state, **self.on_set_kwargs))
             if self.onScreen:
