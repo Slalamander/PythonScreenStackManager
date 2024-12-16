@@ -71,16 +71,16 @@ class colorproperty(customproperty):
             obj = colorproperty(fget, fset,fdel, doc, allows_none=False)
             return obj
 
-    def __call__(self, element : "Element") -> Any:
+    # def __call__(self, element : "Element") -> Any:
         
-        val = self.fget(element)
+    #     val = self.fget(element)
 
-        if isinstance(val, str) and element.parentLayout != None:
-            if val in getattr(element.parentLayout,"_color_shorthands",{}):
-                prop = element.parentLayout._color_shorthands[val]
-                val = getattr(element.parentLayout, prop)
+    #     if isinstance(val, str) and element.parentLayout != None:
+    #         if val in getattr(element.parentLayout,"_color_shorthands",{}):
+    #             prop = element.parentLayout._color_shorthands[val]
+    #             val = getattr(element.parentLayout, prop)
 
-        return val 
+    #     return val 
 
     def __get__(self, obj: "Element", objtype=None):
         if obj is None:
@@ -127,11 +127,11 @@ class colorproperty(customproperty):
             else:
                 setattr(element, set_attribute, value)
         elif isinstance(value,str):
-            if element.parentLayout == None and not self in element.screen.stack:
+            if element.parentLayout == None and not element in element.screen.stack:
                 ##Means it will be validated later
-                setattr(element,set_attribute, value)
+                setattr(element, set_attribute, value)
             elif value in getattr(element.parentLayout,"_color_shorthands",{}):
-                setattr(self,set_attribute, value)
+                setattr(element, set_attribute, value)
             else:
                 msg = f"{element}: {value} is not identified as a valid color nor a valid shorthand for its parent ({self.parentLayout}) colors"
         else:
