@@ -461,6 +461,7 @@ class Element(ABC):
             updated = self.__update_attributes(updateAttributes)
             return updated
 
+    @elementactionwrapper.method
     def update(self, updateAttributes={}, skipGen=False, forceGen:bool = False,  skipPrint=False,
                 reprintOnTop=False, updated : bool = False):
         """
@@ -509,6 +510,7 @@ class Element(ABC):
                     reprintOnTop, updated), self.mainLoop)
         return (updated or attr_updated)
 
+    @elementactionwrapper.method
     async def async_update(self, updateAttributes={}, skipGen=False, forceGen:bool = False,  skipPrint=False,
             reprintOnTop=False, updated : bool = False) -> bool:          
         """
@@ -986,6 +988,7 @@ class Element(ABC):
         """
         return
 
+    @elementactionwrapper.method
     def generate(self, area : PSSMarea=None, skipNonLayoutGen : bool =False) -> Image.Image:
         """
         Generates the element's image data.
@@ -1021,6 +1024,7 @@ class Element(ABC):
 
         return img
     
+    @elementactionwrapper.method
     async def async_generate(self, area : PSSMarea=None, skipNonLayoutGen : bool =False) -> Image.Image:
         """
         Generates the element's image data.
@@ -2172,6 +2176,7 @@ class _TileBase(Layout):
     @colorproperty
     def outline_color(self) ->  Union[ColorType,None]:
         return self._outline_color
+    #endregion
 
     def _style_update(self, attribute, value):
         self._reparse_colors = True
@@ -2218,9 +2223,11 @@ class _TileBase(Layout):
                     color_attr = color_setters[set_props[prop]] ##Grab the parent layout's corresponding attribute
                     set_props[prop] = getattr(self,color_attr) ##Grab the value of said attribute, and set that as the actual color value
 
-            elt.update(set_props, skipPrint=self.isUpdating, skipGen=self.isGenerating or self.isUpdating)
+            # elt.update(set_props, skipPrint=self.isUpdating, skipGen=self.isGenerating or self.isUpdating)
+            elt.update(set_props, skipPrint=self.isUpdating)
 
-        self._reparse_colors = False
+        if not elt_name:
+            self._reparse_colors = False
 
     def generator(self, area=None, skipNonLayoutGen=False):
         
@@ -2542,6 +2549,7 @@ class Popup(Layout):
         loop = self.parentPSSMScreen.mainLoop
         loop.create_task(self.async_show())
 
+    @elementactionwrapper.method
     async def async_show(self):
         ##Only allows adding one of a popup.
         if self.area != (a:= self.make_area()):
@@ -2566,6 +2574,7 @@ class Popup(Layout):
         loop = self.parentPSSMScreen.mainLoop
         loop.create_task(self.async_close(*args, **kwargs))
 
+    @elementactionwrapper.method
     async def async_close(self, *args, **kwargs):
         loop = self.parentPSSMScreen.mainLoop
         task = loop.create_task(self.parentPSSMScreen.async_remove_element(self))
@@ -4978,6 +4987,10 @@ class Line(Element):
         )
         self._imgData = rectangle
         return self.imgData
+    
+    def update(self, updateAttributes={}, skipGen=False, forceGen = False, skipPrint=False, reprintOnTop=False, updated = False):
+        upd = super().update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
+        return upd
 
 
 class _BaseSlider(Element):
@@ -5579,7 +5592,7 @@ class _ElementSelect(Element):
                 # ##At least for now: no updatelock or generator lock are returned, so all elements think the selector is always updating and generating
                 ##Should be able to fix that when copying stuff over from the parentlayout
 
-                elt_upd = elt.update(set_props, skipGen=self.isGenerating, skipPrint=self.isUpdating) #, reprintOnTop= (elt == element))
+                elt_upd = elt.update(set_props, skipPrint=self.isUpdating) #, reprintOnTop= (elt == element))
                 if elt_upd: updated = True
 
         if inactive_elts:
@@ -5593,7 +5606,7 @@ class _ElementSelect(Element):
                     color_attr = color_setters[set_props[prop]]
                     set_props[prop] = getattr(self,color_attr)
             for elt in inactive_elts:
-                elt_upd = elt.update(set_props, skipGen=self.isGenerating, skipPrint=self.isUpdating) #, reprintOnTop= (elt == element))
+                elt_upd = elt.update(set_props, skipPrint=self.isUpdating) #, reprintOnTop= (elt == element))
                 if elt_upd: updated = True
         
         return updated
@@ -5610,6 +5623,7 @@ class _ElementSelect(Element):
             if self._reparse_colors:
                 if self._reparse_element_colors():
                     skipNonLayoutGen = False
+        await asyncio.sleep(0)
         return await super().async_generate(area, skipNonLayoutGen)
 
     def select(self, option : str):
@@ -5663,6 +5677,7 @@ class _ElementSelect(Element):
             self_upd = self._reparse_element_colors()
 
         if self_upd:
+            await asyncio.sleep(0)
             await self.async_update(updated=True)
 
         if self.on_select != None and call_on_select:

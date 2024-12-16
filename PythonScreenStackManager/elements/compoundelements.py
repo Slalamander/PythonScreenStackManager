@@ -27,7 +27,7 @@ from .. import tools
 from ..tools import DrawShapes, DummyTask
 
 from . import baseelements as base
-from .baseelements import _LOGGER, IMPLEMENTED_ICON_SHAPES, colorproperty, elementaction, Style
+from .baseelements import _LOGGER, IMPLEMENTED_ICON_SHAPES, colorproperty, elementaction, elementactionwrapper, Style
 
 BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
 
@@ -2169,7 +2169,8 @@ class TimerSlider(Slider):
                     _LOGGER.debug(f"Timer {self.id} stopped before being done")
                     return False
 
-    def start_timer(self, reset=False, *args):
+    @elementactionwrapper.method
+    def start_timer(self, reset=False):
         " Starts the timer. If the timer previously reached its end, it will be restarted."
 
         ##Second condition ensures the timer can be restart if it is paused
@@ -2218,11 +2219,13 @@ class TimerSlider(Slider):
         else:
             return True
 
+    @elementactionwrapper.method
     def pause_timer(self, *args):
         "Pauses the timer without resetting its position."
         self._timerTask.cancel()
         _LOGGER.debug(f"Timer {self.id} paused")
 
+    @elementactionwrapper.method
     def cancel_timer(self, *args):
         "Stops the timer from running, and resets the position to its minimum/maximum (for count up/down respectively)"
         self._timerTask.cancel()
@@ -2234,6 +2237,7 @@ class TimerSlider(Slider):
         self.set_position(new_position)
         _LOGGER.debug(f"Timer {self.id} cancelled")
 
+    @elementactionwrapper.method
     def toggle_timer(self, *args):
         "Toggles the timer between running and paused"
         if self.running:
@@ -2957,6 +2961,7 @@ class Counter(base._TileBase):
         self.__downProperties = value
     #endregion
 
+    @elementactionwrapper.method
     def set_counter(self, value : Union[float,int]):
         """
         set the counter value directly. Values are rounded down according to step
@@ -3012,11 +3017,13 @@ class Counter(base._TileBase):
             return
         await self._async_set_counter(value)
 
+    @elementactionwrapper.method
     async def increment(self, *args):
         "Increments the counters value"
         newvalue = self.value + self.step
         self.set_counter(newvalue)
 
+    @elementactionwrapper.method
     def decrement(self, *args):
         "Decrements the counter value"
         newvalue = self.value - self.step

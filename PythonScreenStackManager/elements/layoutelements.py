@@ -13,7 +13,7 @@ from ..pssm_types import PSSMlayout
 from ..exceptions import *
 from . import baseelements as base
 from . import compoundelements as comps     ##May need restructuring here if I want to use compounds with grid elements -> Nope probably? Since that would kinda take away some configuration
-from . baseelements import Element
+from .baseelements import Element, elementactionwrapper, elementaction, colorproperty
 from .constants import DEFAULT_ACCENT_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR
 from ..pssm_types import *
 from .. import tools
@@ -499,11 +499,11 @@ class NavigationTile(base._TileBase):
     def _emulator_icon(cls): return "mdi:navigation-variant"
 
     def __init__(self, tile_layout : str, icon : mdiType, name : str, **kwargs): 
-        NavIcon = base.Icon(icon, background_shape="circle")
+        NavIcon = base.Icon(icon, background_shape="circle", _isNavElt=True, NavTile = self)
         if icon == None:
             NavIcon._icon = None
-        NavText = base.Button(name, text_x_position="left")
-        NavLine = base.Line(line_color=None, width=4, alignment="top")
+        NavText = base.Button(name, text_x_position="left", _isNavElt=True, NavTile = self)
+        NavLine = base.Line(line_color=None, width=4, alignment="top", _isNavElt=True, NavTile = self)
 
         self.__elements = {"icon": NavIcon, "name": NavText, "line": NavLine}
         super().__init__(tile_layout,**kwargs)
@@ -540,6 +540,16 @@ class NavigationTile(base._TileBase):
 
     def update(self, updateAttributes={}, skipGen=False, forceGen: bool = False, skipPrint=False, reprintOnTop=False, updated: bool = False):
         return super().update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
+    
+    async def async_update(self, updateAttributes=..., skipGen=False, forceGen = False, skipPrint=False, reprintOnTop=False, updated = False):
+        upd = await super().async_update(updateAttributes, skipGen=True)
+        await asyncio.sleep(0)
+        await super().async_update({}, skipGen, forceGen, skipPrint, reprintOnTop, updated=updated or upd)
+        return upd
+
+    async def async_generate(self, area=None, skipNonLayoutGen=False):
+        await asyncio.sleep(0)
+        return await super().async_generate(area, skipNonLayoutGen)
 
     def generator(self, area=None, skipNonLayoutGen=False):
         img = super().generator(area, skipNonLayoutGen)
@@ -618,7 +628,7 @@ class TabPages(base._TileBase):
     def __init__(self, tabs : list[tabDict], tile_layout : Union[Literal["top","bottom","left","right"], PSSMLayoutString] = "bottom",
                 apply_default_sizes : bool = True, navigation_tile_size : Union[float,PSSMdimension] = 0.2,
                 hide_navigation_bar : bool = False, hide_page_handles : bool = True, cycle : bool = True,
-                element_properties : dict = {},
+                element_properties : dict = {}, horizontal_sizes: dict[str,PSSMdimension] = {}, vertical_sizes: dict[str,PSSMdimension] = {},
                 **kwargs) -> None:
 
         BackHandle = base.Icon("mdi:menu-left", icon_color='foreground', tap_action = self.previous_page)
@@ -656,8 +666,8 @@ class TabPages(base._TileBase):
         self.cycle = cycle
         self.navigation_tile_size = navigation_tile_size
 
-        vertical_sizes = {}
-        horizontal_sizes = {}
+        vertical_sizes = vertical_sizes
+        horizontal_sizes = horizontal_sizes
 
         super().__init__(tile_layout, vertical_sizes=vertical_sizes, horizontal_sizes=horizontal_sizes, element_properties=element_properties, **kwargs)
 
@@ -828,6 +838,9 @@ class TabPages(base._TileBase):
 
         issub = True
         NavElement = NavigationTile("auto", icon, name, _isSubLayout=issub)
+        # for prop, val in NavElement._color_shorthands.items():
+        #     setattr(NavElement,val,prop)
+
 
         self.__NavBar.add_elements(NavElement)
         self.__NavBar.add_option(name, NavElement)
@@ -856,6 +869,7 @@ class TabPages(base._TileBase):
 
             self.__tabs[tab_name] = tabConf
             return
+
 
     async def async_show_page(self, index : int):
         """
@@ -938,7 +952,8 @@ class TabPages(base._TileBase):
         tab_idx = self.__tabNames.index(option)
         await self.async_show_page(tab_idx)
         
-    async def show_tab_shorthand(self, *args, name : str):
+    @elementactionwrapper.method
+    async def show_tab_shorthand(self, name : str):
         """
         Helper function that can be used as an element's tap_action to navigate to tab with the provided name, or other shorthands.
         Can be used by setting it as an element's tap_action, via `{'action' : 'show-tab', 'data': {'name': 'my-tab'}}`
@@ -951,10 +966,12 @@ class TabPages(base._TileBase):
         tab_idx = self.__tabNames.index(name)
         await self.async_show_page(tab_idx)
     
-    async def show_page_shorthand(self, *args, index : int):
+    @elementactionwrapper.method
+    async def show_page_shorthand(self, index : int):
         "Function that can be used as a tap_action i.e. to show a page with a certain number"
         await self.async_show_page(index)
 
+    @elementactionwrapper.method
     def next_page(self, *args):
         """
         Shows the next tab in the list of tabs. If cycle is not `True` and the last page is currently being shown, will do nothing.
@@ -968,6 +985,7 @@ class TabPages(base._TileBase):
 
         self.show_page(new_idx)
 
+    @elementactionwrapper.method
     def previous_page(self, *args):
         """
         Shows the previous tab in the list of tabs. If cycle is not `True` and the first page is currently being shown, will do nothing.
