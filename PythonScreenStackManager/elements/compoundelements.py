@@ -27,11 +27,11 @@ from .. import tools
 from ..tools import DrawShapes, DummyTask
 
 from . import baseelements as base
-from .baseelements import logger, IMPLEMENTED_ICON_SHAPES, colorproperty, elementaction, Style
+from .baseelements import _LOGGER, IMPLEMENTED_ICON_SHAPES, colorproperty, elementaction, Style
 
 BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
 
-logger = logging.getLogger(__package__)
+_LOGGER = logging.getLogger(__package__)
 
 class Tile(base._TileBase):
     """
@@ -263,7 +263,7 @@ class Tile(base._TileBase):
             pass
         elif value.lower() not in DrawShapes.shapeTypes.__args__ and value != "ADVANCED":
             msg = f"{value} is not recognised as a valid background shape."
-            logger.exception(ValueError(msg))
+            _LOGGER.exception(ValueError(msg))
             return
         
         self.__background_shape = value
@@ -319,7 +319,7 @@ class Tile(base._TileBase):
     @badge_icon.setter
     def badge_icon(self, value: Optional[str]):
         if value != None and not isinstance(value, (str, Image.Image)):
-            logger.error(f"{value} cannot be used as a badge icon, setting to error icon.")
+            _LOGGER.error(f"{value} cannot be used as a badge icon, setting to error icon.")
             self._badge_icon = MISSING_ICON
         else:
             self._badge_icon = value
@@ -336,7 +336,7 @@ class Tile(base._TileBase):
     def badge_settings(self, value : dict):
         value = value.copy()
         for key in value:
-            if key not in base.ALLOWED_BADGE_SETTINGS: logger.warning(f"{key} is not an allowed badge setting")
+            if key not in base.ALLOWED_BADGE_SETTINGS: _LOGGER.warning(f"{key} is not an allowed badge setting")
         
         value.setdefault("background_color", self.background_color if self.background_color != None else DEFAULT_BACKGROUND_COLOR)
         self._badge_settings = value
@@ -394,7 +394,7 @@ class Tile(base._TileBase):
         if not isinstance(value,str):
             ##Maybe do allow for this but call the is_layout_valid
             msg = f"tile_layout must be a string. Set the layout itself to alter it directly?"
-            logger.error(TypeError(msg))
+            _LOGGER.error(TypeError(msg))
             return
         
         if value not in ["horizontal", "vertical", "hor", "ver"]:
@@ -650,7 +650,7 @@ class Tile(base._TileBase):
         if self.parentPSSMScreen.popupsOnTop:
             eltarea = self.area
             popuparea = self.parentPSSMScreen.popupsOnTop[-1].area
-            logger.debug(f"Element is {eltarea} popup is {popuparea}")
+            _LOGGER.debug(f"Element is {eltarea} popup is {popuparea}")
         
         self.parentPSSMScreen.device.print_pil(
             self.imgData,
@@ -681,7 +681,7 @@ class dateTimeElementInterval(base._IntervalUpdate):
             try:
                 tz = ZoneInfo(value)
             except ZoneInfoNotFoundError:
-                logger.exception(f"{value} is not a valid timezone key")
+                _LOGGER.exception(f"{value} is not a valid timezone key")
             else:
                 self.__timezone = value
                 self.__zoneInfo = tz
@@ -705,7 +705,7 @@ class dateTimeElementInterval(base._IntervalUpdate):
             dt.now().strftime(value)
             self.__date_format = value
         except ValueError as exce:
-            logger.exception(exce)
+            _LOGGER.error(exce)
     #endregion
 
 class AnalogueClock(base.Element, dateTimeElementInterval):
@@ -823,7 +823,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
     def show_ticks(self, value):
         if not isinstance(value, bool):
             msg = "Show Ticks must be boolean"
-            logger.error(msg)
+            _LOGGER.error(msg)
             if const.RAISE: raise TypeError(msg)
         
         self._genClock = True
@@ -845,7 +845,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
     def show_digital(self, value):
         if not isinstance(value, bool):
             msg = "Show digital must be boolean"
-            logger.error(msg)
+            _LOGGER.error(msg)
             if const.RAISE: raise TypeError(msg)
         
         self.__show_digital = value    
@@ -873,7 +873,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             f = ImageFont.truetype(f)
         except OSError:
             msg = f"Could not open font from value {value}"
-            logger.exception(OSError(msg))
+            _LOGGER.exception(OSError(msg))
         else:
             self.__digital_font = value
 
@@ -908,7 +908,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         clock_line = Style.get_color(self.outline_color, colorMode)
         timedt = dt.now(self.zoneInfo)
 
-        hour_width = round(self.outline_width*2.5)
+        hour_width = round(self.outline_width*2.5)  ##Want to change these to be settable
         mnt_width = round(self.outline_width*1.5)
 
         if self._genClock:
@@ -1021,7 +1021,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             end=360
         )
 
-        logger.verbose(f"Clock updated for {timedt.strftime('%H:%M')}")
+        _LOGGER.verbose(f"Clock updated for {timedt.strftime('%H:%M')}")
         self._imgData = ImageOps.pad(img,(w,h), color=img_background)
         return self.imgData
 
@@ -1261,7 +1261,7 @@ class LineSlider(base._BaseSlider):
     @width.setter
     def width(self, value):
         if v := isinstance(tools.is_valid_dimension(value), Exception):
-            logger.error("Invalid width value", exc_info=v)
+            _LOGGER.error("Invalid width value", exc_info=v)
         else:
             self._width = value
 
@@ -1275,7 +1275,7 @@ class LineSlider(base._BaseSlider):
         imp = ["circle", "rectangle", "rounded_rectangle"]
         if value not in imp:
             msg = f"thumb must be one of {imp}, {value} is not valid/implemented"
-            logger.exception(msg,ValueError(msg))
+            _LOGGER.exception(msg,ValueError(msg))
         else:
             self._thumb = value
 
@@ -1351,7 +1351,7 @@ class LineSlider(base._BaseSlider):
             self.__thumb_icon = value
         elif value[:4] not in ALLOWED_MDI_IDENTIFIERS:
             msg = f"thumb_icon must be an mdi icon. Cannot parse {value} as such"
-            logger.error(msg,exc_info=ValueError(msg))
+            _LOGGER.error(msg,exc_info=ValueError(msg))
         else:
             self.__thumb_icon = value
 
@@ -1376,7 +1376,7 @@ class LineSlider(base._BaseSlider):
         elif isinstance(value,(list,tuple)):
             if len(value) != 2:
                 msg = f"List with endpoints must be exactly of 2 length"
-                logger.error(msg,exc_info=ValueError(msg))
+                _LOGGER.error(msg,exc_info=ValueError(msg))
                 return
             else:
                 points = value
@@ -1386,7 +1386,7 @@ class LineSlider(base._BaseSlider):
                 continue
             if point[:4] not in ALLOWED_MDI_IDENTIFIERS:
                 msg = f"endPoint icon must be an mdi icon. Cannot parse {value} as such"
-                logger.error(msg,exc_info=ValueError(msg))
+                _LOGGER.error(msg,exc_info=ValueError(msg))
                 return
         self.__end_points = tuple(points)
     
@@ -1708,7 +1708,7 @@ class BoxSlider(base._BaseSlider):
         elif isinstance(value,(list,tuple)):
             if len(value) != 2:
                 msg = f"List with endpoints must be exactly of 2 length"
-                logger.error(msg,exc_info=ValueError(msg))
+                _LOGGER.error(msg,exc_info=ValueError(msg))
                 return
             else:
                 points = value
@@ -1718,7 +1718,7 @@ class BoxSlider(base._BaseSlider):
                 continue
             if point[:4] not in ALLOWED_MDI_IDENTIFIERS:
                 msg = f"endPoint icon must be an mdi icon. Cannot parse {value} as such"
-                logger.error(msg,exc_info=ValueError(msg))
+                _LOGGER.error(msg,exc_info=ValueError(msg))
                 return
         self.__end_points = tuple(points)
     #endregion
@@ -1964,7 +1964,7 @@ class Slider(LineSlider, BoxSlider):
         styles = ["line", "box"]
         if value not in styles:
             msg = f"Slider style must be one of {styles}, not {value}"
-            logger.exception(ValueError(msg))
+            _LOGGER.exception(ValueError(msg))
         else:
             self.__style = value
 
@@ -2059,11 +2059,11 @@ class TimerSlider(Slider):
     def count(self, value):
         if value not in {"up","down"}:
             msg = f"Counter value must be either up or down, {value} is not valid."
-            logger.exception(ValueError(msg))
+            _LOGGER.exception(ValueError(msg))
             return
         
         if not self._timerTask.done() and value != self.count:
-            logger.warning(f"{self.id} changed count value. Don't forget to restart the timer.")
+            _LOGGER.warning(f"{self.id} changed count value. Don't forget to restart the timer.")
         self.__count = value
 
     @property
@@ -2115,7 +2115,7 @@ class TimerSlider(Slider):
 
     async def _timed_update(self):
         if self.area == None:
-            logger.info("A timer cannot be started before it has been generated, will keep time for now.")
+            _LOGGER.info("A timer cannot be started before it has been generated, will keep time for now.")
             wait_time = 1
             if hasattr(self,"on_add"):
                 old_add = self.on_add
@@ -2135,14 +2135,14 @@ class TimerSlider(Slider):
             if self.imgData == None and self._lineLength == None:
                 await asyncio.sleep(0)
                 if self.isGenerating:
-                    logger.debug(f"Waiting to start timer {self.id} until generating is finished")
+                    _LOGGER.debug(f"Waiting to start timer {self.id} until generating is finished")
                     await self._await_generator()
                 else:
                     await asyncio.wait_for(
                         self.async_generate(),5)
-                    logger.debug("Done waiting for slider gen")
+                    _LOGGER.debug("Done waiting for slider gen")
 
-            logger.debug(f"Starting timer of {self.id}")
+            _LOGGER.debug(f"Starting timer of {self.id}")
             pixel_length = self._lineLength
             total_seconds = self.maximum - self.minimum
             wait_time = total_seconds/pixel_length
@@ -2163,7 +2163,7 @@ class TimerSlider(Slider):
                     else:
                         self.position = new_position
                 except asyncio.CancelledError:
-                    logger.debug(f"Timer {self.id} stopped before being done")
+                    _LOGGER.debug(f"Timer {self.id} stopped before being done")
                     return False
 
     def start_timer(self, reset=False, *args):
@@ -2218,7 +2218,7 @@ class TimerSlider(Slider):
     def pause_timer(self, *args):
         "Pauses the timer without resetting its position."
         self._timerTask.cancel()
-        logger.debug(f"Timer {self.id} paused")
+        _LOGGER.debug(f"Timer {self.id} paused")
 
     def cancel_timer(self, *args):
         "Stops the timer from running, and resets the position to its minimum/maximum (for count up/down respectively)"
@@ -2229,7 +2229,7 @@ class TimerSlider(Slider):
             new_position = self.maximum
 
         self.set_position(new_position)
-        logger.debug(f"Timer {self.id} cancelled")
+        _LOGGER.debug(f"Timer {self.id} cancelled")
 
     def toggle_timer(self, *args):
         "Toggles the timer between running and paused"
@@ -2291,7 +2291,7 @@ class CheckBox(base._BoolElement, base.Icon):
     def icon(self, value):
         if self.onScreen:
             msg = f"CheckButton does not allow icon to be set directly."
-            logger.error(AttributeError(msg))
+            _LOGGER.error(AttributeError(msg))
 
     @property
     def checked(self) -> bool:
@@ -2539,7 +2539,7 @@ class DropDown(base.Button):
     def closed_icon(self, value : MDItype):
         if value != None:
             if not mdi.is_mdi(value):
-                logger.error(f"Could not set closed_icon to {value}")
+                _LOGGER.error(f"Could not set closed_icon to {value}")
                 return
         self.__closed_icon = value
 
@@ -2552,7 +2552,7 @@ class DropDown(base.Button):
     def opened_icon(self, value : MDItype):
         if value != None:
             if not mdi.is_mdi(value):
-                logger.error(f"Could not set opened_icon to {value}")
+                _LOGGER.error(f"Could not set opened_icon to {value}")
                 return
         self.__opened_icon = value
     #endregion
@@ -2601,7 +2601,7 @@ class DropDown(base.Button):
         else:
             if select not in self.options:
                 msg = f"{select} is not a possible option in this menu. Options are: {self.options}"
-                logger.exception(msg,ValueError(msg))
+                _LOGGER.exception(msg,ValueError(msg))
                 return
             i = self.options.index(select)
             self._selected = i
@@ -2623,7 +2623,7 @@ class DropDown(base.Button):
         )
 
     async def _menu_closed(self):
-        logger.debug("Closing popup")
+        _LOGGER.debug("Closing popup")
         self.__menuOpen = False
 
     async def open_menu(self, elt : base.Element = None, coords : tuple = None):
@@ -2828,7 +2828,7 @@ class Counter(base._TileBase):
                 value = len(str(self.step).split(".")[1])
         if not isinstance(value,int):
             msg = f"Round digits must be an integer type. {value} is of incorrect type {type(value)}"
-            logger.error(TypeError(msg))
+            _LOGGER.error(TypeError(msg))
             return
         self.__roundDigits = value
 
@@ -2890,7 +2890,7 @@ class Counter(base._TileBase):
     @upIcon.setter
     def upIcon(self, value : MDItype):
         if not mdi.is_mdi(value):
-            logger.error(f"Could not set upIcon to {value}")
+            _LOGGER.error(f"Could not set upIcon to {value}")
             return
         self.__upIcon = value
 
@@ -2902,7 +2902,7 @@ class Counter(base._TileBase):
     @downIcon.setter
     def downIcon(self, value : MDItype):
         if not mdi.is_mdi(value):
-            logger.error(f"Could not set upIcon to {value}")
+            _LOGGER.error(f"Could not set upIcon to {value}")
             return
         self.__downIcon = value
 
@@ -2915,7 +2915,7 @@ class Counter(base._TileBase):
     def countProperties(self, value : dict):
         value = value.copy()
         if "text" in value:
-            logger.warning("Setting text is not allowed for the counter, removing it from settings")
+            _LOGGER.warning("Setting text is not allowed for the counter, removing it from settings")
             value.pop("text")
         self.__countProperties = value
 
@@ -2931,7 +2931,7 @@ class Counter(base._TileBase):
         for k in notallowed:
             if k not in value:
                 continue
-            logger.warning(f"Setting {k} is not allowed for the up icon, removing it")
+            _LOGGER.warning(f"Setting {k} is not allowed for the up icon, removing it")
             value.pop(k)
         self.__upProperties = value
 
@@ -2947,7 +2947,7 @@ class Counter(base._TileBase):
         for k in notallowed:
             if k not in value:
                 continue
-            logger.warning(f"Setting {k} is not allowed for the down icon, removing it")
+            _LOGGER.warning(f"Setting {k} is not allowed for the down icon, removing it")
             value.pop(k)
         self.__downProperties = value
     #endregion
@@ -2993,7 +2993,7 @@ class Counter(base._TileBase):
         L = await asyncio.gather(*coros, return_exceptions=True)
         for res in L:
             if isinstance(res,Exception):
-                logger.warning(f"Counter error: {res}")
+                _LOGGER.warning(f"Counter error: {res}")
 
     async def interact_set_counter(self, value : Union[float,int], *args):
         "Function that can be used to set the value by interacting with other elements."
@@ -3003,7 +3003,7 @@ class Counter(base._TileBase):
                 msg = f"{self}: value got passed as an Element: {value}. Make sure you set the appropriate data or map correctly to hold a key defined as value."
             else:
                 msg = f"{self}: Value must be an integer or float, not {type(value)}"
-            logger.exception(TypeError(msg))
+            _LOGGER.exception(TypeError(msg))
             return
         await self._async_set_counter(value)
 

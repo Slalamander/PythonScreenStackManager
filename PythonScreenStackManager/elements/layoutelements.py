@@ -18,7 +18,7 @@ from .constants import DEFAULT_ACCENT_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_F
 from ..pssm_types import *
 from .. import tools
 
-logger = base.logger
+_LOGGER = base._LOGGER
 
 class _GridElement(base.Element):
     """
@@ -33,13 +33,13 @@ class _GridElement(base.Element):
     @grid_row.setter
     def grid_row(self, value):
         if value != None and not isinstance(value, int):
-            logger.warning(f"{self}: grid_row must be None or a positive integer")
+            _LOGGER.warning(f"{self}: grid_row must be None or a positive integer")
             return
         
         if value == None:
             pass
         elif value < 1:
-            logger.warning(f"{self}: grid_row must be at least 1")
+            _LOGGER.warning(f"{self}: grid_row must be at least 1")
             return
         
         self._grid_row = value
@@ -56,13 +56,13 @@ class _GridElement(base.Element):
     @grid_column.setter
     def grid_column(self, value):
         if value != None and not isinstance(value, int):
-            logger.warning(f"{self}: grid_column must be None or a positive integer")
+            _LOGGER.warning(f"{self}: grid_column must be None or a positive integer")
             return
         
         if value == None:
             pass
         elif value < 1:
-            logger.warning(f"{self}: grid_column must be at least 1")
+            _LOGGER.warning(f"{self}: grid_column must be at least 1")
             return
         
         self._grid_column = value
@@ -161,12 +161,12 @@ class GridLayout(base.Layout):
         l = len(value)
         if not 1 <= l <= 4:
             msg = f"{self}: margins cannot be set to {value}, value must be a single dimension, or a list of 1 to 4 dimensions"
-            logger.exception(msg)
+            _LOGGER.exception(msg)
 
         for m in value.copy():
             res = tools.is_valid_dimension(m)
             if isinstance(res, Exception):
-                logger.exception(res)
+                _LOGGER.exception(res)
                 return
 
         l = len(value)
@@ -198,12 +198,12 @@ class GridLayout(base.Layout):
         l = len(value)
         if not 1 <= l <= 4:
             msg = f"{self}: margins cannot be set to {value}, value must be a single dimension, or a list of 1 to 4 dimensions"
-            logger.exception(msg)
+            _LOGGER.exception(msg)
 
         for m in value.copy():
             res = tools.is_valid_dimension(m)
             if isinstance(res, Exception):
-                logger.exception(res)
+                _LOGGER.exception(res)
                 return
 
         l = len(value)
@@ -228,7 +228,7 @@ class GridLayout(base.Layout):
     def rows(self, value):
         if value != None and not isinstance(value,int):
             msg = f"{self}: rows must be either None or an integer. Value {value} with type {type(value)} is not valid"
-            logger.exception(TypeError(msg))
+            _LOGGER.exception(TypeError(msg))
             return
         self._rows = value
 
@@ -253,7 +253,7 @@ class GridLayout(base.Layout):
     def columns(self, value):
         if value != None and not isinstance(value,int):
             msg = f"{self}: columns must be either None or an integer. Value {value} with type {type(value)} is not valid"
-            logger.exception(TypeError(msg))
+            _LOGGER.exception(TypeError(msg))
             return
         self._columns = value
 
@@ -284,7 +284,7 @@ class GridLayout(base.Layout):
             if isinstance(elt,(str,dict,MappingProxyType)):
                 if isinstance(elt,(dict,MappingProxyType)):
                     if "element_id" not in elt:
-                        logger.exception(f"{self}: Passing an element as a dict to a GridLayout requires the 'element_id' key")
+                        _LOGGER.exception(f"{self}: Passing an element as a dict to a GridLayout requires the 'element_id' key")
                         continue
                     elt = elt["element_id"]
 
@@ -295,11 +295,11 @@ class GridLayout(base.Layout):
                     continue
                 else:
                     msg = f"No element with element id {elt} is registered."
-                    logger.exception(msg)
+                    _LOGGER.exception(msg)
                     continue
 
             if elt in self.__elements:
-                logger.warning(f"Element {elt} is already in grid {self}")
+                _LOGGER.warning(f"Element {elt} is already in grid {self}")
                 continue
 
             if not isinstance(elt, _GridElement) and isinstance(elt, Element):
@@ -322,7 +322,7 @@ class GridLayout(base.Layout):
         for elt_str in self.__element_strings:
             if elt_str not in self.screen.elementRegister:
                 msg = f"No element with element id {elt_str} is registered."
-                logger.exception(msg)
+                _LOGGER.exception(msg)
                 continue
             else:
                 elt = self.screen.elementRegister[elt_str]
@@ -341,7 +341,7 @@ class GridLayout(base.Layout):
         
         if num_columns == num_rows == None:
             msg = f"{self}: number of rows and number of columns cannot both be 0!"
-            logger.exception(ValueError(msg))
+            _LOGGER.exception(ValueError(msg))
             return
         
         if num_columns == None or num_rows == None:
@@ -365,13 +365,13 @@ class GridLayout(base.Layout):
                 continue
 
             if elt.grid_row >= num_rows or elt.grid_column >= num_columns:
-                logger.warning(f"{self}: {elt} has grid position ({elt.grid_column+1},{elt.grid_row+1}) (grid_column {elt.grid_column}, grid_row {elt.grid_row}), but exeeds grid size of ({num_columns},{num_rows})")    
+                _LOGGER.warning(f"{self}: {elt} has grid position ({elt.grid_column+1},{elt.grid_row+1}) (grid_column {elt.grid_column}, grid_row {elt.grid_row}), but exeeds grid size of ({num_columns},{num_rows})")    
                 assign_later.append(elt)
                 continue
             
             grid_fill = grid[elt.grid_row][elt.grid_column]
             if grid_fill != None:
-                logger.warning(f"{self}: {elt} has grid position ({elt.grid_column},{elt.grid_row}), but it is already assigned to element {grid_fill}")    
+                _LOGGER.warning(f"{self}: {elt} has grid position ({elt.grid_column},{elt.grid_row}), but it is already assigned to element {grid_fill}")    
                 assign_later.append(elt)
                 continue
 
@@ -395,7 +395,7 @@ class GridLayout(base.Layout):
                 
         if assign_later:
             msg = f"{self}: made a grid, but not all elements fitted. {assign_later} are omitted."
-            logger.warning(msg)
+            _LOGGER.warning(msg)
 
         return grid
 
@@ -775,7 +775,7 @@ class TabPages(base._TileBase):
             return
         r = tools.is_valid_dimension(value)
         if isinstance(r,Exception):
-            logger.exception(r)
+            _LOGGER.exception(r)
             return
         self._navigation_tile_size = value
 
@@ -812,7 +812,7 @@ class TabPages(base._TileBase):
         """        
         
         if name in self.__tabNames:
-            logger.warning(f"{self}: A tab with name {name} already exists in this element. Not adding it.")
+            _LOGGER.warning(f"{self}: A tab with name {name} already exists in this element. Not adding it.")
             return
         
         if isinstance(element,str):
@@ -873,7 +873,7 @@ class TabPages(base._TileBase):
             index = index + len(self.__tabElements)
 
         if index >= len(self.__tabElements):
-            logger.warning(f"{self}: Has {len(self.__tabElements)} tabs, and index {index} is out of range (Keep in mind you can use indices start at 0 and go up to (number_of_tabs -1))")
+            _LOGGER.warning(f"{self}: Has {len(self.__tabElements)} tabs, and index {index} is out of range (Keep in mind you can use indices start at 0 and go up to (number_of_tabs -1))")
             return
         
         self._currentIdx = index
@@ -912,7 +912,7 @@ class TabPages(base._TileBase):
 
         if name not in self.__tabNames:
             msg = f"{self}: {name} is not the name of a registered tab."
-            logger.warning(msg)
+            _LOGGER.warning(msg)
             return 
 
         tab_idx = self.__tabNames.index(name)
@@ -932,7 +932,7 @@ class TabPages(base._TileBase):
 
         if option not in self.__tabNames:
             msg = f"{self}: {option} is not the name of a registered tab."
-            logger.warning(msg)
+            _LOGGER.warning(msg)
             return 
 
         tab_idx = self.__tabNames.index(option)
@@ -945,7 +945,7 @@ class TabPages(base._TileBase):
         """        
         if name not in self.__tabNames:
             msg = f"{self}: {name} is not the name of a registered tab."
-            logger.warning(msg)
+            _LOGGER.warning(msg)
             return 
 
         tab_idx = self.__tabNames.index(name)

@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     from ..pssm.screen import PSSMScreen as Screen
     
 _LOGGER = logging.getLogger(__name__)
-logger = _LOGGER
 
 class DummyScreen:
     "DummyScreen to act as a placeholder when importing."
@@ -190,7 +189,7 @@ class Element(ABC):
 
             if self.__class__.__name__ in generatorClass and generateClass != generatorClass:
                 msg = f"{self}: custom layout generators need to also have async_generate defined"
-                logger.warning(msg)
+                _LOGGER.warning(msg)
 
         if self.screen == None:
             return
@@ -259,7 +258,7 @@ class Element(ABC):
 
         if not isinstance(value, (int,float)):
             msg = f"Feedback duration must be either a valid duration string, or an interger or float. {value} is not valid."
-            logger.exception(TypeError(msg))
+            _LOGGER.exception(TypeError(msg))
 
         self._feedback_duration = value
 
@@ -436,7 +435,7 @@ class Element(ABC):
         for param in updateAttributes:
             if not hasattr(self,param) and self.parentPSSMScreen.printing:
                 msg = f"{self.id} does not have attribute {param}. Call add_attribute if you want to add attributes during printing."
-                logger.exception(AttributeError(msg))
+                _LOGGER.exception(AttributeError(msg))
             else:
                 if getattr(self,param) != updateAttributes[param]:
                     setattr(self, param, updateAttributes[param])
@@ -501,7 +500,7 @@ class Element(ABC):
             attr_updated = False
             for param in updateAttributes:
                 if not hasattr(self,param) and self.parentPSSMScreen.printing:
-                    logger.warning(f"{self.id} does not have attribute {param}. Call add_attribute if you want to add attributes during printing.")
+                    _LOGGER.warning(f"{self.id} does not have attribute {param}. Call add_attribute if you want to add attributes during printing.")
                 else:
                     if getattr(self,param) != updateAttributes[param]:
                         attr_updated = True
@@ -543,7 +542,7 @@ class Element(ABC):
             for elt in self.parentPSSMScreen.elementRegister.values():
                 if elt._updateLock.locked():
                     update_list.append(elt)
-            logger.debug(f"{self.id} waiting to acquire update lock. {len(update_list)} elements are waiting")
+            _LOGGER.debug(f"{self.id} waiting to acquire update lock. {len(update_list)} elements are waiting")
 
         async with self._updateLock:
             upd_attr = await self._async_update_attributes(updateAttributes)        
@@ -551,7 +550,7 @@ class Element(ABC):
 
             if not updateAttributes and not forceGen and not updated:
                 msg = f"Element {self.id} update was called, but no attributes were updated and not regenerated."
-                logger.debug(msg)
+                _LOGGER.debug(msg)
                 return False
 
             ##Hoping this will allow tasks that update subElements to run first
@@ -564,7 +563,7 @@ class Element(ABC):
             else:
                 isBatch = self.parentPSSMScreen.isBatch
                 if reprintOnTop:
-                    logger.debug("Printing on Top")
+                    _LOGGER.debug("Printing on Top")
                     if forceGen:
                         await self.async_generate()
                     await asyncio.to_thread(self.parentPSSMScreen.simple_print_element,element=self, skipGen=skipGen, apply_background=True)
@@ -579,7 +578,7 @@ class Element(ABC):
                         self : Layout
                         c = [elt._await_update() for elt in self.create_element_list()]
                         await asyncio.gather(*c, return_exceptions=True)
-                        logger.debug(f"{self}: Child elements finished updating")
+                        _LOGGER.debug(f"{self}: Child elements finished updating")
 
                     if self.parentLayouts:
                         # We recreate the pillow image of the oldest parent
@@ -601,7 +600,7 @@ class Element(ABC):
                             self._requestGenerate = True
                             if oldest_parent.isGenerating:
                                 ##Wait for the oldest parent to finish generating. If 
-                                logger.debug(f"{self}: Waiting for {oldest_parent.id} to finish generating")
+                                _LOGGER.debug(f"{self}: Waiting for {oldest_parent.id} to finish generating")
                                 await oldest_parent._await_generator()
 
                             if self._requestGenerate:
@@ -616,7 +615,7 @@ class Element(ABC):
                         await self.parentPSSMScreen.print_stack(area=self.area)
                 elif forceGen:
                     if self.isGenerating:
-                        logger.info(f"Waiting for {self.id} to finish generating")
+                        _LOGGER.info(f"Waiting for {self.id} to finish generating")
                         await self._await_generator()
                     await self.async_generate()
             
@@ -687,7 +686,7 @@ class Element(ABC):
             else:
                 return int(eval(dimension,dimVars))
         else:
-            logger.warning("Could not parse the dimension")
+            _LOGGER.warning("Could not parse the dimension")
             return dimension
 
     def add_attributes(self, newAttributes : dict = {}, overwrite=False, update=False):
@@ -712,7 +711,7 @@ class Element(ABC):
         for k,v in newAttributes.items():
             if hasattr(self,k) and not overwrite and self.parentPSSMScreen.printing:
                 msg = f"{self.id} already has attribute {k}"
-                logger.error(msg)
+                _LOGGER.error(msg)
                 if const.RAISE: raise AttributeError(msg)
             else:
                 if not hasattr(self, k) or overwrite:
@@ -767,7 +766,7 @@ class Element(ABC):
         else:
             msg = f"{self}: {value} is not identified as a valid color"
 
-        logger.error(msg,exc_info=ValueError(msg))
+        _LOGGER.error(msg,exc_info=ValueError(msg))
     
     def _validate_color_properties(self):
         parent = self.parentLayout
@@ -783,7 +782,7 @@ class Element(ABC):
                     continue
                 elif not Style.is_valid_color(col_val):
                     msg = f"{self}: Color {col_val} is not a valid color, nor is it recognised as a value to reference a parent's color."
-                    logger.error(msg)
+                    _LOGGER.error(msg)
 
     def _update_parent_colors(self, *updated_colors):
         parent = self.parentLayout
@@ -820,7 +819,7 @@ class Element(ABC):
         if isinstance(v := tools.is_valid_dimension(value,variables), Exception):
             prop  = attribute.lstrip("_")
             msg = f"{value} is not identified as a valid dimension for {prop} of {self.id}"
-            logger.exception(msg,exc_info=v)
+            _LOGGER.exception(msg,exc_info=v)
         else:
             if attribute[:2] == "__":
                 if cls == None:
@@ -861,17 +860,17 @@ class Element(ABC):
         
         elif not isinstance(value, (dict,MappingProxyType)):
             msg = f"{self} {attribute} is of incorrect type. Must be a callable, string, dict or None. Is {type(value)}"
-            logger.exception(TypeError(msg))
+            _LOGGER.exception(TypeError(msg))
             func = None
         else:
             value = value.copy()
             if "action" not in value:
                 msg = f"{self}: setting a function with a dict requires the key 'action'. {value} is not valid."
-                logger.exception(KeyError(msg))
+                _LOGGER.exception(KeyError(msg))
                 func = None
             elif not isinstance(value["action"], (Callable,str)):
                 msg = f"{self}: action key must be a function or a string. {type(value)}: {value} is not valid."
-                logger.exception(TypeError(msg))
+                _LOGGER.exception(TypeError(msg))
                 func = None
             else:
                 func = value["action"]
@@ -891,21 +890,21 @@ class Element(ABC):
                             func = func.replace("element:","")
                         else:
                             msg = f"{self}: using element id in a function dict without using element: in the action string may cause issues."
-                            logger.warning(msg)
+                            _LOGGER.warning(msg)
 
                         if func in elt.action_shorthands:
                             func_str = elt.action_shorthands[func]
                             func = getattr(elt,func_str)
                         else:
                             msg = f"{elt.__class__} elements do not have a shorthand function for {func}. Cannot set {attribute} for {self}"
-                            logger.exception(AttributeError(msg))
+                            _LOGGER.exception(AttributeError(msg))
                             func = None
                     elif not self.parentPSSMScreen.printing:
                         self.parentPSSMScreen._add_element_attribute_check(self,attribute, value.copy())
                         func = None
                     else:
                         msg = f"{self}: element_id {value['element_id']} could not be found in the element register. {attribute} could not be set to {value}"
-                        logger.exception(KeyError(msg))
+                        _LOGGER.exception(KeyError(msg))
                         func = None
 
         if isinstance(func,str):
@@ -916,7 +915,7 @@ class Element(ABC):
                     func = getattr(self,func_attr,None)
                 else:
                     msg = f"{self}: {self.__class__} do not have a shorthand function {func}"
-                    logger.exception(AttributeError(value))
+                    _LOGGER.exception(AttributeError(value))
                     func = None
             elif func in self.parentPSSMScreen.shorthandActions:
                 func = self.parentPSSMScreen.shorthandActions[func]
@@ -926,12 +925,12 @@ class Element(ABC):
                     self.parentPSSMScreen._add_element_attribute_check(self,attribute, value)
                     func = None
                 else:
-                    logger.warning(f"No known function with the name {value}")
+                    _LOGGER.warning(f"No known function with the name {value}")
                     func = None
         
         if not isinstance(func,Callable) and func != None:
             msg = f"{self} {attribute} turned out to not be a function, setting to None"
-            logger.exception(TypeError(msg))
+            _LOGGER.exception(TypeError(msg))
             func = None
         
         data_attr = f"{attribute}_data"
@@ -1017,7 +1016,7 @@ class Element(ABC):
                 #Can't promise this works, generally you'd want to call the async version
                 img = tools._block_run_coroutine(self.async_generate(**saved_args), loop)
         except Exception as e:
-            logger.warning(f"{e} went wrong generating {self}")
+            _LOGGER.warning(f"{e} went wrong generating {self}")
             return
 
         return img
@@ -1041,7 +1040,7 @@ class Element(ABC):
         saved_args = {"area": area, "skipNonLayoutGen": skipNonLayoutGen}
 
         if self._generatorLock.locked():
-            logger.info(f"{self} waiting for generator to unlock")
+            _LOGGER.info(f"{self} waiting for generator to unlock")
 
         try:
             async with self._generatorLock:
@@ -1049,7 +1048,7 @@ class Element(ABC):
                         return
                 
                 if asyncio._get_running_loop() == self.parentPSSMScreen.mainLoop:
-                    logger.debug(f"{self}: switching async_generate to printLoop")
+                    _LOGGER.debug(f"{self}: switching async_generate to printLoop")
                 
 
                     e = self.parentPSSMScreen.generatorPool
@@ -1066,7 +1065,7 @@ class Element(ABC):
 
     async def _await_generator(self):
         "Helper coroutine that can be used to wait for an element's generator to finish."
-        logger.verbose(f"Waiting for {self.id} to finish generating")
+        _LOGGER.verbose(f"Waiting for {self.id} to finish generating")
         async with self._generatorLock:
             await asyncio.sleep(0)
         
@@ -1074,7 +1073,7 @@ class Element(ABC):
     
     async def _await_update(self):
         "Helper coroutine that can be used to wait for an element's update to finish."
-        logger.verbose(f"Waiting for {self.id} to finish updating")
+        _LOGGER.verbose(f"Waiting for {self.id} to finish updating")
         async with self._updateLock:
             await asyncio.sleep(0)
         return
@@ -1185,7 +1184,7 @@ class Layout(Element):
         try:
             self.is_layout_valid(value)
         except FuncExceptions as exce:
-            logger.error(f"{self}: Layout invalid: {exce}")
+            _LOGGER.error(f"{self}: Layout invalid: {exce}")
             return
             # raise Exception("Invalid layout")
             value = [["?",(None,"?")]]
@@ -1374,7 +1373,7 @@ class Layout(Element):
 
             for elt in old_elts - new_elts: ##This returns every element that is in old_elts but not in new_elts
                 if "Clock" in elt.id:
-                    logger.error(f"{self}: Calling on remove via set_parent_layouts")
+                    _LOGGER.error(f"{self}: Calling on remove via set_parent_layouts")
                 if elt.parentLayout == self: 
                     elt._parentLayout = None
                     if callable(getattr(elt,"on_remove",None)):
@@ -1382,7 +1381,7 @@ class Layout(Element):
 
     def on_add(self, call_all = False):
         "Function that is called when the layout is added to a screen object"
-        logger.verbose(f"called layout on add will loop through {len(self.create_element_list())} elements; has {self.parentPSSMScreen} as screen")
+        _LOGGER.verbose(f"called layout on add will loop through {len(self.create_element_list())} elements; has {self.parentPSSMScreen} as screen")
 
         if call_all:
             for elt in self.create_element_list():
@@ -1415,7 +1414,7 @@ class Layout(Element):
         update_list = list(updated_colors)
         for color in updated_colors:
             if color not in self.color_properties:
-                logger.warning(f"{self}: {color} is not recognised as a color property")
+                _LOGGER.warning(f"{self}: {color} is not recognised as a color property")
                 update_list.remove(color)
         for elt in self.create_element_list():
             elt._update_parent_colors(*update_list)
@@ -1431,7 +1430,7 @@ class Layout(Element):
         if area is not None:
             self._area = area
         elif self.area == None:
-            logger.warning(f"{self}: Cannot generate before an area is assigned")
+            _LOGGER.warning(f"{self}: Cannot generate before an area is assigned")
             return
 
         if self.area == None or self._rebuild_area_matrix:
@@ -1521,7 +1520,7 @@ class Layout(Element):
     def createImgMatrix(self, skipNonLayoutGen=False, background_color=DEFAULT_BACKGROUND_COLOR):
         matrix = []
         if not self.areaMatrix:
-            logger.warning("Layout Error, areaMatrix has to be defined first")
+            _LOGGER.warning("Layout Error, areaMatrix has to be defined first")
             return None
         for i, _ in enumerate(self.areaMatrix):
             row = []
@@ -1534,9 +1533,9 @@ class Layout(Element):
                     if not elt.isLayout and skipNonLayoutGen:
                         if elt.imgData == None:
                             if elt.isGenerating:
-                                logger.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
+                                _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                                 tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
-                                logger.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
+                                _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
                             elt_img = elt.generator(elt_area)
                         else:
                             elt_img = elt.imgData
@@ -1545,9 +1544,9 @@ class Layout(Element):
                             ##This line here causes a lot of generating to happen concurrently
                             ##From what I found, this could be fixed using dummy event loop that simply run until the generating is finished.
                             ##See the tool for  the solution
-                            logger.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
+                            _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                             tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
-                            logger.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
+                            _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
 
                         ##Don't need a new thread for generating since it should not ever be called in the mainloop
                         elt_img = elt.generator(area=elt_area, skipNonLayoutGen=skipNonLayoutGen)
@@ -1566,11 +1565,11 @@ class Layout(Element):
             if area is not None:
                 self._area = area
             elif self.area == None:
-                logger.warning(f"{self}: Cannot generate before an area is assigned")
+                _LOGGER.warning(f"{self}: Cannot generate before an area is assigned")
                 return
 
             if asyncio._get_running_loop() == self.mainLoop:
-                logger.debug(f"{self}: switching async_generate to printLoop")
+                _LOGGER.debug(f"{self}: switching async_generate to printLoop")
             
             if self.area == None or self._rebuild_area_matrix:
                 self.create_area_matrix()
@@ -1588,7 +1587,7 @@ class Layout(Element):
     async def async_create_img_matrix(self, skipNonLayoutGen=False):
         matrix = []
         if not self.areaMatrix:
-            logger.warning("Layout Error, areaMatrix has to be defined first")
+            _LOGGER.warning("Layout Error, areaMatrix has to be defined first")
             return None
         for i, _ in enumerate(self.areaMatrix):
             row = []
@@ -1601,17 +1600,17 @@ class Layout(Element):
                     if not elt.isLayout and skipNonLayoutGen:
                         if elt.imgData == None or elt._requestGenerate:
                             if elt.isGenerating:
-                                logger.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
+                                _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                                 await elt._await_generator()
-                                logger.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
+                                _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
                                 elt_img = elt.imgData
                             else:
                                 elt_img = await elt.async_generate(elt_area)
                         else:
                             if elt.isGenerating:
-                                logger.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
+                                _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                                 await elt._await_generator()
-                                logger.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
+                                _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
                                 elt_img = elt.imgData
                             elt_img = elt.imgData
                     else:
@@ -1627,7 +1626,7 @@ class Layout(Element):
         n_rows = len(self.layout)
 
         if self.area == None:
-            logger.warning(f"{self}: Cannot create area matrix before an area has been assigned")
+            _LOGGER.warning(f"{self}: Cannot create area matrix before an area has been assigned")
             return
 
         [(x, y), (w, h)] = self.area[:]
@@ -1658,7 +1657,7 @@ class Layout(Element):
                 true_row_height = next(height_rounders)(eval(dim))
 
             if true_row_height < 0:
-                logger.error(f"{self}: row {i} height {row_height} converted to {true_row_height}, setting to 0")
+                _LOGGER.error(f"{self}: row {i} height {row_height} converted to {true_row_height}, setting to 0")
                 true_row_height = 0
 
             width_rounders = cycle([ceil,floor])
@@ -1682,7 +1681,7 @@ class Layout(Element):
                     ##If overwriting the width to a pixel value here is required for something, it is in the extract_colwidth function, but idk why.
                     ##Seems to not affect it, otherwise probably just rewrite it to use the area matrix
                 if true_elt_width < 0:
-                    logger.error(f"{element}'s width {element_width} converted to {true_elt_width}, setting to 0")
+                    _LOGGER.error(f"{element}'s width {element_width} converted to {true_elt_width}, setting to 0")
                     true_elt_width = 0
 
                 element_area = [(x0, y0), (true_elt_width, true_row_height)]
@@ -1758,7 +1757,7 @@ class Layout(Element):
                 total_questionMarks_weight += weight
         layout_width = self.layoutArea[1][0]
         if total_questionMarks_weight == 0: 
-            logger.warning("Division by 0, converted dim: {}".format(converted_dimension))
+            _LOGGER.warning("Division by 0, converted dim: {}".format(converted_dimension))
             return converted_dimension
         else:
             q_dim = (layout_width - total_width)/total_questionMarks_weight
@@ -1813,12 +1812,12 @@ class Layout(Element):
                                         interaction, elt
                                     )
                                 if type(disp) != list:
-                                    logger.warning(f"Layout returned {disp}")
+                                    _LOGGER.warning(f"Layout returned {disp}")
                                     disp = []
 
                                 return disp
         except FuncExceptions as exce:
-            logger.warning(f"{self}: Cannot iterate fully to dispatch click: {exce}")
+            _LOGGER.warning(f"{self}: Cannot iterate fully to dispatch click: {exce}")
         return []
 
     def _dispatch_click_DICHOTOMY_colsOnly(self, coords):
@@ -1881,7 +1880,7 @@ class Layout(Element):
         click_x, click_y = coords
         row_A = 0
         row_C = max(len(self.areaMatrix) - 1, 0)
-        logger.debug(self.areaMatrix[row_C])
+        _LOGGER.debug(self.areaMatrix[row_C])
         while len(self.areaMatrix[row_A]) == 0:
             row_A += 1
         while len(self.areaMatrix[row_C]) == 0:
@@ -2027,7 +2026,7 @@ class _TileBase(Layout):
     def tile_layout(self, value : str):
         if not isinstance(value, str):
             msg = f"{self}: tile_layout must be a string. {value} is not valid."
-            logger.exception(TypeError(msg))
+            _LOGGER.exception(TypeError(msg))
             return
         
         if value != self._tile_layout:
@@ -2043,7 +2042,7 @@ class _TileBase(Layout):
         try:
             self.is_layout_valid(value)
         except FuncExceptions as exce:
-            logger.error(f"Layout invalid: {exce}")
+            _LOGGER.error(f"Layout invalid: {exce}")
             value = [["?",(None,"?")]]
         
         old_layout = self._layout
@@ -2075,7 +2074,7 @@ class _TileBase(Layout):
             value = list(value)
         value_set = set(value)
         for elt in filter(lambda elt: elt not in self.elements, value_set):
-            logger.warning(f"{self} does not have an element {elt}. Will be removed from the hide list")
+            _LOGGER.warning(f"{self} does not have an element {elt}. Will be removed from the hide list")
             value.remove(elt)
         
         if value_set == set(self.__hide):
@@ -2096,7 +2095,7 @@ class _TileBase(Layout):
         val_keys = set(value.keys()) | allowed_keys
         if val_keys != allowed_keys:
             msg = f"{self.id} vertical sizes only allows {allowed_keys}. {value.keys()} has at least 1 not allowed. Don't forget to add new elements before setting vertical and horizontal sizes."
-            logger.exception(KeyError(msg))
+            _LOGGER.exception(KeyError(msg))
             return
 
         self._vertical_sizes.update(value)
@@ -2114,7 +2113,7 @@ class _TileBase(Layout):
         val_keys = set(value.keys()) | allowed_keys
         if val_keys != allowed_keys:
             msg = f"{self.id} horizontal sizes only allows {allowed_keys}. {value.keys()} has at least 1 not allowed. Don't forget to add new elements before setting vertical and horizontal sizes."
-            logger.exception(KeyError(msg))
+            _LOGGER.exception(KeyError(msg))
             return
 
         self._horizontal_sizes.update(value)
@@ -2131,20 +2130,20 @@ class _TileBase(Layout):
     @element_properties.setter
     def element_properties(self, value : dict[str, dict]):
         if not isinstance(value, dict):
-            logger.exception(TypeError("Element properties must be a dict"))
+            _LOGGER.exception(TypeError("Element properties must be a dict"))
             return
         
         for elt, props_or in value.items():
             props = props_or.copy()
             if elt not in self.elements:
-                logger.warning(f"{self} does not have an element {elt}")
+                _LOGGER.warning(f"{self} does not have an element {elt}")
             else:
                 if elt in self._restricted_element_properties:
                     restrictions = self._restricted_element_properties[elt]
                     prop_keys = set(props.keys())
                     for restr in filter(lambda restr: restr in restrictions, prop_keys):
                         msg = f"{self} does not allow setting {restr} for {elt}. Will not be changed."
-                        logger.warning(msg)
+                        _LOGGER.warning(msg)
                         props.pop(restr)
 
                 if elt in self._element_properties:
@@ -2194,7 +2193,7 @@ class _TileBase(Layout):
             if elt_name not in self._element_properties:
                 return
             elif elt_name not in self.elements:
-                logger.warning(f"{self} does not have an element {elt} in its defined elements")
+                _LOGGER.warning(f"{self} does not have an element {elt} in its defined elements")
                 return
             else:
                 prop_loop = [(elt_name, self._element_properties[elt_name])]
@@ -2304,7 +2303,7 @@ class TileLayout(_TileBase):
         """        
         elts = dict(self.__elements)
         if name in elts:
-            logger.warning(f"{self} already has an element {name}: {elts[name]}. It will be overwritten.")
+            _LOGGER.warning(f"{self} already has an element {name}: {elts[name]}. It will be overwritten.")
         
         elts[name] = element
         
@@ -2349,7 +2348,7 @@ class ButtonList(Layout):
     @margins.setter
     def margins(self, value:list):
         if len(value) != 4:
-            logger.error(f"Margin list must have exactly 4 values. {value} is not valid")
+            _LOGGER.error(f"Margin list must have exactly 4 values. {value} is not valid")
         else:
             self._margins = value
     #endregion
@@ -2549,7 +2548,7 @@ class Popup(Layout):
             self.parentPSSMScreen.add_element(self)
             self.parentPSSMScreen.popupsOnTop.append(self)
         else:
-            logger.warning(f"Popup {self.id} is already on screen. Close it first.")
+            _LOGGER.warning(f"Popup {self.id} is already on screen. Close it first.")
         
         self._tapEvent = asyncio.Event()
         if self.auto_close:
@@ -2557,7 +2556,7 @@ class Popup(Layout):
         if self in self.parentPSSMScreen.popupsOnTop:
             if self.parentPSSMScreen.popupsOnTop.count(self) > 1:
                 ##For some reason it puts two menus on top?
-                logger.warning("this is weird")
+                _LOGGER.warning("this is weird")
         return
 
     def close(self, *args, **kwargs):
@@ -2585,7 +2584,7 @@ class Popup(Layout):
                 await asyncio.wait_for(self._tapEvent.wait(),time)
             except asyncio.TimeoutError:
                 self._tapEvent.clear()
-                logger.debug(f"Closing popup {self.id} automatically")
+                _LOGGER.debug(f"Closing popup {self.id} automatically")
                 await self.async_close()
             else:
                 self._tapEvent.clear()
@@ -2970,7 +2969,7 @@ class PopupDrawer(Popup):
     @direction.setter
     def direction(self, value:str):
         if value.lower() not in ["up", "down", "left", "right"]:
-            logger.error(f"{value} is not a valid drawer direction. Setting not applied")
+            _LOGGER.error(f"{value} is not a valid drawer direction. Setting not applied")
         else:
             self._direction = value.lower()
 
@@ -3228,7 +3227,7 @@ class Button(Element):
     @text.setter
     def text(self, value:str):
         if not isinstance(value,str):
-            logger.debug(f"Converting {type(value)} to a string")
+            _LOGGER.debug(f"Converting {type(value)} to a string")
             value = str(value)
         self.__text = value
 
@@ -3304,7 +3303,7 @@ class Button(Element):
         if isinstance(value,(tuple,list)):
             if len(value) > 4:
                 msg = f"Margin lists cannot be larger than 4."
-                logger.exception(msg,ValueError(msg))
+                _LOGGER.exception(msg,ValueError(msg))
                 return
             elif len(value) == 2:
                 value = value*2
@@ -3315,7 +3314,7 @@ class Button(Element):
             value = (value,)*4
         else:
             msg = f"Invalid margin type."
-            logger.exception(msg,TypeError(msg))
+            _LOGGER.exception(msg,TypeError(msg))
             return
         self._dimension_setter('_margins',value)
     
@@ -3353,14 +3352,14 @@ class Button(Element):
         if isinstance(value, bool):
             if value != False:
                 msg = "Resize cannot be explicitly true, please use an integer or dimensional string"
-                logger.exception(ValueError(msg))
+                _LOGGER.exception(ValueError(msg))
             else:
                 self.__resize = value
             return
 
         if v := tools.is_valid_dimension(value):
             if isinstance(v,Exception):
-                logger.exception(v,exc_info=v)
+                _LOGGER.exception(v,exc_info=v)
             else:
                 self.__resize = value
             
@@ -3373,18 +3372,18 @@ class Button(Element):
     def text_x_position(self, value:Union[str,int]):
         if isinstance(value,int):
             if value < 0:
-                logger.error(f"Text position must be a positive or 0 integer, {value} is not valid, setting to 0")
+                _LOGGER.error(f"Text position must be a positive or 0 integer, {value} is not valid, setting to 0")
                 value = 0
         else:
             ops = ["left","middle","right","center"]
             PILvals = ["l","m","r","s"]
             if value in ["baseline","s"]:
-                logger.error("Baseline alignment is only for vertical text, which is not implemented. Setting to center")
+                _LOGGER.error("Baseline alignment is only for vertical text, which is not implemented. Setting to center")
                 value = "center"
             elif value.lower() not in ops and value.lower() not in PILvals:
                 valid = tools.is_valid_dimension(value)
                 if isinstance(valid,Exception):
-                    logger.error(f"{value} is not a valid dimensional string for text_x_position: {valid}. Setting to center")
+                    _LOGGER.error(f"{value} is not a valid dimensional string for text_x_position: {valid}. Setting to center")
                     value = "center"
 
         self._text_x_position = value
@@ -3398,7 +3397,7 @@ class Button(Element):
     def text_y_position(self, value:Union[str,int]):
         if isinstance(value,int):
             if value < 0:
-                logger.error(f"Text position must be a positive or 0 integer, {value} is not valid")
+                _LOGGER.error(f"Text position must be a positive or 0 integer, {value} is not valid")
                 value = 0
             else:
 
@@ -3407,7 +3406,7 @@ class Button(Element):
                 if value.lower() not in ops and value.lower() not in PILvals:
                     valid = tools.is_valid_dimension(value)
                     if isinstance(valid,Exception):
-                        logger.error(f"{value} is not a valid dimensional string for text_y_position: {valid}. Setting to center")
+                        _LOGGER.error(f"{value} is not a valid dimensional string for text_y_position: {valid}. Setting to center")
                         value = "center"
             
         self._text_y_position = value
@@ -3425,7 +3424,7 @@ class Button(Element):
         elif horV in ["l","m","r","s"]:
             hor = horV
         else:
-            logger.error(f"{horV} is not a valid horizontal alignment. Please ensure you used a value from the Pillow docs, or None. Setting value to None")
+            _LOGGER.error(f"{horV} is not a valid horizontal alignment. Please ensure you used a value from the Pillow docs, or None. Setting value to None")
             hor = None
 
         if verV == None:
@@ -3433,7 +3432,7 @@ class Button(Element):
         elif verV in ["a","t","m","s","b","d"]:
             ver = verV
         else:
-            logger.error(f"{verV} is not a valid vertical alignment. Please ensure you used a value from the Pillow docs, or None. Setting value to None")
+            _LOGGER.error(f"{verV} is not a valid vertical alignment. Please ensure you used a value from the Pillow docs, or None. Setting value to None")
             ver = None
         self._text_anchor_alignment = (hor, ver)
 
@@ -3497,7 +3496,7 @@ class Button(Element):
             area = self.area
 
         if area == None:
-            logger.verbose(f"Element {self} has no area asigned. Returning")
+            _LOGGER.verbose(f"Element {self} has no area asigned. Returning")
             ##No area assigned yet, wait till it is done by a layout
             return
 
@@ -3675,11 +3674,11 @@ class Button(Element):
         if text_length > w*0.95:
             text_height = int((text_height*w*0.95)/text_length)
             if text_height < min_size:
-                logger.debug(f"Could not fit {text} without violating min size {min_size}, height required is {text_height}" )
+                _LOGGER.debug(f"Could not fit {text} without violating min size {min_size}, height required is {text_height}" )
                 text_height = int(min_size)
             loaded_font = loaded_font.font_variant(size=text_height)
             text_length = loaded_font.getlength(text)
-            logger.verbose(f"Fitted text {text} with length {text_length} into area {area}")
+            _LOGGER.verbose(f"Fitted text {text} with length {text_length} into area {area}")
         
         self._current_font_size = text_height
         if self.resize:
@@ -3708,14 +3707,14 @@ class ImageElement(Element):
         if value == None:
             self._background_shape = None
         elif value == "ADVANCED":
-            logger.debug("Advanced icon shape applied")
+            _LOGGER.debug("Advanced icon shape applied")
             self._background_shape = value
         elif value.strip().lower().replace(" ","_") in IMPLEMENTED_ICON_SHAPES:
             ##Maybe add some string stuff like lower in here to allower for minor changes in what people fill in.
             ##Mainly, remove spaces for underscores, and lower all text
             self._background_shape = value 
         else:
-            logger.error(f"{value} is not a predefined icon background shape, nor is it set to ADVANCED. Setting shape to none")
+            _LOGGER.error(f"{value} is not a predefined icon background shape, nor is it set to ADVANCED. Setting shape to none")
             self._background_shape = None
 
     @property
@@ -3841,7 +3840,7 @@ class Picture(ImageElement):
                 
             if not p.exists():
                 msg = f"Picture file {p} does not exist."
-                logger.error(msg)            
+                _LOGGER.error(msg)            
             self.__picturePath = p
 
         else:
@@ -3898,7 +3897,7 @@ class Picture(ImageElement):
     def fit_method(self, value):
         if value not in ["resize", "crop", "contain", "cover", "fit", "pad"]:
             msg = f"{value} is not an allowed fit_method. Using default value and method"
-            logger.warning(msg)
+            _LOGGER.warning(msg)
             value = "default"
 
         self.__fit_method = value
@@ -3953,7 +3952,7 @@ class Picture(ImageElement):
             self._area = area
 
         if area == None:
-            logger.warning(f"Element {self} has no area asigned. Cannot generate")
+            _LOGGER.warning(f"Element {self} has no area asigned. Cannot generate")
             return
 
         [(x, y), (w, h)] = area
@@ -3984,7 +3983,7 @@ class Picture(ImageElement):
                 img = self.pictureImage
         except (FileNotFoundError, AttributeError):
             ##Make missing image.
-            logger.error(f"Unable to open image at {self.__picturePath}")
+            _LOGGER.error(f"Unable to open image at {self.__picturePath}")
             self._fileError = True
             self.__reopen = True
             img = Image.new("RGBA", size, "gray")
@@ -4002,7 +4001,7 @@ class Picture(ImageElement):
                     (shape_img, _) = DrawShapes.draw_advanced(Image.new("RGBA", (w,h)), method, 
                                                 drawArgs=self.shape_settings.get("drawArgs",{}), paste=False)
                 except FuncExceptions as exce:
-                    logger.error(f"Error drawing advanced shape {method}: {exce}")
+                    _LOGGER.error(f"Error drawing advanced shape {method}: {exce}")
             else:
                 draw_func = DrawShapes.get_draw_function(self.background_shape)
                 drawArgs = self.shape_settings.get("drawArgs",{})
@@ -4057,7 +4056,7 @@ class Picture(ImageElement):
             img = img_new
 
         if img.size != size:
-            logger.warning(f"{self.id} did not yield the correct size. Fitting to ensure correct size")
+            _LOGGER.warning(f"{self.id} did not yield the correct size. Fitting to ensure correct size")
             img = ImageOps.fit(img,size)
 
         self._imgData = img
@@ -4168,7 +4167,7 @@ class Icon(Element):
 
         for param in kwargs:
             if "alert" in param:
-                logger.warning(f"found leftover alert in icon, change to badge. Entity is {kwargs.get('entity', 'Not defined')}")
+                _LOGGER.warning(f"found leftover alert in icon, change to badge. Entity is {kwargs.get('entity', 'Not defined')}")
 
     #region
     # -------------------------- Icon Element properties ------------------------- #      
@@ -4212,7 +4211,7 @@ class Icon(Element):
         else:
             if only_mdi:
                 msg = f"{value} is not recognised as a valid mdi icon type"
-                logger.error(ValueError(msg))
+                _LOGGER.error(ValueError(msg))
                 return
             else:
                 ##Test if the icon file exists here. Check the generator maybe?
@@ -4265,14 +4264,14 @@ class Icon(Element):
         if value == None:
             self._background_shape = None
         elif value == "ADVANCED":
-            logger.debug("Advanced icon shape applied")
+            _LOGGER.debug("Advanced icon shape applied")
             self._background_shape = value
         elif value.strip().lower().replace(" ","_") in IMPLEMENTED_ICON_SHAPES:
             ##Maybe add some string stuff like lower in here to allower for minor changes in what people fill in.
             ##Mainly, remove spaces for underscores, and lower all text
             self._background_shape = value 
         else:
-            logger.error(f"{value} is not a predefined icon background shape, nor is it set to ADVANCED. Setting shape to none")
+            _LOGGER.error(f"{value} is not a predefined icon background shape, nor is it set to ADVANCED. Setting shape to none")
             self._background_shape = None
 
     @property
@@ -4338,7 +4337,7 @@ class Icon(Element):
     @badge_icon.setter
     def badge_icon(self, value: Optional[str]):
         if value != None and not isinstance(value, (str, Image.Image)):
-            logger.error(f"{value} cannot be used as a badge icon, setting to error icon.")
+            _LOGGER.error(f"{value} cannot be used as a badge icon, setting to error icon.")
             self._badge_icon = MISSING_ICON
         else:
             self._badge_icon = value
@@ -4357,7 +4356,7 @@ class Icon(Element):
         value = value.copy()
         for key in value:
             if key not in ALLOWED_BADGE_SETTINGS: 
-                logger.warning(f"{key} is not an allowed badge setting")
+                _LOGGER.warning(f"{key} is not an allowed badge setting")
                 value.pop(key)
         self._badge_settings = value
 
@@ -4388,10 +4387,10 @@ class Icon(Element):
 
             if value in valid_strings:
                 loc = valid_locs[valid_strings.index(value)]
-                logger.verbose(f"Badge location provided as {input}, set as {loc}")
+                _LOGGER.verbose(f"Badge location provided as {input}, set as {loc}")
                 self._badge_location = loc
             else:
-                logger.error(f"Unable to decode {input} as a valid badge location, location set to {DEFAULT_BADGE_LOCATION}. Use one of {valid_locs} as shorthand or {valid_strings} (where spaces, dashes and underscores are removed and input is converted to lowercase)")
+                _LOGGER.error(f"Unable to decode {input} as a valid badge location, location set to {DEFAULT_BADGE_LOCATION}. Use one of {valid_locs} as shorthand or {valid_strings} (where spaces, dashes and underscores are removed and input is converted to lowercase)")
                 self._badge_location = DEFAULT_BADGE_LOCATION
 
     @property
@@ -4411,11 +4410,11 @@ class Icon(Element):
                 perc = float(value.replace("%",""))
                 value = perc/100
             else:
-                logger.error(f"Could not convert badge_size value {input} to a percentage")
+                _LOGGER.error(f"Could not convert badge_size value {input} to a percentage")
                 return
         
         if value < 0 or value > 1:
-            logger.error(f"badge_size {input} should be between 0 and 100, or 0% to 100%")
+            _LOGGER.error(f"badge_size {input} should be between 0 and 100, or 0% to 100%")
         else:
             self._badge_size = value
 
@@ -4427,7 +4426,7 @@ class Icon(Element):
     @badge_offset.setter
     def badge_offset(self, value:int):
         if value < 0:
-            logger.error("Offset must be 0 or larger")
+            _LOGGER.error("Offset must be 0 or larger")
         else:
             self._badge_offset = value
     #endregion
@@ -4440,14 +4439,14 @@ class Icon(Element):
             self._area = area
 
         if area == None:
-            logger.verbose(f"Element {self} has no area asigned. Returning")
+            _LOGGER.verbose(f"Element {self} has no area asigned. Returning")
             return
         
         [(x, y), (w, h)] = area
         draw_size = min(w, h)
 
         if draw_size <= 0:
-            logger.warning(f"{self}: Image size but be larger than 0, cannot draw in area {area}")
+            _LOGGER.warning(f"{self}: Image size but be larger than 0, cannot draw in area {area}")
             return
 
         icon_size = draw_size
@@ -4479,12 +4478,12 @@ class Icon(Element):
             if self.background_shape == "ADVANCED":
                 method = self.shape_settings["method"]
                 icon_size = self.shape_settings.get("icon_size",1)
-                logger.debug(f"Drawing advanced shape {method}")
+                _LOGGER.debug(f"Drawing advanced shape {method}")
                 try:
                     (loadedImg, drawImg) = DrawShapes.draw_advanced(loadedImg, method, 
                                                 drawArgs=self.shape_settings.get("drawArgs",{}), paste=False)
                 except FuncExceptions as exce:
-                    logger.error(f"Error drawing advanced shape {method}: {exce}")
+                    _LOGGER.error(f"Error drawing advanced shape {method}: {exce}")
             
             elif shape in IMPLEMENTED_ICON_SHAPES:
                 drawFunc, relSize = IMPLEMENTED_ICON_SHAPES[shape]
@@ -4496,7 +4495,7 @@ class Icon(Element):
                 (loadedImg, drawImg) = drawFunc(loadedImg, drawArgs=drawArgs, paste=False)
             else:
                 ##This should not happen since the check happens (or will happen) when setting the value
-                logger.error(f"{self.background_shape} is not a recognised valid value for background shape.")
+                _LOGGER.error(f"{self.background_shape} is not a recognised valid value for background shape.")
         else:
             if self.background_color != None:
                 img_background = Style.get_color(self.background_color, imgMode)
@@ -4514,11 +4513,11 @@ class Icon(Element):
             img_background = Style.get_color(img_background,imgMode)
 
         self._fileError = False
-        logger.debug(f"Icon is {self.icon}, path is {self._iconData}")
+        _LOGGER.debug(f"Icon is {self.icon}, path is {self._iconData}")
 
         if self.icon != None and mdi.is_mdi(self.icon):
             icon = self.icon
-            logger.verbose(f"Parsing mdi icon {icon}")
+            _LOGGER.verbose(f"Parsing mdi icon {icon}")
             mdistr = mdi.parse_MDI_Icon(icon)
             
             if isinstance(self.icon_color, bool):
@@ -4544,12 +4543,12 @@ class Icon(Element):
                     loadedImg = loadedImg.resize(draw_size,Image.Resampling.LANCZOS)
                 else:
                     loadedImg = mdi.draw_mdi_icon(loadedImg, self._iconData, icon_color=icon_color_value)
-                logger.debug(f"Drew icon {self.icon}")
+                _LOGGER.debug(f"Drew icon {self.icon}")
             else:
-                logger.error(f"Could not parse mdi file: {icon}")
+                _LOGGER.error(f"Could not parse mdi file: {icon}")
                 self._fileError = True
         elif self.icon != None:
-            logger.debug(f"Getting image {self.icon} for icon element {self.id}")
+            _LOGGER.debug(f"Getting image {self.icon} for icon element {self.id}")
             try:
                 if isinstance(self.icon, Image.Image):
                     iconImg = self.icon
@@ -4559,7 +4558,7 @@ class Icon(Element):
                     img = tools.parse_known_image_file(self.icon)
                     iconImg = Image.open(img)
             except FileNotFoundError:
-                logger.warning(f"Image file {img} does not exist at path {self._iconData}")
+                _LOGGER.warning(f"Image file {img} does not exist at path {self._iconData}")
                 self._fileError = True
                 icon_color_value = Style.contrast_color(icon_bg, imgMode)
             else:
@@ -4594,7 +4593,7 @@ class Icon(Element):
                     iconOriging = (
                         int((draw_size[0]-iconImg.width)/2), 
                         int((draw_size[1]-iconImg.height)/2))
-                logger.verbose(f"Pasting an icon image with size {iconImg.size} onto an image with size {loadedImg.size} onto origin {iconOriging}")
+                _LOGGER.verbose(f"Pasting an icon image with size {iconImg.size} onto an image with size {loadedImg.size} onto origin {iconOriging}")
                 if iconImg.mode == "RGBA" and loadedImg.mode == "RGBA":
                     loadedImg.alpha_composite(iconImg, iconOriging)
                 elif "A" in iconImg.mode and not "A" in loadedImg.mode:
@@ -4612,7 +4611,7 @@ class Icon(Element):
 
         if self.fileError:
             ##Gotta test this one out too to check if the icon gets a seeable color
-            logger.error(f"Could not find icon matching {self.icon} for icon {self.id}")
+            _LOGGER.error(f"Could not find icon matching {self.icon} for icon {self.id}")
             self._iconData = mdi.parse_MDI_Icon(MISSING_ICON)
             loadedImg = Image.new(imgMode, (draw_size[0],draw_size[1]), None)
             loadedImg = mdi.draw_mdi_icon(loadedImg, MISSING_ICON)
@@ -4647,11 +4646,11 @@ class Icon(Element):
                 badgeDict.setdefault("location", self.badge_location)
 
             ##I think this needs to be rewritten for quite a bit since multiple badge properties are not taken into account
-            logger.verbose(f"Badge dict is {badgeDict}")
+            _LOGGER.verbose(f"Badge dict is {badgeDict}")
             loadedImg = self.add_badge(loadedImg, parentIconSize=draw_size, **badgeDict)
 
         if self.invert_icon:
-            logger.verbose(f"Inverting an icon")
+            _LOGGER.verbose(f"Inverting an icon")
             loadedImg = tools.invert_Image(loadedImg)
             drawImg = False
 
@@ -4697,7 +4696,7 @@ class Icon(Element):
         margin = (marginx, marginy)
 
         if relSize > 1:
-            logger.warning(f"Icon {self.badge_icon} for {self} has relative size {relSize} > 1, defaulting to 0.5")
+            _LOGGER.warning(f"Icon {self.badge_icon} for {self} has relative size {relSize} > 1, defaulting to 0.5")
             relSize = 0.5
 
         circle_diameter = round((min(size)*relSize))
@@ -4718,7 +4717,7 @@ class Icon(Element):
         y0 = int(y0)
 
         circle_coo = [(x0,y0),(x1,y1)]
-        logger.verbose(f"Drawing circle size {circle_diameter} at coordinates {location}: {circle_coo} on image with size {size}, margin {margin} ({getattr(self, 'entity_id', 'no entity')})")
+        _LOGGER.verbose(f"Drawing circle size {circle_diameter} at coordinates {location}: {circle_coo} on image with size {size}, margin {margin} ({getattr(self, 'entity_id', 'no entity')})")
         if background_color != None:
             background_color_tuple = Style.get_color(background_color,colorMode)
         else:
@@ -4739,7 +4738,7 @@ class Icon(Element):
             newImg = mdi.make_mdi_icon(self.badge_icon, relSize, col)
             pasteCoords = (int((badgeImg.width-relSize)/2),)*2
             badgeImg.alpha_composite(newImg,pasteCoords)
-            logger.debug("Custom badge")
+            _LOGGER.debug("Custom badge")
 
         badgeImg = badgeImg.resize((circle_diameter, circle_diameter))
         
@@ -4780,7 +4779,7 @@ class Icon(Element):
 
         imgMode = img.mode
         (w,h) = size
-        logger.verbose(f"Saving inverted {self.icon} icon onto image with colormode {imgMode}")
+        _LOGGER.verbose(f"Saving inverted {self.icon} icon onto image with colormode {imgMode}")
         
         if isinstance(background_color,tuple): 
             inv_background = background_color[0]
@@ -4886,7 +4885,7 @@ class Line(Element):
     def orientation(self,value: Literal["horizontal","vertical","diagonal1", "diagonal2"]):
         if value not in ["horizontal","vertical","diagonal1", "diagonal2"]:
             msg = f'Line orientation must be one of ["horizontal","vertical","diagonal1", "diagonal2"], {value} is not valid'
-            logger.error(ValueError(msg))
+            _LOGGER.error(ValueError(msg))
             return
         
         self.__orientation = value
@@ -4916,7 +4915,7 @@ class Line(Element):
                 self.__alignment = value
             else:
                 msg = f'Line alignment must be one of ["center","top","bottom", "left", "right"], {value} is not valid'
-                logger.error(ValueError(msg))
+                _LOGGER.error(ValueError(msg))
             return
         self.__alignment : Literal["center","top","bottom", "left", "right"] = value
     #endregion
@@ -5030,7 +5029,7 @@ class _BaseSlider(Element):
     def orientation(self, value:str):
         if value.lower() not in ["horizontal", "vertical","hor","ver"]:
             msg = f"Slider orientation must be hor(izontal) or ver(tical). {value} is not allower"
-            logger.exception(msg,exc_info=TypeError(msg))
+            _LOGGER.exception(msg,exc_info=TypeError(msg))
         else:
             if "hor" in value.lower():
                 self.__orientation = "horizontal"
@@ -5079,7 +5078,7 @@ class _BaseSlider(Element):
             value = eval(value)
         
         if value not in [int,float]:
-            logger.exception(f"value_type must be int or float, not {value}",exc_info=TypeError("Not float or integer type"))
+            _LOGGER.exception(f"value_type must be int or float, not {value}",exc_info=TypeError("Not float or integer type"))
             return
         else:
             self.__value_type = value
@@ -5103,7 +5102,7 @@ class _BaseSlider(Element):
     def interactive(self, value:bool):
         if not isinstance(value, bool):
             msg = "interactive must be boolean"
-            logger.exception(msg, TypeError(msg))
+            _LOGGER.exception(msg, TypeError(msg))
         else:
             self.__interactive = value
 
@@ -5148,7 +5147,7 @@ class _BaseSlider(Element):
         elif rel_touch > self.valueRange[1]:
             rel_touch = self.valueRange[1]
             
-        logger.verbose(f"Slider position set to {rel_touch}")
+        _LOGGER.verbose(f"Slider position set to {rel_touch}")
 
         await self.async_set_position(rel_touch)
 
@@ -5626,7 +5625,7 @@ class _ElementSelect(Element):
         """        
 
         if option not in self.option_elements:
-            logger.warning(f"{self}: {option} is not a valid option")
+            _LOGGER.warning(f"{self}: {option} is not a valid option")
             return
 
         coros = []
@@ -5661,7 +5660,7 @@ class _ElementSelect(Element):
         L = await asyncio.gather(*coros, return_exceptions=True)
         for res in L:
             if isinstance(res,Exception):
-                logger.warning(f"Counter error: {res}")        
+                _LOGGER.warning(f"Counter error: {res}")        
 
     def add_option(self, option, element : Element, overwrite = False):
         """
@@ -5677,7 +5676,7 @@ class _ElementSelect(Element):
             Overwrite the option if it already exists, by default False
         """
         if option in self.__option_elements and not overwrite:
-            logger.warning(f"{self} already has an option {option}, not adding it.")
+            _LOGGER.warning(f"{self} already has an option {option}, not adding it.")
             return
         
         self.__option_elements[option] = element
@@ -5695,7 +5694,7 @@ class _ElementSelect(Element):
         """
 
         if option not in self.__option_elements:
-            logger.warning(f"{self} does not have an option {option}.")
+            _LOGGER.warning(f"{self} does not have an option {option}.")
             return
         
         if self.selected == option or (self.selected != None and option in self.selected):
@@ -5764,7 +5763,7 @@ class _IntervalUpdate(ABC):
             return
         elif value not in allowed:
             msg = f"Updateinterval must be one of hour, minute or second"
-            logger.error(msg)
+            _LOGGER.error(msg)
             if const.RAISE: raise ValueError(msg)
         else:
             k = f"{value}s" 
@@ -5840,7 +5839,7 @@ class _IntervalUpdate(ABC):
                 self.callback())
         while self._waitTime > 0:
             w = self._waitTime
-            logger.verbose(f"{self} waiting for {w} seconds to call {self.callback}")
+            _LOGGER.verbose(f"{self} waiting for {w} seconds to call {self.callback}")
             await asyncio.sleep(w)
             asyncio.create_task(
                 self.callback())
@@ -5942,7 +5941,7 @@ def parse_layout_string(layout_string : str, sublayout : Optional[str] = None, h
                                                     vertical_sizes, horizontal_sizes, **elementParse)
         ##Figure out how to do this if there's only one thing in the sublayout?
         elementParse[sl] = Layout(sublayoutList, _isSubLayout = True, _register=False)
-        logger.debug(val)
+        _LOGGER.debug(val)
 
     buildlayout = buildlayout.split(";")
     buildlayout = [row.split(",") for row in buildlayout]

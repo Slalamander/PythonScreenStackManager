@@ -25,7 +25,7 @@ from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_MENU_HEADER_
 
 import inspect
 
-from .baseelements import logger, \
+from .baseelements import _LOGGER, \
     DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR, IMPLEMENTED_ICON_SHAPES, IMPLEMENTED_ICON_SHAPES_HINT, DEFAULT_FONT_BOLD, DEFAULT_FONT_SIZE
 
 if TYPE_CHECKING:
@@ -105,7 +105,7 @@ class StatusBar(layouts.GridLayout):
 
         for elt in value.copy():
             if elt not in self.statusbar_elements:
-                logger.warning(f"{self}: {elt} is not registered as a statusbar element")
+                _LOGGER.warning(f"{self}: {elt} is not registered as a statusbar element")
                 value.remove(elt)
 
         self.__hide = value
@@ -122,7 +122,7 @@ class StatusBar(layouts.GridLayout):
     def orientation(self, value:str):
         if value.lower() not in ["horizontal", "vertical","hor","ver"]:
             msg = f"Statusbar orientation must be hor(izontal) or ver(tical). {value} is not allower"
-            logger.exception(msg,exc_info=TypeError(msg))
+            _LOGGER.exception(msg,exc_info=TypeError(msg))
             return
         else:
             if "hor" in value.lower():
@@ -192,7 +192,7 @@ class StatusBar(layouts.GridLayout):
             return
         
         if isinstance(v := tools.is_valid_dimension(value, ["r"]), Exception):
-            logger.exception(v)
+            _LOGGER.exception(v)
             return
         else:
             self._element_size = value
@@ -214,7 +214,7 @@ class StatusBar(layouts.GridLayout):
 
         for elt_name, props in value:
             if elt_name not in all_elements:
-                logger.warning(f"{self}: No element registerd under {elt_name}, not applying properties")
+                _LOGGER.warning(f"{self}: No element registerd under {elt_name}, not applying properties")
                 continue
             elt : "Element" = all_elements[elt_name]
             elt.update(props)
@@ -252,10 +252,10 @@ class StatusBar(layouts.GridLayout):
 
         name = name.lower().replace(" ","")
         if name in cls._statusbar_elements:
-            logger.error(f"The statusbar already has an element named {name} registered.")
+            _LOGGER.error(f"The statusbar already has an element named {name} registered.")
             return
         elif name == "clock":
-            logger.error(f"'clock' is a reserved name and cannot be used for a statusbar element.")
+            _LOGGER.error(f"'clock' is a reserved name and cannot be used for a statusbar element.")
             return
         
         if not isinstance(element, layouts._GridElement):
@@ -536,7 +536,7 @@ class ScreenMenu(UniquePopupMenu):
         return await super().async_show(*args, **kwargs)
 
     async def _screen_actions(self, *elt_args, action : Literal["refresh", "clear", "invert"]):
-        logger.info(f"performing screen action {action}")
+        _LOGGER.info(f"performing screen action {action}")
         
         await self.async_close()
         if action == "refresh":

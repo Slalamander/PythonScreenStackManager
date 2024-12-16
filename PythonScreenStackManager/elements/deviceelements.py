@@ -16,7 +16,7 @@ from ..tools import DummyTask
 from ..constants import FEATURES, FEATURE_ATTRIBUTES
 
 from . import baseelements as base, compoundelements as comps
-from .baseelements import logger, CoordType, classproperty, colorproperty, Style
+from .baseelements import _LOGGER, CoordType, classproperty, colorproperty, Style
 from .constants import BatteryIconMapping, DEFAULT_BATTERY_STYLE, DEFAULT_NETWORK_STYLE, ColorType
 
 if TYPE_CHECKING:
@@ -65,7 +65,7 @@ class _DeviceMonitor(base.Element):
     @monitor_feature.setter
     def monitor_feature(self, value:Literal["battery", "network", "backlight"]):
         if not self.parentPSSMScreen.device.has_feature(value):
-            logger.error(f"The linked device does not have the {value} feature")
+            _LOGGER.error(f"The linked device does not have the {value} feature")
             return
         
         value = FEATURE_ATTRIBUTES.get(value,value)
@@ -81,7 +81,7 @@ class _DeviceMonitor(base.Element):
     @monitor_attribute.setter
     def monitor_attribute(self, value:str):
         if not hasattr(self.monitor, value):
-            logger.error(f"The device {self.monitor_feature} does not have a {value} attribute")
+            _LOGGER.error(f"The device {self.monitor_feature} does not have a {value} attribute")
             return
         self.__monitor_attribute = value
 
@@ -157,7 +157,7 @@ class DeviceButton(_DeviceMonitor, base.Button):
     
     @base.Button.text.setter
     def text(self, value):
-        logger.warning("DeviceButton does not allow setting the text property directly")
+        _LOGGER.warning("DeviceButton does not allow setting the text property directly")
     
     @property
     def typing(self) -> Optional[type]:
@@ -175,12 +175,12 @@ class DeviceButton(_DeviceMonitor, base.Button):
                 value = eval(value)
             except NameError as exce:
                 msg = f"Cannot convert {value} to a python type"
-                logger.exception(TypeError(msg))
+                _LOGGER.exception(TypeError(msg))
                 return
         
         if not isinstance(value, type):
             msg = f"Cannot convert {value} to a python type. It evaluates as a {type(value)} (Should evaluate to type)"
-            logger.exception(TypeError(msg))
+            _LOGGER.exception(TypeError(msg))
         else:
             self.__typing = value
     #endregion
@@ -266,7 +266,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
     @base.Icon.icon.setter
     def icon(self, value) -> Union[str,Image.Image]:
         "Status icon. Cannot be set here,  as it is taken care of by the element itself."
-        if value != "mdi:cog": logger.warning("DeviceStatus does not allow setting the icon property directly")
+        if value != "mdi:cog": _LOGGER.warning("DeviceStatus does not allow setting the icon property directly")
 
     @property
     def monitor(self) -> "PSSMdevice":
@@ -477,7 +477,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
     def build_newAttributes(self):
         "Gathers the new states of the device features and updates itself accordingly."
         ##Don't need to monitor if anything did change. This function is only called by monitor_device which means it needs to be updated anyhow
-        logger.debug("Updating DeviceStatus Icon")
+        _LOGGER.debug("Updating DeviceStatus Icon")
         newAttributes = {}
         if self.icon_feature == "battery":
             _icon = self.make_battery_icon()
@@ -650,7 +650,7 @@ class BacklightSlider(_DeviceMonitor, comps.Slider):
     @monitor_attribute.setter
     def monitor_attribute(self, value:Literal["brightness", "defaultBrightness"]):
         if value not in ["brightness", "defaultBrightness"]:
-            logger.error("BacklightSlider can only monitor brightness or defaultBrightness")
+            _LOGGER.error("BacklightSlider can only monitor brightness or defaultBrightness")
             return
         self.__monitor_attribute = value
         val = getattr(self.monitor, value)
