@@ -2456,7 +2456,7 @@ class DropDown(base.Button):
     @property
     def _emulator_icon(cls): return "mdi:form-select"
 
-    def __init__(self, options : list[str], selected : int=0, on_select : Callable[[base.Element,str],Any] = None,
+    def __init__(self, options : list[str] = [], selected : int=0, on_select : Callable[[base.Element,str],Any] = None,
                 closed_icon : MDItype = "mdi:menu-down", opened_icon : MDItype = "mdi:menu-up", 
                 margins : PSSMdimension = None, radius : PSSMdimension="h*0.2",
                 background_color : ColorType = DEFAULT_BACKGROUND_COLOR,  outline_color : ColorType = None, outline_width : PSSMdimension = 5, **kwargs):
@@ -2471,7 +2471,8 @@ class DropDown(base.Button):
             self._selected = selected
         else:
             self._text = None
-            self._selected = None
+            self._selected = 0
+
         self.text_anchor_alignment = ("l","m")
 
         self.options = options
