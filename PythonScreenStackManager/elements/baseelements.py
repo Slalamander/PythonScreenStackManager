@@ -5137,9 +5137,10 @@ class _BaseSlider(Element):
 
     #endregion
 
-    async def __tap_action(self,elt,coords, **kwargs):
+    async def __tap_action(self, elt, coords, **kwargs):
         if self.interactive:
             await self._slider_interact(elt,coords)
+            kwargs.update(self.tap_action_kwargs)
         
         if self._tap_action == None:
             return
@@ -5148,25 +5149,7 @@ class _BaseSlider(Element):
     async def _slider_interact(self, elt, coords):
         """Function that handles the slider being clicked on. Performs logic checks and then executes onTap"""
 
-        (x, y), (w, h) = self.area
-        if self.orientation == "horizontal":
-            ##This should map every 1 pixel to a amount of value
-            t = coords[0] - x - self.lineCoords[0][0]
-            rangeMap = (self.valueRange[1] - self.valueRange[0])/(self.lineCoords[1][0] - self.lineCoords[0][0])
-            pos = t*rangeMap + self.valueRange[0]
-
-        elif self.orientation == "vertical":
-            ##Breakpoint since vertical sliders still need testing
-            t = self.lineCoords[1][1] - (coords[1] - y)
-            rangeMap = (self.valueRange[1] - self.valueRange[0])/(self.lineCoords[1][1] - self.lineCoords[0][1])
-            pos = t*rangeMap + self.valueRange[0]
-
-        rel_touch = pos
-        if rel_touch < self.valueRange[0]:
-            rel_touch = self.valueRange[0]
-        elif rel_touch > self.valueRange[1]:
-            rel_touch = self.valueRange[1]
-            
+        rel_touch = self._get_touch_position(coords)
         _LOGGER.verbose(f"Slider position set to {rel_touch}")
 
         await self.async_set_position(rel_touch)
@@ -5191,6 +5174,28 @@ class _BaseSlider(Element):
 
     def set_position(self, new_position):
         self.parentPSSMScreen.mainLoop.create_task(self.async_set_position(new_position))
+
+    def _get_touch_position(self, coords):
+        (x, y), (w, h) = self.area
+        if self.orientation == "horizontal":
+            ##This should map every 1 pixel to a amount of value
+            t = coords[0] - x - self.lineCoords[0][0]
+            rangeMap = (self.valueRange[1] - self.valueRange[0])/(self.lineCoords[1][0] - self.lineCoords[0][0])
+            pos = t*rangeMap + self.valueRange[0]
+
+        elif self.orientation == "vertical":
+            ##Breakpoint since vertical sliders still need testing
+            t = self.lineCoords[1][1] - (coords[1] - y)
+            rangeMap = (self.valueRange[1] - self.valueRange[0])/(self.lineCoords[1][1] - self.lineCoords[0][1])
+            pos = t*rangeMap + self.valueRange[0]
+
+        rel_touch = pos
+        if rel_touch < self.valueRange[0]:
+            rel_touch = self.valueRange[0]
+        elif rel_touch > self.valueRange[1]:
+            rel_touch = self.valueRange[1]
+        
+        return rel_touch
 
     @elementactionwrapper.method
     async def _set_position_action(self, new_position):
