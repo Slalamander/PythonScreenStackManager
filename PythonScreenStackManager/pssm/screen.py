@@ -688,7 +688,7 @@ class PSSMScreen:
                 except ElementNotRegistered as e:
                     checks_passed = False
                     _LOGGER.error(f"Attribute {attr} check for element {elt} failed: {e}")
-        
+
         delattr(self,"_element_checks")
         return checks_passed
 

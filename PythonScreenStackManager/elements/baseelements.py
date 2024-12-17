@@ -116,6 +116,30 @@ class Element(ABC):
     def _emulator_icon(cls): return "mdi:shape"
     "Icon to use in the element tree of the emulator"
 
+    def __init_subclass__(cls, *args, **kwargs):
+        ##Method gotten from: https://stackoverflow.com/questions/71183263/automatically-call-method-after-init-in-child-class
+        ##Cannot use a metaclass for this, which would've probably been preferred, as it messes up other elements that already have metaclasses
+        super().__init_subclass__(*args, **kwargs)
+        init = cls.__init__
+        def new_init(self, *args, **kwargs):
+            id = kwargs.get("id",None)
+            _register = kwargs.get("_register",None)
+            init(self, *args, **kwargs)
+            if cls is type(self):
+                self.__post_init__(id, _register)
+        cls.__init__ = new_init
+
+    def __post_init__(self, id, _register):
+
+        if self.screen == None:
+            return
+
+        if _register == None:
+            _register = not self.parentPSSMScreen.printing if id == None else True
+        if _register:
+            self.parentPSSMScreen._register_element(self)
+        return
+
     def __new__(cls, *args, **kwargs):
         ##Ensure that the id and unique id are set immediately, which allows for things like __repr__ and __hash__ to work when __init__ starts.
         instance = super().__new__(cls)
@@ -192,13 +216,13 @@ class Element(ABC):
                 msg = f"{self}: custom layout generators need to also have async_generate defined"
                 _LOGGER.warning(msg)
 
-        if self.screen == None:
-            return
+        # if self.screen == None:
+        #     return
 
-        if _register == None:
-            _register = not self.parentPSSMScreen.printing if id == None else True
-        if _register:
-            self.parentPSSMScreen._register_element(self)
+        # if _register == None:
+        #     _register = not self.parentPSSMScreen.printing if id == None else True
+        # if _register:
+        #     self.parentPSSMScreen._register_element(self)
 
     #region Element Properties
     @property
@@ -2454,8 +2478,8 @@ class Popup(Layout):
         else:
             self.__popupID = popupID
 
-        if popupID != None:
-            self.parentPSSMScreen._register_popup(self)
+        # if popupID != None:
+        #     self.parentPSSMScreen._register_popup(self)
 
     #region
     # ----------------------------- popup properties ----------------------------- #
@@ -5364,6 +5388,11 @@ class _ElementSelect(Element):
     def _color_shorthands(cls) -> dict[str,str]:
         "Class method to get shorthands for color setters, to allow for parsing their values in element properties. Returns a dict with the [key] being the shorthand to use for element properties and [value] being the tile attribute it links to."
         return {"active": "active_color", "inactive": "inactive_color"} | _TileBase._color_shorthands
+
+    def __post_init__(self, id, _register):
+        ##Since this works on already defined elements, the __post_init__ is overwritten as otherwise it'd be registered again.
+        ##And cause issues since the element __init__ is not called
+        return
 
     def  __init__(self, layout_element : Union[Layout, "_ElementSelect"], elements : dict[Literal["option"], Element], select_multiple : bool = False, allow_deselect : bool = True, on_select : InteractionFunctionType = None,
                 active_properties : dict = {"background_color": "active"}, inactive_properties : dict = {"background_color": "inactive"},
