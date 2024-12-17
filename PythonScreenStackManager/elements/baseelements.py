@@ -4685,7 +4685,11 @@ class Icon(ImageElement):
 
             ##I think this needs to be rewritten for quite a bit since multiple badge properties are not taken into account
             _LOGGER.verbose(f"Badge dict is {badgeDict}")
-            loadedImg = self.add_badge(loadedImg, parentIconSize=draw_size, **badgeDict)
+
+            try:
+                loadedImg = self.add_badge(loadedImg, parentIconSize=draw_size, **badgeDict)
+            except:
+                _LOGGER.error(f"{self} Could not add badge", exc_info=True)
 
         if self.invert_icon:
             _LOGGER.verbose(f"Inverting an icon")
@@ -4773,10 +4777,14 @@ class Icon(ImageElement):
             badgeImg = mdi.draw_mdi_icon(badgeImg,self.badge_icon, icon_size=relSize, icon_color=icon_color)
         else:
             col = Style.get_color(icon_color,"RGBA")
-            newImg = mdi.make_mdi_icon(self.badge_icon, relSize, col)
+            if isinstance(self.badge_icon, Image.Image):
+                badge = self.badge_icon.copy()
+            else:
+                badge = tools.parse_known_image_file(self.badge_icon)
+            
+            newImg = mdi.make_mdi_icon(badge, relSize, col)
             pasteCoords = (int((badgeImg.width-relSize)/2),)*2
             badgeImg.alpha_composite(newImg,pasteCoords)
-            _LOGGER.debug("Custom badge")
 
         badgeImg = badgeImg.resize((circle_diameter, circle_diameter))
         
