@@ -2466,8 +2466,12 @@ class DropDown(base.Button):
         if not isinstance(options, (list,tuple)):
             options = list(options)
 
-        self.__text = options[selected]
-        self._selected = selected
+        if options:
+            self._text = options[selected]
+            self._selected = selected
+        else:
+            self._text = None
+            self._selected = None
         self.text_anchor_alignment = ("l","m")
 
         self.options = options
