@@ -918,7 +918,15 @@ class PSSMScreen:
                 img = new_img
             else:
                 bg = Style.get_color(element.parentBackground, self.imgMode)
-                new_img = Image.new(self.imgMode,img.size, bg)
+                new_img = Image.new(self.imgMode, img.size, bg)
+                
+                if "A" in self.imgMode and bg[-1] != 255:
+                    crop_box = [x,y,x+w,y+h]
+                    bg_img = self.backgroundImage.crop(crop_box)
+                    bg_img.paste(new_img, mask=new_img)
+                    # bg_img.paste(new_img)
+                    new_img = bg_img
+                
                 new_img.paste(img, mask=img)
                 img = new_img
 
