@@ -1825,7 +1825,7 @@ class Layout(Element):
 
                                 return disp
         except FuncExceptions as exce:
-            _LOGGER.warning(f"{self}: Cannot iterate fully to dispatch click: {exce}")
+            _LOGGER.warning(f"{self}: Cannot iterate fully to dispatch click: {exce}", exc_info=exce)
         return []
 
     def _dispatch_click_DICHOTOMY_colsOnly(self, coords):
