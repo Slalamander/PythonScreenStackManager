@@ -265,7 +265,7 @@ class elementaction(customproperty):
         ##Errors cause the function to be set to None, otherwise data and map etc. may interfere with the stuff.
         attribute = self._action_attribute
 
-        if isinstance(value,Callable) or value == None:
+        if callable(value) or value == None:
             func = value
         elif isinstance(value, str):
             func = element.screen.parse_shorthand_function(value,attribute)
