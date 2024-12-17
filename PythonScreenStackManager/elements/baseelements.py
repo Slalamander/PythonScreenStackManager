@@ -4144,7 +4144,7 @@ class Icon(ImageElement):
     @property
     def _emulator_icon(cls): return "mdi:drawing-box"
 
-    def __init__(self, icon: Optional[Union[mdiType,str]] = DEFAULT_ICON, icon_color:Union[ColorType,bool]= DEFAULT_FOREGROUND_COLOR, background_color : Optional[ColorType]=None, background_shape:IMPLEMENTED_ICON_SHAPES_HINT = None, shape_settings : dict = {},
+    def __init__(self, icon: Optional[Union[mdiType,str]] = DEFAULT_ICON, icon_color:Union[ColorType,bool] = DEFAULT_FOREGROUND_COLOR, background_color : Optional[ColorType]=None, background_shape:IMPLEMENTED_ICON_SHAPES_HINT = None, shape_settings : dict = {},
                 isInverted : bool = False, invert_icon : bool = False,
                 mirrored:bool=False, rotation_angle: Union[int,float] = 0, force_aspect = True, 
                 badge_icon : Optional[Union[mdiType,str]] = None, badge_settings : dict = {}, badge_location : Optional[BadgeLocationType] = None, badge_color = None, badge_size : Optional[float] = None, badge_offset : int = 0, **kwargs):
