@@ -371,7 +371,7 @@ class elementaction(customproperty):
 
         attr_map = getattr(element, f"{action_attr}_map", {}).copy()
 
-        for key, attr in attr_map:
+        for key, attr in attr_map.items():
             if hasattr(element, attr):
                 d[key] = getattr(element,attr)
             else:
