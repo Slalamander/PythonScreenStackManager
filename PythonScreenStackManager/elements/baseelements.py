@@ -3193,7 +3193,7 @@ class Button(Element):
     @property
     def _emulator_icon(cls): return "mdi:alpha-b-box"
 
-    def __init__(self, text: Optional[str]="", font:str=DEFAULT_FONT, font_size: PSSMdimension = DEFAULT_FONT_SIZE, font_color : Union[bool,ColorType] =True, #"black",
+    def __init__(self, text: Optional[str]="", font:str=DEFAULT_FONT, font_size: PSSMdimension = DEFAULT_FONT_SIZE, font_color : Union[bool,ColorType] = DEFAULT_FOREGROUND_COLOR, #"black",
                 background_color: ColorType =None, outline_color: Optional[ColorType] = None, outline_width : PSSMdimension = 1, radius:int=0, 
                 margins : int = 0, text_x_position : Union[int,Literal["l","m","r","s"]] ="center", text_y_position : Union[int,Literal["a","t","m","s","b","d"]] ="center", text_anchor_alignment : textAlignmentType = (None,None), multiline : bool =False, 
                 isInverted:bool=False, resize=False, fit_text=False, **kwargs):
