@@ -87,7 +87,8 @@ class GridLayout(base.Layout):
     Elements that are added to it (either at initialisation or via `GridLayout.add_elements`) will be given a `grid_row` and `grid_column` attribute with functionality to notify the GridLayout that their position changed.
     Elements do not need a value for `grid_row` and `grid_column`, in which case the GridLayout will attempt to place them later on in the leftover empty cells.
     Any elements that overflow the available number of grid cells, or have their `grid_row` and `grid_column` overlap with that of another Element will not be put in the Layout, but will be saved for new iterations of the GridLayout in case space becomes available.
-    
+    `rows` or `columns` can be set to `None`, in which case they will be set as needed by the number of elements. However, it is not allowed to set both to `None`.
+
     Parameters
     ----------
     elements : list[base.Element]
@@ -95,8 +96,10 @@ class GridLayout(base.Layout):
         Can be assigned a location by setting `grid_row` and `grid_column` (Keep in mind indices start at 0)
     rows : int, optional
         The number of rows, by default 4
+        If None, the rows will be set depending on the number of elements
     columns : int, optional
         The number of columns, by default 4
+        If None, the columns will be set depending on the number of elements
     row_sizes : list[PSSMdimension], optional
         The sizes (heights) of the rows, by default "?"
         If a single value, all rows will be assigned that size. 
