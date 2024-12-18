@@ -1,2 +1,5 @@
 graft ./PythonScreenStackManager/config
 graft ./PythonScreenStackManager/fonts
+
+global-exclude */__pycache__/*
+global-exclude *.pyc
