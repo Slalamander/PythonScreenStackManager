@@ -544,7 +544,7 @@ class PSSMScreen:
                 raise DuplicateElementError(msg)
         else:
             self.__elementRegister[id] = element
-            if element.isPopup: self._register_popup(element)
+            if element.isPopup and element.popupID: self._register_popup(element)
 
             for func in self.__elementRegisterCallbacks:
                 func(element)
@@ -1361,9 +1361,10 @@ class PSSMScreen:
     def _register_popup(self, popup: "elements.Popup"):
         "Adds this popup to the popup register"
         id = popup.popupID
-        if not id in self.__popupRegister:
+        
+        if id and id not in self.__popupRegister:
             self.__popupRegister[id] = popup
-        else:
+        elif id:
             msg = f"A popup with id {id} is already registered."
             _LOGGER.error(ValueError(msg))
             if const.RAISE: raise ValueError(msg)
