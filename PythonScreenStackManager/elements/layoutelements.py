@@ -6,7 +6,7 @@ from math import floor, ceil
 import asyncio
 
 from PIL.Image import Image
-from typing import Coroutine
+from typing import Coroutine, Sequence
 from types import MappingProxyType
 
 from ..pssm_types import PSSMlayout
@@ -115,7 +115,7 @@ class GridLayout(base.Layout):
     @property
     def _emulator_icon(cls): return "mdi:dots-grid"
     
-    def __init__(self, elements : list[base.Element], rows : int = 4, columns : int = 4,
+    def __init__(self, elements : Sequence[base.Element], rows : int = 4, columns : int = 4,
                 row_sizes : list[PSSMdimension] = "?", column_sizes : list[PSSMdimension] = "?",
                 outer_margins : list[PSSMdimension] = 0, inner_margins : list[PSSMdimension] = 0, **kwargs):
 
