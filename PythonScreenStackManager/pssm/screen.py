@@ -780,7 +780,7 @@ class PSSMScreen:
             [(x, y), (w, h)] = self.area
 
         if pil_image == None:
-            _LOGGER.error("Something went wrong printing the Stack?")
+            _LOGGER.error("Something went wrong printing the Stack")
             raise ValueError("pil_image for stack print cannot be None")
         
         await asyncio.to_thread(self.device.print_pil, pil_image, x,y, isInverted=self.isInverted)

@@ -30,7 +30,7 @@ from .pssm_types import *
 if TYPE_CHECKING:
     from . import elements
 
-logger = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 # ######################## - Helper Classes - ####################################
 
@@ -126,7 +126,7 @@ def function_checker(func: Union[Callable[...,None], bool, None], default: Calla
         return default
     elif type(func) == bool:
         if func:
-            logger.warning(f"interaction booleans can only be False, setting to False")
+            _LOGGER.warning(f"interaction booleans can only be False, setting to False")
     return False
 
 def update_nested_dict(update_dict: dict, old_dict: dict) -> dict:
@@ -206,7 +206,7 @@ def wrap_to_coroutine(func: Callable, *args, **kwargs) -> Awaitable:
     """
     
     if not callable(func):
-        logger.warning(f"{func} is not a callable value. It's better to filter these cases out.")
+        _LOGGER.warning(f"{func} is not a callable value. It's better to filter these cases out.")
         return asyncio.sleep(0)
     
     if asyncio.iscoroutinefunction(func):
@@ -271,13 +271,13 @@ def _block_run_coroutine(coro : Coroutine, loop : asyncio.BaseEventLoop) -> Any:
     if loop == None:
         loop = asyncio.get_running_loop()
 
-    logger.verbose(f"Blocking till coroutine {coro} finishes")
+    _LOGGER.verbose(f"Blocking till coroutine {coro} finishes")
 
     f = asyncio.run_coroutine_threadsafe(coro, loop)
     res = f.result()
     w = asyncio.run_coroutine_threadsafe(asyncio.sleep(0), loop)
     w = w.result()
-    logger.verbose(f"{coro} is finished.")
+    _LOGGER.verbose(f"{coro} is finished.")
     return res 
 
 
@@ -344,7 +344,7 @@ def match_duration_string(string : str) -> duration_dict_type:
     for name, param in parts.items():
         if param:
             time_params[name] = float(param)
-    logger.debug(f"Duration string {string} matched to {time_params}")
+    _LOGGER.debug(f"Duration string {string} matched to {time_params}")
     return time_params
 
 def parse_duration_string(string : Union[str, int, float]) -> float:
@@ -378,7 +378,7 @@ def parse_duration_string(string : Union[str, int, float]) -> float:
     match_dict = match_duration_string(string)
     if not match_dict:
         msg = f"Could not parse duration {string} into time values. Please check if you used the right notations and everything is in order from largest to smallest."
-        logger.exception(ValueError(msg))
+        _LOGGER.exception(ValueError(msg))
         return
     secs = 0
     for unit, t in match_dict.items():
@@ -532,7 +532,7 @@ def is_valid_dimension(dimStr:PSSMdimension, variables : list[str] =[]) -> Union
     varDict = {"W":1,"H":1,"w":1, "h":1,"P":1,"p":1, "Q":1}
     for var in variables:
         if len(var) > 1: 
-            logger.warning(f"Dimensional variables are best kept at single letters. {var} is longer")
+            _LOGGER.warning(f"Dimensional variables are best kept at single letters. {var} is longer")
         varDict[var] = 1
     try:
         res = eval(dimStr,varDict)      #@IgnoreExceptions
@@ -639,19 +639,19 @@ def is_valid_Color(color : ColorType) -> bool:
     
     if isinstance(color,int):
         if color < 0 or color > 255:
-            logger.warning(f"Integer colors must be between 0 and 255. {color} lies outside that.")
+            _LOGGER.warning(f"Integer colors must be between 0 and 255. {color} lies outside that.")
             return False
         else:
             return True
         
     if isinstance(color,(list,tuple)):
         if len(color) > 4:
-            logger.error(f"Supported colorModes are L, LA, RGB and RGBA. This means a list of color values can contain at most 4 values. {color} has {len(color)} values.")
+            _LOGGER.error(f"Supported colorModes are L, LA, RGB and RGBA. This means a list of color values can contain at most 4 values. {color} has {len(color)} values.")
             return True
         else:
             for col in color:
                 if col < 0 or col > 255:
-                    logger.warning(f"Integer colors must be between 0 and 255. {color} has at least one value exceeding that.")
+                    _LOGGER.warning(f"Integer colors must be between 0 and 255. {color} has at least one value exceeding that.")
                     return False
             return True
         
@@ -730,7 +730,7 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
     
     if isinstance(color, str):
         if color in const.PSSM_COLORS:
-            logger.debug(f"Parsing pssm color: {color}")
+            _LOGGER.debug(f"Parsing pssm color: {color}")
             if colorMode == "RGBA":
                 return const.PSSM_COLORS[color]
             else:
@@ -739,7 +739,7 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
         try:
             colorTup = PILgetcolor(color,colorMode)
         except ValueError:
-            logger.error(f"Could not recognise {color} as a valid color.")
+            _LOGGER.error(f"Could not recognise {color} as a valid color.")
             raise
         else:
             if isinstance(colorTup,int): 
@@ -748,7 +748,7 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
 
     #Code should not get here (And can't, apparently), but leaving it just in case.
     msg = f"Something went wrong converting {color} to a color value, returning 0 (black)"
-    logger.error(TypeError(msg))
+    _LOGGER.error(TypeError(msg))
     raise TypeError(msg)
     return 0
 
@@ -870,10 +870,10 @@ def fit_Image(img : Image.Image, new_size : tuple[int,int],  method : Literal["c
                                 eval(box_kw, {"W": old_w, "H": old_h, "w": new_size[0], "h": new_size[1]}))
 
                 if box_kw < 0 and i in [0,1]:
-                    logger.warning(log_msg)
+                    _LOGGER.warning(log_msg)
                     box_kw = 0
                 elif box_kw > old_w and i in [0,2]:
-                    logger.warning(log_msg)
+                    _LOGGER.warning(log_msg)
                     box_kw = box[i]
                 elif box_kw > old_h and i in [1,3]:
                     box_kw = box[i]
@@ -949,7 +949,7 @@ async def open_image_file_threadsafe(image_path : Union[str,Path]) -> Image.Imag
 
     # return img
 
-def parse_weather_icon(condition,night:bool=False,conditionDict:dict=MDI_WEATHER_CONDITION_ICONS, prefix:str="mdi:weather-", suffix:Union[str,Path]=""):
+def parse_weather_icon(condition, night:bool=False, conditionDict:dict=MDI_WEATHER_CONDITION_ICONS, prefix:str="mdi:weather-", suffix:Union[str,Path]=""):
     ##See here https://developers.home-assistant.io/docs/core/entity/weather#recommended-values-for-state-and-condition
     """
     Returns name of an icon corresponding to the given condition from the condition dict. Defaults to mdi icons.
@@ -964,7 +964,7 @@ def parse_weather_icon(condition,night:bool=False,conditionDict:dict=MDI_WEATHER
 
     ##Maybe add a check to see if it returns a valid mdi icon
     if not (conditionDict.get("default",False) or conditionDict.get("day",False) or conditionDict.get("night",False)):
-        logger.error(f"A condition dict must have keys default, day and night")
+        _LOGGER.error(f"A condition dict must have keys default, day and night")
         raise KeyError
     
     if condition in {"default", None}:
@@ -976,7 +976,7 @@ def parse_weather_icon(condition,night:bool=False,conditionDict:dict=MDI_WEATHER
         icon_id = conditionDict["day"].get(condition,"default")
     
     if icon_id == "default":
-        logger.warning(f"Could not find weather condition {condition} in the condition day keys, returning default value")
+        _LOGGER.warning(f"Could not find weather condition {condition} in the condition day keys, returning default value")
         icon_id = conditionDict["default"]
 
     if prefix == None:
@@ -997,7 +997,7 @@ def save_testImage(PIL_img : Image.Image, filename :str = "test.png", loglevel :
         loglevel = getattr(logging,loglevel)
 
     PIL_img.save(filepath)
-    logger.log(loglevel,f"Saved testimage to {filepath}")
+    _LOGGER.log(loglevel,f"Saved testimage to {filepath}")
 
 class DrawShapes:
     """
@@ -1045,7 +1045,7 @@ class DrawShapes:
             return cls.draw_advanced
         else:
             msg = f"{shape} is not recognised as a valid draw shape"
-            logger.error(ValueError(msg))
+            _LOGGER.error(ValueError(msg))
 
     @classmethod
     def get_relative_size(cls, shape : shapeTypes) -> float:
@@ -1080,7 +1080,7 @@ class DrawShapes:
             return 1
         else:
             msg = f"{shape} is not recognised as a valid draw shape"
-            logger.error(ValueError(msg))  
+            _LOGGER.error(ValueError(msg))  
 
     @classmethod
     def rescale(cls, dimension : Union[int,float,list[int], tuple[int]], factor : float) -> Union[int,list,tuple]:
@@ -1180,7 +1180,7 @@ class DrawShapes:
                 value = get_Color(value,img.mode)
             args[key] = value
         
-        logger.debug(f"Drawing pieslice with arguments {args}")
+        _LOGGER.debug(f"Drawing pieslice with arguments {args}")
         drawImg = ImageDraw.Draw(mask)
         drawImg.pieslice(**args)
         mask = mask.resize(img.size, Image.Resampling.LANCZOS)
@@ -1217,7 +1217,7 @@ class DrawShapes:
                 value = get_Color(value,img.mode)
             args[key] = value
         
-        logger.debug(f"Drawing square with arguments {args}")
+        _LOGGER.debug(f"Drawing square with arguments {args}")
 
         drawImg = ImageDraw.Draw(mask)
         drawImg.rectangle(**args)
@@ -1253,7 +1253,7 @@ class DrawShapes:
                 value = get_Color(value,img.mode)
             args[key] = value
         
-        logger.debug(f"Drawing rounded rectangle with arguments {args}")
+        _LOGGER.debug(f"Drawing rounded rectangle with arguments {args}")
 
         drawImg = ImageDraw.Draw(mask)
         drawImg.rounded_rectangle(**args)
@@ -1292,7 +1292,7 @@ class DrawShapes:
                 value = get_Color(value,img.mode)
             args[key] = value
         
-        logger.debug(f"Drawing rounded square with arguments {args}")
+        _LOGGER.debug(f"Drawing rounded square with arguments {args}")
         drawImg = ImageDraw.Draw(mask)
         drawImg.rounded_rectangle(**args)
 
@@ -1325,7 +1325,7 @@ class DrawShapes:
                 value = get_Color(value,img.mode)
             args[key] = value
         
-        logger.debug(f"Drawing octagon with arguments {args}")
+        _LOGGER.debug(f"Drawing octagon with arguments {args}")
 
         drawImg = ImageDraw.Draw(mask)
         drawImg.regular_polygon(**args)
@@ -1405,7 +1405,7 @@ class DrawShapes:
         if not use_mask:
             drawImg = ImageDraw.Draw(img)
             drawFunc = getattr(drawImg,method)
-            logger.debug(f"Advanced drawing type returned method {drawFunc}.")
+            _LOGGER.debug(f"Advanced drawing type returned method {drawFunc}.")
             for arg in rescale:
                 if arg in drawArgs:
                     value = cls.rescale(value,scale)
@@ -1417,7 +1417,7 @@ class DrawShapes:
             (mask, scale) = cls.get_mask(img)
             drawImg = ImageDraw.Draw(mask)
             drawFunc = getattr(drawImg,method)
-            logger.debug(f"Advanced drawing type returned method {drawFunc}.")
+            _LOGGER.debug(f"Advanced drawing type returned method {drawFunc}.")
             for arg in rescale:
                 if arg in drawArgs:
                     value = cls.rescale(value,scale)

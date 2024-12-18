@@ -1069,7 +1069,7 @@ class Element(ABC):
         saved_args = {"area": area, "skipNonLayoutGen": skipNonLayoutGen}
 
         if self._generatorLock.locked():
-            _LOGGER.info(f"{self} waiting for generator to unlock")
+            _LOGGER.debug(f"{self} waiting for generator to unlock")
 
         try:
             async with self._generatorLock:
@@ -1618,7 +1618,11 @@ class Layout(Element):
 
                 [(x, y), (w, h)] = self.area
             
-            img = self.generator()
+            try:
+                img = self.generator()
+            except FuncExceptions:
+                _LOGGER.exception(f"{self}: could not make image")
+                img = None
         return img
 
     async def async_create_img_matrix(self, skipNonLayoutGen=False):
