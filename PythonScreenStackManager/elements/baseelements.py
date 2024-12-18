@@ -1562,26 +1562,31 @@ class Layout(Element):
                 if elt is None:
                     elt_img = None
                 else:
-                    if not elt.isLayout and skipNonLayoutGen:
-                        if elt.imgData == None:
+                    try:
+                        if not elt.isLayout and skipNonLayoutGen:
+                            if elt.imgData == None:
+                                if elt.isGenerating:
+                                    _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
+                                    tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
+                                    _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
+                                elt_img = elt.generator(elt_area)
+                            else:
+                                elt_img = elt.imgData
+                        else:
                             if elt.isGenerating:
+                                ##This line here causes a lot of generating to happen concurrently
+                                ##From what I found, this could be fixed using dummy event loop that simply run until the generating is finished.
+                                ##See the tool for  the solution
                                 _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                                 tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
                                 _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
-                            elt_img = elt.generator(elt_area)
-                        else:
-                            elt_img = elt.imgData
-                    else:
-                        if elt.isGenerating:
-                            ##This line here causes a lot of generating to happen concurrently
-                            ##From what I found, this could be fixed using dummy event loop that simply run until the generating is finished.
-                            ##See the tool for  the solution
-                            _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
-                            tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
-                            _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
 
-                        ##Don't need a new thread for generating since it should not ever be called in the mainloop
-                        elt_img = elt.generator(area=elt_area, skipNonLayoutGen=skipNonLayoutGen)
+                            ##Don't need a new thread for generating since it should not ever be called in the mainloop
+                            elt_img = elt.generator(area=elt_area, skipNonLayoutGen=skipNonLayoutGen)
+                    except Exception:
+                        _LOGGER.error(f"{self}: {elt} could not generate", exc_info=True)
+                        elt_img = None
+
                 row.append(elt_img)
             matrix.append(row)
         
