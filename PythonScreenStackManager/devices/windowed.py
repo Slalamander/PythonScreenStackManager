@@ -509,7 +509,10 @@ class Device(PSSMdevice):
         self.parentPSSMScreen.quit()
 
     def _quit(self):
-        self._call_in_main_thread(self._quit_in_mainthread)
+        try:
+            self._call_in_main_thread(self._quit_in_mainthread)
+        except tk.TclError:
+            return
 
     def _quit_in_mainthread(self):
         for idx in self.canvas.find_all():
