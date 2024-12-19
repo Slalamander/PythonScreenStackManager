@@ -247,7 +247,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         self.backlight_icons = backlight_icons
         self.color_from_brightness = color_from_brightness
     
-        if icon_feature not in {FEATURES.FEATURE_BATTERY, FEATURES.FEATURE_NETWORK, FEATURES.FEATURE_BACKLIGHT} | {"battery","network", "backlight"}:
+        if icon_feature not in ({FEATURES.FEATURE_BATTERY, FEATURES.FEATURE_NETWORK, FEATURES.FEATURE_BACKLIGHT} | {"battery","network", "backlight"}):
             self._icon = icon_feature
         elif icon_feature in {FEATURES.FEATURE_BATTERY, "battery"}:
             self._icon = "mdi:battery"
@@ -318,7 +318,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
     def icon_feature(self, value):
 
         if self.screen.device.has_feature(value):
-            self._icon_feature = value
+            self._icon_feature = FEATURES.get_feature_string(value)
             return
         else:
             self._icon = value
@@ -333,7 +333,10 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
     def badge_feature(self, value):
         if value and not self.screen.device.has_feature(value):
             raise AttributeError(f"{self}: Device does not have feature {value}")
-        self._badge_feature = value
+        elif value:
+            self._badge_feature = FEATURES.get_feature_string(value)
+        else:
+            self._badge_feature = value
 
     @property
     def battery_style(self) -> Literal["filled","bars"]:

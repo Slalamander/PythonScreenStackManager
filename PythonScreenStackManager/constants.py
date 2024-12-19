@@ -74,6 +74,17 @@ class FEATURES:
     FEATURE_PRESS_RELEASE = "FEATURE_PRESS_RELEASE"
     "Feature to indicate the device is interactive and can report the coordinates of a press and the coordinates of a release"
 
+    @classmethod
+    def get_feature_string(cls, feature: str):
+        if hasattr(cls, feature):
+            return getattr(cls, feature)
+        
+        if not feature.startswith("FEATURE_"):
+            feature_str = "FEATURE_" + feature.upper()
+            return cls.get_feature_string(feature_str)
+        
+        raise AttributeError(f"Feature {feature} is not a valid value or shorthand")
+
 FEATURE_ATTRIBUTES = {
     FEATURES.FEATURE_BACKLIGHT: "backlight",
     FEATURES.FEATURE_BATTERY: "battery",

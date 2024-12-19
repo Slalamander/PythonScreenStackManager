@@ -312,7 +312,7 @@ class DeviceMenu(UniquePopupMenu):
                 wifiButton = develts.DeviceButton(FEATURES.FEATURE_NETWORK,"SSID",**buttonSettings)
 
                 ipIcon = base.Icon("mdi:ip", background_shape="circle")
-                ipButton = develts.DeviceButton("network","IP",**buttonSettings)
+                ipButton = develts.DeviceButton(FEATURES.FEATURE_NETWORK,"IP",**buttonSettings)
                 netwLayout = [[h, (None,m), (networkIcon, "r"), (None,m) , (wifiButton,"?")],[h_margin],
                     [h, (None,m), (ipIcon, "r"), (None,m) , (ipButton,"?")]]
                 row.append((base.Layout(netwLayout),"?"))

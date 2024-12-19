@@ -2,7 +2,7 @@
 from collections import namedtuple
 from ..constants import FEATURES
 
-_attr_list = [y for x, y in FEATURES.__dict__.items() if not x.startswith("_")]
+_attr_list = [y for x, y in FEATURES.__dict__.items() if isinstance(y,str) and not x.startswith("_")]
 
 _DeviceTuple = namedtuple("__DeviceTuple", _attr_list, defaults=(False,)* len(_attr_list))
 

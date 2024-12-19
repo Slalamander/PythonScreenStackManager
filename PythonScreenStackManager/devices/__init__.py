@@ -258,13 +258,11 @@ class PSSMdevice(ABC):
         ----------
         feature: str
             The  feature to check. Use the constants from `FEATURES` to check, although some safeguarding is in place to convert passed values to valid feature strings.
-        """
-        if not feature.startswith("FEATURE_"):
-            feature_str = f"FEATURE_{feature}".upper()
-        else:
-            feature_str = feature
+        """        
+        with suppress(AttributeError):
+            feature = FEATURES.get_feature_string(feature)
 
-        return bool(getattr(self._features,feature_str,False))
+        return bool(getattr(self._features,feature,False))
     
     @abstractmethod
     async def async_pol_features(self):
