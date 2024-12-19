@@ -4,7 +4,7 @@
     Rewritten to use asyncio by Slalamander, among other changes
 """
 
-__version__ = "0.3.4"
+__version__ = "0.3.5"
 "PythonScreenStackManager version. For now the s is in front to indicate it is the version continued by Slalamander"
 
 import __main__
