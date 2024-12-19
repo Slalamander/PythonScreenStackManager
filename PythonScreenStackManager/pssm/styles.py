@@ -1,11 +1,10 @@
 
 import logging
 from typing import TYPE_CHECKING
-from typing import Generic, Callable, Any
 
 from .. import tools
 from ..pssm_types import *
-from ..constants import SHORTHAND_FONTS, SHORTHAND_ICONS, PSSM_COLORS
+from ..constants import PSSM_COLORS
 
 
 if TYPE_CHECKING:

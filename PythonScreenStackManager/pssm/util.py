@@ -14,9 +14,6 @@ if TYPE_CHECKING:
     from ..elements import Element
     from .styles import Style
 
-def parse_known_image_file(file):
-    pass
-
 _LOGGER = logging.getLogger(__name__)
 
 class colorproperty(customproperty):

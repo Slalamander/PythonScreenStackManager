@@ -7,29 +7,27 @@ import logging
 import re
 from itertools import cycle
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Union, Optional, Literal, get_args, \
-                    TypeVar, Any, TypedDict, Generic, Coroutine
+from typing import TYPE_CHECKING, Callable, Union, Optional, Literal, \
+                    TypeVar, Any, TypedDict, Coroutine
 from types import MappingProxyType
-import inspect
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps,\
                 ImageFile
-from PIL.ImageColor import getcolor as PILgetcolor
 import mdi_pil as mdi
 from mdi_pil import mdiType
 
 from .. import constants as const
-from ..constants import FuncExceptions, PATH_TO_PSSM, \
+from ..constants import FuncExceptions, \
                 DEFAULT_FEEDBACK_DURATION
 
-from .constants import DEFAULT_FONT, DEFAULT_FONT_BOLD, \
+from .constants import DEFAULT_FONT, \
     DEFAULT_FONT_SIZE, DEFAULT_BADGE_LOCATION, MISSING_PICTURE_ICON, MISSING_ICON, DEFAULT_ICON, \
     ALLOWED_BADGE_SETTINGS
 
-from .constants import CoordType, ColorType, INKBOARD,\
-            DEFAULT_FOREGROUND_COLOR, DEFAULT_ACCENT_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_MENU_HEADER_COLOR, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_FONT_HEADER, DEFAULT_BLUR_POPUP_BACKGROUND
+from .constants import CoordType, ColorType, \
+            DEFAULT_FOREGROUND_COLOR, DEFAULT_ACCENT_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_MENU_HEADER_COLOR, DEFAULT_FONT_HEADER, DEFAULT_BLUR_POPUP_BACKGROUND
 from ..pssm_types import *
 
 from .. import tools
@@ -49,8 +47,6 @@ class DummyScreen:
     mainLoop = None
     elementRegister = {}
     defaultColor = "white"
-
-
 
 # ########################## - VARIABLES - ####################################
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -215,14 +211,6 @@ class Element(ABC):
             if self.__class__.__name__ in generatorClass and generateClass != generatorClass:
                 msg = f"{self}: custom layout generators need to also have async_generate defined"
                 _LOGGER.warning(msg)
-
-        # if self.screen == None:
-        #     return
-
-        # if _register == None:
-        #     _register = not self.parentPSSMScreen.printing if id == None else True
-        # if _register:
-        #     self.parentPSSMScreen._register_element(self)
 
     #region Element Properties
     @property
@@ -1215,8 +1203,6 @@ class Layout(Element):
         except FuncExceptions as exce:
             _LOGGER.error(f"{self}: Layout invalid: {exce}")
             return
-            # raise Exception("Invalid layout")
-            value = [["?",(None,"?")]]
 
         self._layout = value
         self._rebuild_area_matrix = True
@@ -1311,7 +1297,6 @@ class Layout(Element):
         -------
         ValueError, TypeError
         """
-        # TODO : to be tested
         if validateLayout:
             layout = validateLayout
         else:
@@ -1486,7 +1471,6 @@ class Layout(Element):
                 elt_img : Image.Image = self.imgMatrix[i][j]
                 if elt_img is not None:
                     pos = (relative_x, relative_y)
-                    # placeholder.paste(self.imgMatrix[i][j], pos)
                     if elt_img.mode == "RGBA" and colorMode == "RGBA":
                         placeholder.alpha_composite(elt_img, pos)
                     elif "A" in elt_img.mode and "A" not in colorMode:
@@ -1498,7 +1482,6 @@ class Layout(Element):
 
         if self.radius != 0:
             ##There should also be a way to draw this when outline width is not 0
-
             r = self._convert_dimension(self.radius)
 
             mask = Image.new("RGBA",placeholder.size,None)
@@ -2256,8 +2239,6 @@ class _TileBase(Layout):
                 elif set_props[prop] in color_setters: ##Check if the value of the element's color attribute to be set corresponds to a known shorthand color of _this_ (i.e. the parentlayout) element
                     color_attr = color_setters[set_props[prop]] ##Grab the parent layout's corresponding attribute
                     set_props[prop] = getattr(self,color_attr) ##Grab the value of said attribute, and set that as the actual color value
-
-            # elt.update(set_props, skipPrint=self.isUpdating, skipGen=self.isGenerating or self.isUpdating)
             elt.update(set_props, skipPrint=self.isUpdating)
 
         if not elt_name:
@@ -2454,7 +2435,6 @@ class Popup(Layout):
     @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["Element", CoordType],Any]]:
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
-        # return {"show-popup": "async_show", "close-popup": "async_close"}.update(Element.action_shorthands)
         return Element.action_shorthands | {"show-popup": "async_show", "close-popup": "async_close"}
 
     @property
@@ -2486,9 +2466,6 @@ class Popup(Layout):
             self.__popupID = None
         else:
             self.__popupID = popupID
-
-        # if popupID != None:
-        #     self.parentPSSMScreen._register_popup(self)
 
     #region
     # ----------------------------- popup properties ----------------------------- #
@@ -2538,7 +2515,6 @@ class Popup(Layout):
     def horizontal_position(self, value: PSSMdimension):
         self._horizontal_position : PSSMdimension
         self._dimension_setter("_horizontal_position", value)
-
 
     @property
     def vertical_position(self) -> PSSMdimension:
@@ -2898,8 +2874,7 @@ class PopupButtons(Popup):
         self.height = height
         self.horizontal_position = horizontal_position
         self.vertical_position = vertical_position
-        
-        # self.build_layout()
+
         super().__init__(layout = self.build_layout(), **kwargs)
 
     def build_layout(self):
@@ -3621,8 +3596,7 @@ class Button(Element):
                 text_bg = self.parentBackgroundColor
             else:
                 text_bg = self.background_color
-            
-            # textCol = tools.contrast_color(text_bg, img_mode)
+
             textCol = Style.contrast_color(text_bg, img_mode)
         else:
             textCol = Style.get_color(self.font_color, self.parentPSSMScreen.imgMode)
@@ -3861,7 +3835,7 @@ class Picture(ImageElement):
         self.__pictureData = None
 
         super().__init__(isInverted=isInverted, background_color=background_color, **kwargs)
-        # return
+        return
 
     #region
     @property
@@ -4298,29 +4272,6 @@ class Icon(ImageElement):
         """
         return self._icon_color
 
-    # @property
-    # def background_shape(self) -> Literal[IMPLEMENTED_ICON_SHAPES_HINT]:
-    #     f"""
-    #     The shape of the icons background. If not set, no shape is used and background color is used as the background color of the entire element of the area.
-    #     Can be one of {IMPLEMENTED_ICON_SHAPES} or ADVANCED. See background_shapeDict for usage of advanced (Not fully tested, so be aware)
-    #     """
-    #     return self._background_shape
-    
-    # @background_shape.setter
-    # def background_shape(self, value:Union[str,None]):
-    #     if value == None:
-    #         self._background_shape = None
-    #     elif value == "ADVANCED":
-    #         _LOGGER.debug("Advanced icon shape applied")
-    #         self._background_shape = value
-    #     elif value.strip().lower().replace(" ","_") in IMPLEMENTED_ICON_SHAPES:
-    #         ##Maybe add some string stuff like lower in here to allower for minor changes in what people fill in.
-    #         ##Mainly, remove spaces for underscores, and lower all text
-    #         self._background_shape = value 
-    #     else:
-    #         _LOGGER.error(f"{value} is not a predefined icon background shape, nor is it set to ADVANCED. Setting shape to none")
-    #         self._background_shape = None
-
     @property
     def shape_settings(self) -> dict:
         """
@@ -4511,7 +4462,6 @@ class Icon(ImageElement):
             if self.background_color != True:
                 shape_color = Style.get_color(self.background_color, imgMode)
             else: 
-                # shape_color = tools.contrast_color(layoutBackgroundColor,imgMode)
                 shape_color = Style.contrast_color(layoutBackgroundColor,imgMode)
                 if "L" in imgMode:
                     if shape_color[0] > 110 and shape_color[0] < 175: shape_color = Style.get_color("white",imgMode)
@@ -4799,7 +4749,7 @@ class Icon(ImageElement):
         
         if "A" in img.mode: ##This take care of having a transparent circle cutout of the sourceimage, regardless of whether it's RGBA or not.
             if background_color == None or background_color_tuple[-1] == 0:
-                (maskImg, drawImg) = DrawShapes.draw_circle(badgeImg, drawArgs={"fill": "white"}, paste=False)
+                (maskImg, _) = DrawShapes.draw_circle(badgeImg, drawArgs={"fill": "white"}, paste=False)
                 maskImg = maskImg.resize((circle_diameter, circle_diameter))
                 img.paste(Image.new(img.mode,maskImg.size,None),(x0,y0),mask=maskImg)
 
@@ -5638,14 +5588,13 @@ class _ElementSelect(Element):
             color_props = active_elts[0].__class__.color_properties
             for prop in color_props.intersection(set_props):
                 if isinstance(set_props[prop],str) and set_props[prop] in color_setters:
-                    # set_props[prop] = color_setters[set_props[prop]](self)
                     color_attr = color_setters[set_props[prop]]
                     set_props[prop] = getattr(self,color_attr)
             for elt in active_elts:
                 # ##At least for now: no updatelock or generator lock are returned, so all elements think the selector is always updating and generating
                 ##Should be able to fix that when copying stuff over from the parentlayout
 
-                elt_upd = elt.update(set_props, skipPrint=self.isUpdating) #, reprintOnTop= (elt == element))
+                elt_upd = elt.update(set_props, skipPrint=self.isUpdating)
                 if elt_upd: updated = True
 
         if inactive_elts:
@@ -5659,7 +5608,7 @@ class _ElementSelect(Element):
                     color_attr = color_setters[set_props[prop]]
                     set_props[prop] = getattr(self,color_attr)
             for elt in inactive_elts:
-                elt_upd = elt.update(set_props, skipPrint=self.isUpdating) #, reprintOnTop= (elt == element))
+                elt_upd = elt.update(set_props, skipPrint=self.isUpdating)
                 if elt_upd: updated = True
         
         return updated

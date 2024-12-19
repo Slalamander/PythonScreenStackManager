@@ -7,18 +7,16 @@ import logging
 import asyncio
 import re as regex
 
-from copy import deepcopy
 from typing import *
 from math import cos, sin, floor
 from  pathlib import Path
 from abc import ABCMeta
-from types import SimpleNamespace, MappingProxyType
+from types import MappingProxyType
 from abc import abstractmethod
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageChops
 from PIL.ImageColor import getrgb as PILgetrgb, getcolor as PILgetcolor
 
-import mdi_pil as mdi
 from mdi_pil import ALLOWED_MDI_IDENTIFIERS, MDI_WEATHER_ICONS as MDI_WEATHER_CONDITION_ICONS
 
 from . import constants as const
@@ -64,8 +62,6 @@ class Singleton(ABCMeta):
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
             cls._instances[cls] = super().__call__(*args, **kwargs)
-        # else:
-        #     raise Exception("Double instance")
         return cls._instances[cls]
 
 class customproperty(property):
@@ -522,10 +518,8 @@ def is_valid_dimension(dimStr:PSSMdimension, variables : list[str] =[]) -> Union
     if isinstance(dimStr,(int,float)):
         return True
     
-    # p, P = 1, 1 #Pixel calculations are allowed too it seems 
     if "?" in dimStr:
         if dimStr[0] == "?":
-            # dimStr[0] = "Q"
             dimStr = dimStr.replace("?","Q")
         else:
             return SyntaxError(f"{dimStr} is not a valid positional string. Questionmarks (?), if present, must always be the first character.")
@@ -609,8 +603,6 @@ def parse_known_fonts(font:str):
         return font
     if font.lower() in const.SHORTHAND_FONTS:
         return const.SHORTHAND_FONTS[font.lower()]
-    # elif PATH_TO_PSSM / "fonts" in font:
-    #     return font
     else:
         if "/" not in font:
             return const.CUSTOM_FOLDERS["font_folder"] / font

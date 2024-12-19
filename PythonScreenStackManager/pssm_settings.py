@@ -9,7 +9,6 @@ from typing import TypedDict, Literal, Union, Any, TYPE_CHECKING
 from types import MappingProxyType
 import logging
 
-from .constants import INKBOARD
 if TYPE_CHECKING:
     from .pssm_types import DurationType, RotationValues
 
@@ -121,20 +120,6 @@ for k, default_dict in _settings_keys.items():
 
 _data : settings_type = __data.copy()
 ##Also add a function for add_device_setting and save_settings
-
-# if INKBOARD:
-
-#     from inkBoard.core import config
-    
-#     d = dict(config.configuration)
-#     for key in _data["screen"]:
-#         if getattr(config.screen,key,False):
-#         # if key in config.screen:
-#             _data["screen"][key] = config.screen[key]
-
-#     for key in _data["device"]:
-#         if getattr(config.device,key,False):
-#             _data["device"][key] = config.device[key]
 
 class __settings():
     "Helper class for settings. Mainly implements functions to easily save them."

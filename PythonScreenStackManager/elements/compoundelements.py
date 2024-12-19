@@ -5,23 +5,20 @@
 
 import logging
 import asyncio
-from datetime import datetime as dt, timezone as tz, tzinfo
+from datetime import datetime as dt
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-from functools import partial
 from math import pi, sin, cos, ceil, floor
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Union, Optional, Callable, Literal, TypeVar, Any, TypedDict, Coroutine
+from typing import Union, Optional, Callable, Literal, Any, TypedDict, Coroutine
 from types import MappingProxyType
-import re
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFile, ImageFilter #ImageChops
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import mdi_pil as mdi
 from mdi_pil import mdiType as MDItype, ALLOWED_MDI_IDENTIFIERS
 
 from ..pssm_types import *
 
 from . import constants as const
-from .constants import INKBOARD, DEFAULT_FONT_CLOCK, DEFAULT_FONT_SIZE, MISSING_ICON, DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR,  DEFAULT_FONT_HEADER
+from .constants import DEFAULT_FONT_CLOCK, DEFAULT_FONT_SIZE, MISSING_ICON, DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR,  DEFAULT_FONT_HEADER
 
 from .. import tools
 from ..tools import DrawShapes, DummyTask
@@ -655,7 +652,7 @@ class Tile(base._TileBase):
         self.parentPSSMScreen.device.print_pil(
             self.imgData,
             x, y,
-            isInverted=self.isInverted #self.isInverted
+            isInverted=self.isInverted
         )
 
 #region datetime element
@@ -709,7 +706,6 @@ class dateTimeElementInterval(base._IntervalUpdate):
     #endregion
 
 class AnalogueClock(base.Element, dateTimeElementInterval):
-    #[ ] Make outline width also possible as a tuple?
     """
     An analogue clock that updates at the start of each minute
 
@@ -1007,7 +1003,6 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
 
         draw.line(
             hour_coo,
-            # fill=clock_line,
             fill=self.hour_hand_color,
             width=hour_width
         )
@@ -1653,10 +1648,6 @@ class BoxSlider(base._BaseSlider):
     def thumb_color(self) -> ColorType:
         "Show a small line at the end of the active bar with color thumb_color. Set to None for no thumb"
         return self._thumb_color
-
-    # @thumb_color.setter
-    # def thumb_color(self, value : ColorType):
-    #     self._color_setter("_thumb_color", value=value)
 
     @colorproperty
     def end_colors(self) -> ColorType:

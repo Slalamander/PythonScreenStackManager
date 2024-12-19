@@ -4,7 +4,7 @@ Since the OSK has not been tested for inkBoard, these elements are not guarantee
 """
 import json
 
-from .baseelements import logger, Layout, Button, Popup
+from .baseelements import _LOGGER, Layout, Button, Popup
 from .constants import DEFAULT_FONT, DEFAULT_FONT_SIZE
 
 from .. import tools, \

@@ -2,7 +2,7 @@
 Various type hints for use with pssm.
 """
 from typing import TYPE_CHECKING, \
-                Union, TypeVar, Literal, Optional, TypedDict, Callable, AnyStr, Any, Generic, NamedTuple
+                Union, TypeVar, Literal, Optional, TypedDict, Callable, Any, Generic, NamedTuple
 import functools
 
 from mdi_pil import mdiType

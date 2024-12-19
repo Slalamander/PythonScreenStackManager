@@ -9,7 +9,6 @@ from PIL.Image import Image
 from typing import Coroutine, Sequence
 from types import MappingProxyType
 
-from ..pssm_types import PSSMlayout
 from ..exceptions import *
 from . import baseelements as base
 from . import compoundelements as comps     ##May need restructuring here if I want to use compounds with grid elements -> Nope probably? Since that would kinda take away some configuration
@@ -743,7 +742,6 @@ class TabPages(base._TileBase):
     def hide_navigation_bar(self, value: bool):
         self._hide_navigation_bar = bool(value)
         self._resize_defaults = True 
-        # self._set_default_sizes()
 
     @property
     def hide_page_handles(self) -> bool:
@@ -753,7 +751,6 @@ class TabPages(base._TileBase):
     def hide_page_handles(self, value: bool):
         self._hide_page_handles = bool(value)
         self._resize_defaults = True
-        # self._set_default_sizes()
 
     @property
     def apply_default_sizes(self) -> bool:
@@ -841,9 +838,6 @@ class TabPages(base._TileBase):
 
         issub = True
         NavElement = NavigationTile("auto", icon, name, _isSubLayout=issub)
-        # for prop, val in NavElement._color_shorthands.items():
-        #     setattr(NavElement,val,prop)
-
 
         self.__NavBar.add_elements(NavElement)
         self.__NavBar.add_option(name, NavElement)

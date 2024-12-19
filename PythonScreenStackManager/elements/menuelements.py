@@ -6,8 +6,6 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Literal, Optional, Union
 from types import MappingProxyType
-import sys
-import logging
 
 from mdi_pil import MDI_VERSION
 
@@ -16,18 +14,15 @@ from ..tools import Singleton
 from ..pssm_types import *
 from ..constants import FEATURES
 
-from .baseelements import DEFAULT_FONT_BOLD
+from .constants import DEFAULT_FONT_BOLD
 from . import baseelements as base
 from . import compoundelements as comps
 from . import deviceelements as develts
 from . import layoutelements as layouts
-from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_MENU_HEADER_COLOR, SHORTHAND_ICONS
+from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_FONT_BOLD, \
+    DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR
 
-import inspect
-
-from .baseelements import _LOGGER, \
-    DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR, IMPLEMENTED_ICON_SHAPES, IMPLEMENTED_ICON_SHAPES_HINT, DEFAULT_FONT_BOLD, DEFAULT_FONT_SIZE
-
+from .baseelements import _LOGGER
 if TYPE_CHECKING:
     from ..devices import PSSMdevice
 

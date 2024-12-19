@@ -19,13 +19,13 @@ from PIL import Image, ImageOps, ImageFile, ImageFilter
 from .styles import Style
 from .util import elementactionwrapper
 
-from ..tools import DummyTask, returnFalse, get_Color, is_valid_Color
+from ..tools import DummyTask, get_Color, is_valid_Color
 from .. import tools
 
 from ..pssm_types import *
 from ..exceptions import *
 
-from ..constants import PATH_TO_PSSM, CUSTOM_FOLDERS, DEFAULT_BACKGROUND
+from ..constants import CUSTOM_FOLDERS, DEFAULT_BACKGROUND
 from .. import constants as const
 
 from ..pssm_settings import SETTINGS
@@ -268,7 +268,6 @@ class PSSMScreen:
     @property
     def rotation(self) -> Literal["UR", "CW", "UD", "CCW"]:
         "The screen rotation. Call screen.rotate() to rotate it."
-        # return self.__rotation
         return SETTINGS["screen"]["rotation"]
 
     @property
@@ -514,13 +513,6 @@ class PSSMScreen:
     #endregion
 
     #region Bookkeeping functions
-    def _set_main_loop(self):
-        "Sets the main loop property to the current running loop."
-        raise RuntimeError("This should not be called. Also did you fix all the element inits? (for inkBoard stuff not required since those are imported in a running loop anyways)")
-        self.__mainLoop = asyncio.get_running_loop()
-        self.__eStop = self.__mainLoop.create_future()
-        self.__mainLoop.set_default_executor(self.generatorPool)
-
     def add_running_task(self,task:asyncio.Task):
         "Add a task to the set of running tasks, and add the callback to remove it when done."
         _LOGGER.debug("Adding task to running set")
@@ -924,7 +916,6 @@ class PSSMScreen:
                     crop_box = [x,y,x+w,y+h]
                     bg_img = self.backgroundImage.crop(crop_box)
                     bg_img.paste(new_img, mask=new_img)
-                    # bg_img.paste(new_img)
                     new_img = bg_img
                 
                 new_img.paste(img, mask=img)
@@ -1580,7 +1571,7 @@ class PSSMScreen:
             _LOGGER.verbose("Passing click to the popup on top")
             popup = self.popupsOnTop[-1]
             if tools.coords_in_area(x, y, popup.area):
-                for p in self.popupsOnTop: # if p != popup:
+                for p in self.popupsOnTop:
                     p._tapEvent.set()
 
                 coro_list.extend(
