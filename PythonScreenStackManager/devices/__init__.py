@@ -3,11 +3,10 @@ Base device module for pssm devices. The `windowed` package is an out of the box
 """
 
 import asyncio
-from typing import TYPE_CHECKING, TypedDict, Literal, Optional, Union, Any
+from typing import TYPE_CHECKING, TypedDict, Literal, Optional, Union
 import logging
 from PIL import Image
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field, make_dataclass
 from contextlib import suppress
 
 from .const import *
@@ -28,7 +27,6 @@ if TYPE_CHECKING:
     from PythonScreenStackManager.pssm.screen import PSSMScreen
     import asyncio
     from ..pssm_types import ColorType
-
 
 
 NetworkDict = TypedDict("NetworkDict",
@@ -302,7 +300,6 @@ class PSSMdevice(ABC):
         """
         ##This function is a leftover from the pure Eink version. Will be deprecated
         _LOGGER.debug("This base device function is deprecated")
-        # raise DeprecationWarning("This base device function is deprecated")
         pass
 
     def do_screen_clear(self):
@@ -515,7 +512,6 @@ class Backlight(ABC):
     @property
     def default_time_on(self) -> Union[float,int,str]:
         "Default  time to turn the backlight on for when calling the temporary backlight function. Controlled by parent screen"
-        # return self._device.parentPSSMScreen.backlight_time_on
         return self.__default_time_on
     
     @default_time_on.setter

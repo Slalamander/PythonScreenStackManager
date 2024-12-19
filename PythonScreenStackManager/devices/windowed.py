@@ -562,7 +562,6 @@ class Network(BaseNetwork):
 
     def __get_ip(self) -> str:
         """Gets the devices IP adress. Returns None if none found and sets the connected attribute appropriately"""
-        # return
         if not self.connected:
             logger.warning("Not connected to a network, setting IP to None")
             self._IP = None
