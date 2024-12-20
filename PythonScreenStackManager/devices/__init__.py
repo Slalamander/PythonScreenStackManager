@@ -391,8 +391,8 @@ class Network(ABC):
         return self._connected
 
     @property
-    def signal(self) -> int:
-        "Wifi signal percentage, from 0-100"
+    def signal(self) -> Optional[int]:
+        "Wifi signal percentage, from 0-100, or None if unavailable."
         return self._signal
 
     @property
