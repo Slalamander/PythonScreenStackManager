@@ -266,8 +266,7 @@ class Device(PSSMdevice):
 
         return
 
-    def _set_screen(self, ScreenInstance):
-        super()._set_screen(ScreenInstance)
+    def _set_screen(self):
         
         self.Screen.add_shorthand_function("toggle-fullscreen", tools.wrap_to_tap_action(self.set_fullscreen))
         self.Screen.add_shorthand_function("make-screenshot", tools.wrap_to_tap_action(self.make_screenshot))
@@ -515,7 +514,6 @@ class Device(PSSMdevice):
             return
 
     def _quit_in_mainthread(self):
-        self.close_interaction_handler()
         for idx in self.canvas.find_all():
             self.canvas.delete(idx)
 

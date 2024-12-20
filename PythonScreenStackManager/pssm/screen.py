@@ -1,7 +1,6 @@
 """
 This package holds the PSSMScreen class, which manages the screen printing and elements.
-It is advised to use the `set_screen` method in the main module, as it takes care of setting some important variables and provides some usage protection.
-However, you may want to inspect it to get the variables that are to be passed to the screen instance.
+It should be instantiated before any elements.
 """
 
 #!/usr/bin/env python
@@ -141,9 +140,12 @@ class PSSMScreen:
         assert isinstance(device, devices.PSSMdevice), f"A device must be a subclass of PSSMdevice, type {type(device)} is not allowed."
 
         self._device = device
-        self._device._set_screen(self)
         self._device._Screen = self
         self._device._updateCondition = asyncio.Condition(loop=self.mainLoop)
+        if self._device.has_feature(FEATURES.FEATURE_BACKLIGHT):
+            self._device.backlight._updateCondition = asyncio.Condition(loop=self.mainLoop)
+        
+        self._device._set_screen()
 
         if self.device.has_feature(FEATURES.FEATURE_BACKLIGHT):
             if backlight_behaviour != None:
@@ -1694,7 +1696,7 @@ class PSSMScreen:
                     break
 
         if self.device.has_feature(FEATURES.FEATURE_BACKLIGHT):
-            asyncio.create_task(monitor_backlight())
+            self.mainLoop.create_task(monitor_backlight())
 
         while self.printing:
             try:
@@ -1982,4 +1984,3 @@ class PSSMScreen:
                 return
 
         await self.device.backlight.toggle_async(brightness,transition)
-

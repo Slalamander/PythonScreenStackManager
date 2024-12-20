@@ -238,7 +238,7 @@ class PSSMdevice(ABC):
     #endregion
 
     #region methods
-    def _set_screen(self, ScreenInstance : "PSSMScreen"):
+    def _set_screen(self):
         """
         This method sets the screen property. Can be used to set additional settings, or register shorthand functions.
         ScreenInstance is the running PSSMScreen instance.
@@ -246,10 +246,8 @@ class PSSMdevice(ABC):
         #When overwriting this, calling the super() function first is adviced
         #Also backlight shorthands are registered by the screen itself, so those do not need to be done.
         #Setting the attribute will in the furure likely be handled by the screen itself
-        if hasattr(self,"_Screen"):
-            raise AttributeError("A device's screen instance can only be set once.")
-        self._Screen = ScreenInstance
-        self._updateCondition = asyncio.Condition(loop=self._Screen.mainLoop)
+
+        return
 
     def has_feature(self, feature: str) -> bool:
         """Returns true if the device has this feature (i.e. is it true in device.Features)
