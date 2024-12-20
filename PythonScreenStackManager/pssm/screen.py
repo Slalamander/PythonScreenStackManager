@@ -734,7 +734,7 @@ class PSSMScreen:
 
         try:
             self.save_settings()
-            self.device._quit()
+            self.device._quit(exce)
             if self.mainLoop.is_running():
                 if not self._printGather.done(): 
                     self._printGather.cancel("Quit was requested")
