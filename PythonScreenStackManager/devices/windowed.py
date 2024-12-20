@@ -515,6 +515,7 @@ class Device(PSSMdevice):
             return
 
     def _quit_in_mainthread(self):
+        self.close_interaction_handler()
         for idx in self.canvas.find_all():
             self.canvas.delete(idx)
 

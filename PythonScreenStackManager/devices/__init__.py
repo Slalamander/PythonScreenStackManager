@@ -334,11 +334,6 @@ class PSSMdevice(ABC):
         """
         pass
 
-    @abstractmethod
-    def close_interaction_handler(self):
-        "Stops the interaction handler"
-        pass
-
     def power_off(self,*args):
         "Powers off the device. Does nothing if the device does not support the power feature."
         _LOGGER.warning("Device does not support power off. Saving Settings though.")
