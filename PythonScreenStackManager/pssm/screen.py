@@ -159,6 +159,10 @@ class PSSMScreen:
             self.__shorthandFunctions["backlight-temporary"] = tools.wrap_to_tap_action(self.temporary_backlight_async)
             self.__shorthandFunctions["backlight-set-behaviour"] = tools.wrap_to_tap_action(self.set_backlight_behaviour)
 
+        if self.device.has_feature(FEATURES.FEATURE_POWER):
+            self.__shorthandFunctions["power-off"] = self.device.power_off
+            self.__shorthandFunctions["reboot"] = self.device.reboot
+
         self.set_background_image(background, fit_method=background_fit, fit_arguments=background_fit_arguments)
 
         self._stack = []
@@ -1984,3 +1988,4 @@ class PSSMScreen:
                 return
 
         await self.device.backlight.toggle_async(brightness,transition)
+
