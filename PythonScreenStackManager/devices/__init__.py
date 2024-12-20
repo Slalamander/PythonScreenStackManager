@@ -528,9 +528,10 @@ class Backlight(ABC):
 
         self._default_seconds_on : Union[int,float] = s
         "Default time on in seconds. Set automatically when setting default_time_on"
-
-        asyncio.create_task(
-            self.notify_condition())
+        with suppress(RuntimeError):
+            loop = asyncio.get_running_loop()
+            loop.create_task(
+                self.notify_condition())
     #endregion
 
     async def notify_condition(self):
