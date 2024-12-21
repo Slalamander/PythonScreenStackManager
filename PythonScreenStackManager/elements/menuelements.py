@@ -20,7 +20,7 @@ from . import compoundelements as comps
 from . import deviceelements as develts
 from . import layoutelements as layouts
 from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_FONT_BOLD, \
-    DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR
+    DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR, DEFAULT_FONT_SIZE
 
 from .baseelements import _LOGGER
 if TYPE_CHECKING:
@@ -291,7 +291,7 @@ class DeviceMenu(UniquePopupMenu):
         return
         
     def build_menu(self):
-        fSize = "0.4*h"
+        fSize = DEFAULT_FONT_SIZE
         buttonSettings = {"text_x_position": "left", "font_size":fSize}
         m = "w*0.02"
         h = 50
@@ -332,13 +332,13 @@ class DeviceMenu(UniquePopupMenu):
         col = DEFAULT_MENU_BUTTON_COLOR
         if self.device.has_feature(FEATURES.FEATURE_POWER):
             ##These should be moved to the pssm screen, as I should give that a function for both with a splash screen
-            pw = base.Button("Power off",font_size=fSize, tap_action=self.device.power_off, background_color=col)
-            rb = base.Button("Reboot", tap_action=self.device.reboot, background_color=col, font_color="black")
+            pw = base.Button("Power off",font_size=fSize, tap_action=self.device.power_off, background_color=col, resize=fSize)
+            rb = base.Button("Reboot", font_size=fSize, tap_action=self.device.reboot, background_color=col, font_color="black", resize=fSize)
             buttonRow = ["?", (pw,"?"),(None,"?"), (rb,"?"),(None,"?")]
         else:
             buttonRow = ["?", (None,"?"),(None,"?")]        
 
-        restartButton = base.Button("Reload", font_size=fSize, background_color=col, tap_action=self.parentPSSMScreen.reload)
+        restartButton = base.Button("Reload", font_size=fSize, background_color=col, tap_action=self.parentPSSMScreen.reload, resize=fSize)
         buttonRow.append((restartButton,"?"))
         buttonRow = ["?*0.25",(base.Layout([buttonRow], background_color=col),"w")]
         layout.append(buttonRow)
