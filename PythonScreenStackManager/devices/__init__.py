@@ -433,7 +433,7 @@ class Backlight(ABC):
         self._device = device
         "The device instance"
 
-        self.transitionTask : asyncio.Task = DummyTask()
+        self._transitionTask : asyncio.Task = DummyTask()
         "Task that tracks if the backlight is currently transitioning."
 
         self._behaviour = SETTINGS["device"]["backlight_behaviour"]
