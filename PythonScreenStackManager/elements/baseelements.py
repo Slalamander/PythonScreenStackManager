@@ -679,7 +679,7 @@ class Element(ABC):
             nd = ""
             W = self.parentPSSMScreen.width
             H = self.parentPSSMScreen.height
-            if self.area:
+            if getattr(self,"area", None):
                 (x, y), (w, h) = self.area
             else:
                 # area not defined. Instead of being stuck, let's assume the
