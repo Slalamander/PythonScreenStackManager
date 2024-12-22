@@ -27,7 +27,7 @@ from ..exceptions import *
 from ..constants import CUSTOM_FOLDERS, DEFAULT_BACKGROUND
 from .. import constants as const
 
-from ..pssm_settings import SETTINGS
+from ..pssm_settings import SETTINGS, settings_type
 
 from ..devices import PSSMdevice, FEATURES
 from .. import elements, devices
@@ -212,6 +212,11 @@ class PSSMScreen:
     def device(self) -> "PSSMdevice":
         """The device of the screen. For handling battery, screen printing etc."""
         return self._device
+
+    @property
+    def _SETTINGS(self) -> settings_type:
+        "The settings instance, use with care"
+        return SETTINGS
 
     @property
     def colorMode(self):
@@ -1830,6 +1835,7 @@ class PSSMScreen:
         if not self.device.has_feature(FEATURES.FEATURE_ROTATION):
             return
         
+        _LOGGER.info("Rotating screen")
         if rotation  != None:
             pass
         else:
@@ -1839,6 +1845,8 @@ class PSSMScreen:
             rotation = r_list[idx]                
         
         await self.device._rotate(rotation)
+
+        SETTINGS["screen"]["rotation"] = rotation
 
         return
 
