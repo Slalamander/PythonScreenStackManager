@@ -2815,11 +2815,14 @@ class PopupMenu(Popup):
     def _build_popup_layout(self):
         "Builds the layout to pass onto the popup class, using the settings for the menu header and the provided menu layout."
         ##I think this should be the generator?
+        title_H = self._convert_dimension("H*0.1", {"H": self.screen.height})
+        if title_H < 50:
+            title_H = 50
         titleButton = Button(self.title, self.title_font, fit_text=True, font_size=40, font_color=self.title_color, show_feedback=False)
         close_icon = Icon(self.close_icon, tap_action=self.async_close, icon_color=self.close_icon_color)
         titleLayout = [["?*0.1", (None, "?")],["?*0.8",(titleButton,"?"),(close_icon,"r*2")], ["?*0.15", (None, "?")]]
         titleLayout = Layout(titleLayout, background_color=self.header_color)
-        layout = [[50,(titleLayout,"w*1.01")],
+        layout = [[title_H,(titleLayout,"w*1.01")],
                 ["?", (self.menu_layout,"?")]]
         return layout
 
