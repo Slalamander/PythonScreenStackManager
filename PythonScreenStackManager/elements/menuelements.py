@@ -319,7 +319,7 @@ class DeviceMenu(UniquePopupMenu):
             
             if self.device.has_feature(FEATURES.FEATURE_BATTERY):
                 batteryIcon = develts.DeviceIcon(FEATURES.FEATURE_BATTERY, tap_action=None)
-                batteryText = develts.DeviceButton(FEATURES.FEATURE_BATTERY,"charge",suffix="%", font_size=fSize, fit_text = True)
+                batteryText = develts.DeviceButton(FEATURES.FEATURE_BATTERY,"charge",suffix="%", font_size=fSize, fit_text = True, text_x_position = "center")
                 battery = base.Layout([["h*0.7",(batteryIcon,"w")],["?",(batteryText,"?")]])
                 row.append((battery,"w*0.1"))
                 
