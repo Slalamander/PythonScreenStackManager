@@ -454,6 +454,12 @@ class Tile(base._TileBase):
         if value == "default":
             self._vertical_sizes = value
             return
+        
+        if self._vertical_sizes == "default":
+            if self.__tile_layout in self._default_vertical_sizes:
+                self._vertical_sizes = self._default_vertical_sizes.get(self.__tile_layout, {})
+            else:
+                self._vertical_sizes = self._default_vertical_sizes["custom"]
         base._TileBase.vertical_sizes.fset(self,value)
 
     @property
@@ -473,6 +479,13 @@ class Tile(base._TileBase):
         if value == "default":
             self._horizontal_sizes = value
             return
+        
+        if self._horizontal_sizes == "default":
+            if self.__tile_layout in self._default_horizontal_sizes:
+                self._horizontal_sizes = self._default_horizontal_sizes.get(self.__tile_layout, {})
+            else:
+                self._horizontal_sizes = self._default_horizontal_sizes["custom"]
+
         base._TileBase.horizontal_sizes.fset(self,value)
 
     #region subelements
