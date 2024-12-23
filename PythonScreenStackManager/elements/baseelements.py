@@ -2094,6 +2094,8 @@ class _TileBase(Layout):
     def hide(self, value : list):
         if value == None:
             value = []
+        elif isinstance(value,str):
+            value = [value]
         else:
             value = list(value)
         value_set = set(value)
