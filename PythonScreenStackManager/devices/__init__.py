@@ -343,6 +343,11 @@ class PSSMdevice(ABC):
         _LOGGER.warning("Device does not support rebooting")
         self.parentPSSMScreen.save_settings()
         return
+    
+    def toggle_autostart(self,*args):
+        "Toggles autostart. Logs a warning if not implemented"
+        _LOGGER.warning("Device does not support the autostart feature")
+        return
 
     def _quit(self):
         """"
