@@ -53,6 +53,9 @@ class FEATURES:
     FEATURE_POWER = "FEATURE_POWER"
     "Power features indicate the device is able to turn the hardware off and reboot it"
 
+    FEATURE_AUTOSTART = "FEATURE_AUTOSTART"
+    "Feature to indicate the device allows starting inkBoard on boot (as well as toggle it)"
+
     FEATURE_INTERACTIVE = "FEATURE_INTERACTIVE"
     "Interactive feature to indicate the device supports screen interaction"
 
