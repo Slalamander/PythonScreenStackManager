@@ -294,7 +294,7 @@ class DeviceMenu(UniquePopupMenu):
         fSize = DEFAULT_FONT_SIZE
         buttonSettings = {"text_x_position": "left", "font_size":fSize}
         m = "w*0.02"
-        h = 50
+        h = "?"
         h_margin = 5
 
         deviceText = self.device.deviceName if self.device.deviceName != None else "PSSM"
@@ -304,7 +304,7 @@ class DeviceMenu(UniquePopupMenu):
         layout = [[h,(deviceButton,"?"),(None,"r")]]
 
         if self.device.has_feature(FEATURES.FEATURE_BATTERY) or self.device.has_feature(FEATURES.FEATURE_NETWORK):
-            row = [h*2 + h_margin]
+            row = [f"{h}*2"]
             if not self.device.has_feature(FEATURES.FEATURE_NETWORK):
                 row.append((None,"?"))
             else:
@@ -319,7 +319,7 @@ class DeviceMenu(UniquePopupMenu):
             
             if self.device.has_feature(FEATURES.FEATURE_BATTERY):
                 batteryIcon = develts.DeviceIcon(FEATURES.FEATURE_BATTERY, tap_action=None)
-                batteryText = develts.DeviceButton(FEATURES.FEATURE_BATTERY,"charge",suffix="%", font_size=fSize, fit_text = True, text_x_position = "center")
+                batteryText = develts.DeviceButton(FEATURES.FEATURE_BATTERY,"charge",suffix="%", font_size=fSize, fit_text = True)
                 battery = base.Layout([["h*0.7",(batteryIcon,"w")],["?",(batteryText,"?")]])
                 row.append((battery,"w*0.1"))
                 
@@ -340,7 +340,7 @@ class DeviceMenu(UniquePopupMenu):
 
         restartButton = base.Button("Reload", font_size=fSize, background_color=col, tap_action=self.parentPSSMScreen.reload, resize=fSize)
         buttonRow.append((restartButton,"?"))
-        buttonRow = ["?*0.25",(base.Layout([buttonRow], background_color=col),"w")]
+        buttonRow = ["h*0.25",(base.Layout([buttonRow], background_color=col),"w")]
         layout.append(buttonRow)
         self.menu_layout = base.Layout(layout)
         return self.menu_layout
@@ -446,6 +446,13 @@ class ScreenMenu(UniquePopupMenu):
         ##A version check using github is also useful
         ##I think it may be useful to do that using a special icon/element like the device status one?
         ##That uses the interval timer to check like, every 12 hours
+        if self.device.has_feature(FEATURES.FEATURE_AUTOSTART):
+            state = self.device.autoStart
+            elt = comps.CheckBox(state, checked_icon="mdi:checkbox-marked", unchecked_icon="mdi:checkbox-blank", on_set = self.device.toggle_autostart)
+            button = base.Button("Auto start",font_size=buttonSettings["font_size"], text_x_position="right")
+            row1, row2 = layout
+            row1.extend([(elt,"r"),(None,"r")])
+            row2.extend([(button,"?"),(None,"r")])
 
         setter_bg = DEFAULT_MENU_BUTTON_COLOR
         buttSett = {"font_color": DEFAULT_FOREGROUND_COLOR}
@@ -539,3 +546,4 @@ class ScreenMenu(UniquePopupMenu):
         elif action == "invert":
             self.parentPSSMScreen.invert()
         return
+
