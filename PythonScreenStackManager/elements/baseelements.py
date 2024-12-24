@@ -2588,13 +2588,18 @@ class Popup(Layout):
 
     @elementactionwrapper.method
     async def async_close(self, *args, **kwargs):
-        loop = self.parentPSSMScreen.mainLoop
-        task = loop.create_task(self.parentPSSMScreen.async_remove_element(self))
+        loop = self.screen.mainLoop
+        task = loop.create_task(self.screen.async_remove_element(self))
         await task
-        c = self.parentPSSMScreen.popupsOnTop.count(self)
+        c = self.screen.popupsOnTop.count(self)
         for i in range(c):
-            self.parentPSSMScreen.popupsOnTop.remove(self)
+            self.screen.popupsOnTop.remove(self)
+        
         self._tapEvent.set()
+
+        if self.screen.device.screenType == "E-Ink":
+            await asyncio.to_thread(
+                self.screen.device.refresh_screen)
 
     async def _auto_close_timer(self):
         if self.auto_close == True:
