@@ -347,6 +347,7 @@ class PSSMdevice(ABC):
     def toggle_autostart(self,*args):
         "Toggles autostart. Logs a warning if not implemented"
         _LOGGER.warning("Device does not support the autostart feature")
+        ##For the validation: also test if it has the autoStart attribute.
         return
 
     def _quit(self):
