@@ -5160,6 +5160,8 @@ class _BaseSlider(Element):
             return
         
         if hasattr(self,"_fast_position_update") and not self.parentPSSMScreen.popupsOnTop:
+            await asyncio.to_thread(
+                self._fast_position_update, new_position)
             self._fast_position_update(new_position)
         elif hasattr(self,"_fast_position_update"):    
             for popup in self.parentPSSMScreen.popupsOnTop:
@@ -5167,7 +5169,8 @@ class _BaseSlider(Element):
                     self.position = new_position
                     asyncio.create_task(self.async_update(updated=True))
                     return
-            self._fast_position_update(new_position)
+            await asyncio.to_thread(
+                self._fast_position_update, new_position)
         else:
             self.position = new_position
             asyncio.create_task(self.async_update(updated=True))
