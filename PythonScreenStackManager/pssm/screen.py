@@ -121,7 +121,7 @@ class PSSMScreen:
 
         self.__shorthandFunctionGroups = {"element": self.parse_element_function}
 
-        self._printLock = asyncio.Lock(loop=self.mainLoop)
+        self._printLock = asyncio.Lock()
         "Lock to ensure only one print loop can run"
 
         self._printGather : asyncio.Future = DummyTask()
@@ -141,9 +141,9 @@ class PSSMScreen:
 
         self._device = device
         self._device._Screen = self
-        self._device._updateCondition = asyncio.Condition(loop=self.mainLoop)
+        self._device._updateCondition = asyncio.Condition()
         if self._device.has_feature(FEATURES.FEATURE_BACKLIGHT):
-            self._device.backlight._updateCondition = asyncio.Condition(loop=self.mainLoop)
+            self._device.backlight._updateCondition = asyncio.Condition()
         
         self._device._set_screen()
 
@@ -170,7 +170,7 @@ class PSSMScreen:
         self._isInputThreadStarted = False
 
         self._lastCoords = (-1,-1)
-        self._interactEvent = asyncio.Event(loop=self.mainLoop)
+        self._interactEvent = asyncio.Event()
         self.__touchDebounceTime = tools.parse_duration_string(touch_debounce_time)
         self.__minimumHoldTime = tools.parse_duration_string(minimum_hold_time)
 

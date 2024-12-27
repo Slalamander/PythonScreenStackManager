@@ -462,7 +462,7 @@ class Device(PSSMdevice):
             else:
                 if not self._resizeTask.done():
                     return
-                resize_event = asyncio.Event(loop=self.Screen.mainLoop)
+                resize_event = asyncio.Event()
                 self.window.bind("<ButtonRelease-1>", lambda event: resize_event.set(), add="+") ##Won't add this to bind as it is removed upon releasing the mouse button
 
             with suppress(RuntimeError):

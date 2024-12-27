@@ -164,8 +164,8 @@ class Element(ABC):
         self._requestGenerate = True
         "This variable is used to signal to parentLayouts that this element was updated, and needs to be regenerated."
 
-        self.__generatorLock = asyncio.Lock(loop=self.mainLoop)
-        self.__updateLock = asyncio.Lock(loop=self.mainLoop)
+        self.__generatorLock = asyncio.Lock()
+        self.__updateLock = asyncio.Lock()
         self._feedbackTask : asyncio.Task = DummyTask()
         "asyncio task that handles the elements feedback function"
 

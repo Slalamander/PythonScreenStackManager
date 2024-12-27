@@ -2047,7 +2047,7 @@ class TimerSlider(Slider):
         self._timerTask : asyncio.Task = DummyTask()
         "Task running the timed slider update loop"
 
-        self.__timerLock = asyncio.Lock(loop=self.mainLoop)
+        self.__timerLock = asyncio.Lock()
 
         super().__init__(style, orientation, interactive=interactive, **kwargs)
         
