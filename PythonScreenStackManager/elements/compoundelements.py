@@ -1337,7 +1337,6 @@ class LineSlider(base._BaseSlider):
         else:
             self._dimension_setter("__thumb_height",value,["l"])
 
-
     @colorproperty
     def thumb_color(self) -> Optional[ColorType]:
         if self._thumb_color == None:
@@ -1977,20 +1976,12 @@ class Slider(LineSlider, BoxSlider):
 
         return
 
-    @property
+    @colorproperty
     def thumb_color(self):
         if self.style == "line":
             return LineSlider.thumb_color.fget(self)
         elif self.style == "box":
             return BoxSlider.thumb_color.fget(self)
-    
-    @thumb_color.setter
-    def thumb_color(self, value : ColorType):
-        if self.style == "line":
-            val = LineSlider.thumb_color.fset(self, value)
-        elif self.style == "box":
-            val =  BoxSlider.thumb_color.fset(self, value)
-        return val
 
     @property
     def SliderClass(self) -> Union[type[LineSlider], type[BoxSlider]]:
