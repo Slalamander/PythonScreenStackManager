@@ -2635,7 +2635,7 @@ class DropDown(base.Button):
         await asyncio.gather(
             self._menuPopup.async_close(),
             self._async_select(elt.text),
-            loop=self.parentPSSMScreen.mainLoop
+            # loop=self.parentPSSMScreen.mainLoop
         )
 
     def _menu_closed(self):
