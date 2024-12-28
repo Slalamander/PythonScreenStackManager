@@ -162,6 +162,7 @@ SHORTHAND_FONTS : dict[fontType, Path] = {
 }
 "Paths to some default implemented fonts. Also has shorthands for default, clock and header fonts. Allows for other libraries to add to it."
 
+SHORTHAND_FONTS["merriweather"] = SHORTHAND_FONTS["merriweather-regular"]
 SHORTHAND_FONTS['default'] = SHORTHAND_FONTS['notosans']
 SHORTHAND_FONTS['default-regular'] = SHORTHAND_FONTS['notosans-regular']
 SHORTHAND_FONTS['default-bold'] = SHORTHAND_FONTS['notosans-bold']
