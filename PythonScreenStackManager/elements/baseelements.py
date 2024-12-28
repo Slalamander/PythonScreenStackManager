@@ -118,6 +118,7 @@ class Element(ABC):
         super().__init_subclass__(*args, **kwargs)
         init = cls.__init__
         def new_init(self, *args, **kwargs):
+            asyncio.set_event_loop(self.screen.mainLoop)
             id = kwargs.get("id",None)
             _register = kwargs.get("_register",None)
             init(self, *args, **kwargs)
