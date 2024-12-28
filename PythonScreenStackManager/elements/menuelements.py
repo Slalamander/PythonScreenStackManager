@@ -44,7 +44,7 @@ class StatusBar(layouts.GridLayout):
         return MappingProxyType(cls._statusbar_elements)
 
     def __init__(self, orientation : Literal["horizontal","vertical"] = "horizontal", show_clock = True,
-                outer_margins = [0, 10], inner_margins = 0, hide : list[str] = [], element_size : PSSMdimension = "default",
+                outer_margins = [0, 10], inner_margins = [0,5], hide : list[str] = [], element_size : PSSMdimension = "default",
                 element_properties : dict = {}, status_element_properties : dict = {"background_shape": "circle", "background_color": DEFAULT_BACKGROUND_COLOR},
                 **kwargs):
         
