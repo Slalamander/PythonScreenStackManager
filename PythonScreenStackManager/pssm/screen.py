@@ -457,9 +457,9 @@ class PSSMScreen:
     
     @background.setter
     def background(self, value : Union[str, ColorType]):
-        if is_valid_Color(value):
+        if Style.is_valid_color(value):
             self.__background = value
-            self.__baseBackgroundImage = Image.new(self.imgMode, self.size, color = get_Color(value,self.imgMode))
+            self.__baseBackgroundImage = Image.new(self.imgMode, self.size, color = Style.get_color(value,self.imgMode))
         elif isinstance(value,(str,Path)):
             try:
                 img = Image.open(value)
