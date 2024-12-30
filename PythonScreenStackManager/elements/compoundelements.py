@@ -2707,7 +2707,7 @@ class Counter(base._TileBase):
     @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["base.Element", CoordType],Any]]:
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
-        return base._TileBase.action_shorthands | {"set-value": "interact_set_counter", "increment": "increment", "decrement": "decrement"}
+        return base._TileBase.action_shorthands | {"set-value": "set_counter", "increment": "increment", "decrement": "decrement"}
 
     _restricted_element_properties : dict[str,set[str]] = {"count": {"text"}, "up": {"icon", "tap_action"}, "down": {"icon", "tap_action"}}
     "Properties of the elements that are not allowed to be set."
@@ -2983,6 +2983,9 @@ class Counter(base._TileBase):
         value : Union[float,int]
             the new value to set
         """
+        if value == self.value:
+            return
+        
         i = (value - self.value)/self.step
         i = round(i)
         value = self.value + self.step*i
@@ -3004,18 +3007,6 @@ class Counter(base._TileBase):
         for res in L:
             if isinstance(res,Exception):
                 _LOGGER.warning(f"Counter error: {res}")
-
-    async def interact_set_counter(self, value : Union[float,int], *args):
-        "Function that can be used to set the value by interacting with other elements."
-        
-        if not isinstance(value,(int,float)):
-            if isinstance(value, base.Element):
-                msg = f"{self}: value got passed as an Element: {value}. Make sure you set the appropriate data or map correctly to hold a key defined as value."
-            else:
-                msg = f"{self}: Value must be an integer or float, not {type(value)}"
-            _LOGGER.exception(TypeError(msg))
-            return
-        await self._async_set_counter(value)
 
     @elementactionwrapper.method
     async def increment(self, *args):
