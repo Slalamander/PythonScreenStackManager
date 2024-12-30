@@ -5183,11 +5183,6 @@ class _BaseSlider(Element):
     async def async_set_position(self, new_position, *args):
         if new_position == self.position:
             return
-        
-        if self.on_position_set:
-            task = tools.wrap_to_coroutine(self.on_position_set, self, new_position, **self.on_position_set_kwargs)
-        else:
-            task = None
 
         if hasattr(self,"_fast_position_update") and not self.parentPSSMScreen.popupsOnTop:
             await asyncio.to_thread(
@@ -5197,7 +5192,8 @@ class _BaseSlider(Element):
                 if tools.get_rectangles_intersection(self.area,popup.area) or popup.blur_background:
                     self.position = new_position
                     asyncio.create_task(self.async_update(updated=True))
-                    if task: asyncio.create_task(task)
+                    if self.on_position_set:
+                        task = tools.wrap_to_coroutine(self.on_position_set, self, new_position, **self.on_position_set_kwargs)
                     return
             await asyncio.to_thread(
                 self._fast_position_update, new_position)
@@ -5205,7 +5201,9 @@ class _BaseSlider(Element):
             self.position = new_position
             asyncio.create_task(self.async_update(updated=True))
         
-        if task: asyncio.create_task(task)
+        if self.on_position_set:
+            asyncio.create_task(
+                tools.wrap_to_coroutine(self.on_position_set, self, new_position, **self.on_position_set_kwargs))
         return
 
     def set_position(self, new_position):
