@@ -5042,7 +5042,7 @@ class _BaseSlider(Element):
 
     def __init__(self, orientation : Literal["horizontal","vertical"], position : Union[int,float]=None, 
                 minimum : float = 0, maximum : float = 100, value_type : Union[type[float],type[int],Literal["int","float"]] = float, 
-                show_feedback : bool = False, interactive : bool = True, tap_action=None,
+                show_feedback : bool = False, interactive : bool = True, tap_action=None, on_position_set: dict = None,
                 **kwargs):
 
         super().__init__(tap_action=tap_action, show_feedback=show_feedback, **kwargs)
@@ -5055,6 +5055,10 @@ class _BaseSlider(Element):
             position = self.minimum
         self.position = position
         self.value_type = value_type
+
+        self.on_position_set_data = {}
+        self.on_position_set_map = {}
+        self.on_position_set = on_position_set
 
     #region
     @property
@@ -5152,6 +5156,11 @@ class _BaseSlider(Element):
         """
         return self.__tap_action
 
+    @elementaction
+    def on_position_set(self) -> Callable[["_BaseSlider",Union[float,int]],Any]:
+        "Function that is called whenever the slider's position changes. Passes the element and the new position."
+        return self._on_position_set
+
     #endregion
 
     async def __tap_action(self, elt, coords, **kwargs):
@@ -5175,21 +5184,28 @@ class _BaseSlider(Element):
         if new_position == self.position:
             return
         
+        if self.on_position_set:
+            task = tools.wrap_to_coroutine(self.on_position_set, self, new_position)
+        else:
+            task = None
+
         if hasattr(self,"_fast_position_update") and not self.parentPSSMScreen.popupsOnTop:
             await asyncio.to_thread(
                 self._fast_position_update, new_position)
-            self._fast_position_update(new_position)
         elif hasattr(self,"_fast_position_update"):    
             for popup in self.parentPSSMScreen.popupsOnTop:
                 if tools.get_rectangles_intersection(self.area,popup.area) or popup.blur_background:
                     self.position = new_position
                     asyncio.create_task(self.async_update(updated=True))
+                    if task: asyncio.create_task(task)
                     return
             await asyncio.to_thread(
                 self._fast_position_update, new_position)
         else:
             self.position = new_position
             asyncio.create_task(self.async_update(updated=True))
+        
+        if task: asyncio.create_task(task)
         return
 
     def set_position(self, new_position):
