@@ -2002,7 +2002,10 @@ class TileElement(Layout):
     def defaultLayouts(cls) -> dict: return {}    ##rename to defaultLayouts
     "Dict that can hold default layouts for elements."
 
-    
+    @property
+    def tiles(self) -> tuple[str]:
+        "The available tiles for the tile_layout"
+        return ()
 
     _restricted_element_properties : dict[str,set[str]] = {}
     "Properties of the elements that are not allowed to be set."
