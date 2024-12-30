@@ -2705,7 +2705,7 @@ class Counter(base.TileElement):
     """
 
     @classproperty
-    def tiles(self) -> tuple[str]:
+    def tiles(cls) -> tuple[str]:
         "The names of the tiles that can be used"
         return ("count", "up", "down")
 
