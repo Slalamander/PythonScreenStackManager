@@ -1998,8 +1998,11 @@ class TileElement(Layout):
         Can be used in element_properties by `'outline``, which will parse the color to the element.
     """
 
-    defaultLayouts : dict = {}    ##rename to defaultLayouts
+    @classproperty
+    def defaultLayouts(cls) -> dict: return {}    ##rename to defaultLayouts
     "Dict that can hold default layouts for elements."
+
+    
 
     _restricted_element_properties : dict[str,set[str]] = {}
     "Properties of the elements that are not allowed to be set."
