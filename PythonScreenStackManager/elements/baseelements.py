@@ -106,7 +106,7 @@ class Element(ABC):
     @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["Element", CoordType],Any]]:
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
-        return {"generate": "async_generate", "update": "async_update"}
+        return {"generate": "async_generate", "update": "async_update_action"}
     
     @property
     def _emulator_icon(cls): return "mdi:shape"
@@ -636,6 +636,21 @@ class Element(ABC):
                     await self.async_generate()
             
             return updated
+
+    async def async_update_action(self, *args, force_element_update: bool = False, **kwargs):
+        """Function to update an element via actions.
+
+        Catches out all positional arguments. Any non specified keyword arguments are passed as updateAttributes
+
+        Parameters
+        ----------
+        force_element_update : bool, optional
+            Forcibly set the element's update status to True, by default False
+        """        
+        if kwargs:
+            _LOGGER.log(5, f"{self}: calling update via update_action")
+            await self.async_update(updateAttributes=kwargs, updated=bool(force_element_update))
+        return
 
     def _convert_dimension(self, dimension : Union[int,float,str,list,tuple], variables : dict ={}):
         """
