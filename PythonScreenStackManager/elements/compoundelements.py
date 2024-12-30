@@ -2690,16 +2690,16 @@ class Counter(base.TileElement):
         Maximum counter value, by default None (No maximum)
     on_count : Callable, optional
         Optional function to call when the counter value is changed, defaults to None
-    counter_layout : str, optional
-        The counter layout, as a string. See the description of the property for more explanation on how to use it. By default "count,[up;down]"
+    to;e_layout : str, optional
+        The tile layout of the counter. By default default ("count,[up;down]")
     downIcon : MDItype, optional
         Mdi icon of the decrementing button, by default "mdi:minus-box"
     upIcon : MDItype, optional
         Mdi icon of the incrementing button, by default "mdi:plus-box"
     horizontal_sizes : dict[str,PSSMdimension], optional
-            horizontal sizes for the tile elements, by default None, which applies default values depending on the value of counter_layout
+            horizontal sizes for the tile elements, by default None, which applies default values depending on the value of tile_layout
     vertical_sizes : dict[str,PSSMdimension], optional
-            vertical sizes for the tile elements, by default None, which applies default values depending on the value of counter_layout
+            vertical sizes for the tile elements, by default None, which applies default values depending on the value of tile_layout
     element_properties : dict[str,dict[str,str]], optional
             Properties for the counter elements, by default {"count": {}, "up": {"icon_color": "foreground"},"down": {"icon_color": "foreground"}}
     """
@@ -2708,6 +2708,10 @@ class Counter(base.TileElement):
     def tiles(self) -> tuple[str]:
         "The names of the tiles that can be used"
         return ("count", "up", "down")
+
+    @classproperty
+    def defaultLayouts(cls):
+        return {"default": "count,[up;down]", "horizontal": "down,count,up"}
 
     @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["base.Element", CoordType],Any]]:
@@ -2720,7 +2724,7 @@ class Counter(base.TileElement):
     @property
     def _emulator_icon(cls): return "mdi:counter"
 
-    def __init__(self, counter_layout : Union[Literal["default", "horizontal"], PSSMLayoutString] = "default", value : float = 0, step : float = 1, roundDigits : int = None, minimum : float = None, maximum : float = None, 
+    def __init__(self, tile_layout : Union[Literal["default", "horizontal"], PSSMLayoutString] = "default", value : float = 0, step : float = 1, roundDigits : int = None, minimum : float = None, maximum : float = None, 
                 on_count : Callable[["Counter",Union[float,int]],Any] = None,  downIcon : MDItype = "mdi:minus-box", upIcon : MDItype = "mdi:plus-box", 
                 horizontal_sizes : dict[str,PSSMdimension] = None, vertical_sizes : dict[str,PSSMdimension] = None, 
                 element_properties : dict[str,dict[str,str]] = {"count": {}, "up": {"icon_color": "foreground"},"down": {"icon_color": "foreground"}},
@@ -2750,25 +2754,23 @@ class Counter(base.TileElement):
 
         element_properties = default_properties
 
-        self.counter_layout = counter_layout
-
         if not isinstance(vertical_sizes, dict):
-            if counter_layout == "default":
+            if tile_layout == "default":
                 vertical_sizes = {"outer": "h*0.1", "up": "?", "down": "?"}
-            elif counter_layout == "horizontal":
+            elif tile_layout == "horizontal":
                 vertical_sizes = {"up": "?", "down": "?", "outer": "h*0.05"}
             else:
                 vertical_sizes = {}
 
         if not isinstance(horizontal_sizes, dict):
-            if counter_layout == "default":
+            if tile_layout == "default":
                 horizontal_sizes = {"count": "w*0.6", "up": "r", "down": "r"}
-            elif counter_layout == "horizontal":
-                horizontal_sizes = {"up": "r", "down": "r"}
+            elif tile_layout == "horizontal":
+                horizontal_sizes = {"up": "?", "down": "?"}
             else:
                 horizontal_sizes = {}
 
-        super().__init__(self.tile_layout, element_properties=element_properties, horizontal_sizes=horizontal_sizes, vertical_sizes= vertical_sizes,  **kwargs)
+        super().__init__(tile_layout, element_properties=element_properties, horizontal_sizes=horizontal_sizes, vertical_sizes= vertical_sizes,  **kwargs)
 
         self.minimum = minimum
         self.maximum = maximum
@@ -2785,29 +2787,6 @@ class Counter(base.TileElement):
     def elements(self) -> MappingProxyType[Literal["count","up","down"],base.Element]:
         "The elements in the counter"
         return self.__elements
-    
-    @property
-    def counter_layout(self) -> str:
-        """
-        The counter layout, as a string. Needs to contain up, down and count to indicate where to place the up Icon, down Icon and counter Button respectively.
-        Use ',' to separate columns, and ';' to separate rows. You can encapsulate within [...] to use a sublayout, so you can stack items within a single row, for example. \n
-        Examples: 
-            count,[up;down] \n
-            down,count,up   
-        """
-        return self.__counter_layout
-    
-    @counter_layout.setter
-    def counter_layout(self, value:str):
-        if value.lower() == "default":
-            layout_str = "count,[up;down]"
-        elif value.lower() in {"horizontal","hor"}:
-            layout_str = "down,count,up"
-        else:
-            layout_str = value
-
-        self.__counter_layout = value
-        self.tile_layout = layout_str
 
     @property
     def valueText(self) -> str:
