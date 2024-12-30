@@ -5185,7 +5185,7 @@ class _BaseSlider(Element):
             return
         
         if self.on_position_set:
-            task = tools.wrap_to_coroutine(self.on_position_set, self, new_position)
+            task = tools.wrap_to_coroutine(self.on_position_set, self, new_position, **self.on_position_set_kwargs)
         else:
             task = None
 
