@@ -481,7 +481,7 @@ class GridLayout(base.Layout):
                 self.build_layout()
         return await super().async_generate(area, skipNonLayoutGen)
 
-class NavigationTile(base._TileBase):
+class NavigationTile(base.TileElement):
     """
     Styled Tile Element to use with the TabPages. Used to show and select the tabs.
     Not quite fully developed since it's not meant to be used as a standalone element.
@@ -576,7 +576,7 @@ class tabDict(TypedDict):
     "Optional index (page number) that will be given to this tab"
 
 
-class TabPages(base._TileBase):
+class TabPages(base.TileElement):
     """
     A layout that can hold multiple other elements (as tabs). 
     Comes with elements to cycle through the tab list, as well as a navigation bar that can be used to go to a specific tab.
@@ -624,7 +624,7 @@ class TabPages(base._TileBase):
     @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["base.Element", CoordType],Any]]:
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
-        return base._TileBase.action_shorthands | {"show-page": "show_page_shorthand", "show-tab": "show_tab_shorthand", "next-page": "next_page", "previous-page": "previous_page"}
+        return base.TileElement.action_shorthands | {"show-page": "show_page_shorthand", "show-tab": "show_tab_shorthand", "next-page": "next_page", "previous-page": "previous_page"}
 
 
     def __init__(self, tabs : list[tabDict], tile_layout : Union[Literal["top","bottom","left","right"], PSSMLayoutString] = "bottom",
@@ -680,12 +680,12 @@ class TabPages(base._TileBase):
     def elements(self) -> dict[Literal["navigation","handle-previous","handle-next","tab"], Union[base.Layout,GridLayout, base.Icon]]:
         return self.__elements | {"tab": self.__currentTab}
 
-    @base._TileBase.tile_layout.setter
+    @base.TileElement.tile_layout.setter
     def tile_layout(self, value):
         if value == getattr(self,"_tile_layout",None):
             return
         
-        base._TileBase.tile_layout.fset(self, value)
+        base.TileElement.tile_layout.fset(self, value)
         if self._tile_layout != value or value not in TabPages.defaultLayouts:
             return ##This means something was wrong with the layout (or it's not a default one)
 

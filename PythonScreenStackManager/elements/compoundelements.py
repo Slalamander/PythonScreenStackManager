@@ -30,7 +30,7 @@ BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
 
 _LOGGER = logging.getLogger(__package__)
 
-class Tile(base._TileBase):
+class Tile(base.TileElement):
     """
     Element that combines an icon, text and optional title into a versatile element. A lot of defaults are present, such that making custom layout elements combining icons and text is generally not needed.
 
@@ -460,7 +460,7 @@ class Tile(base._TileBase):
                 self._vertical_sizes = self._default_vertical_sizes.get(self.__tile_layout, {})
             else:
                 self._vertical_sizes = self._default_vertical_sizes["custom"]
-        base._TileBase.vertical_sizes.fset(self,value)
+        base.TileElement.vertical_sizes.fset(self,value)
 
     @property
     def horizontal_sizes(self) -> 'Tile._EltSizeDict':
@@ -486,7 +486,7 @@ class Tile(base._TileBase):
             else:
                 self._horizontal_sizes = self._default_horizontal_sizes["custom"]
 
-        base._TileBase.horizontal_sizes.fset(self,value)
+        base.TileElement.horizontal_sizes.fset(self,value)
 
     #region subelements
     @property
@@ -2674,7 +2674,7 @@ class DropDown(base.Button):
         await self._menuPopup.async_close()
         self.__menuOpen = False
 
-class Counter(base._TileBase):
+class Counter(base.TileElement):
     """
     Tile based element that can increment a numeric value with two buttons.
 
@@ -2712,7 +2712,7 @@ class Counter(base._TileBase):
     @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["base.Element", CoordType],Any]]:
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
-        return base._TileBase.action_shorthands | {"set-value": "set_counter", "increment": "increment", "decrement": "decrement"}
+        return base.TileElement.action_shorthands | {"set-value": "set_counter", "increment": "increment", "decrement": "decrement"}
 
     _restricted_element_properties : dict[str,set[str]] = {"count": {"text"}, "up": {"icon", "tap_action"}, "down": {"icon", "tap_action"}}
     "Properties of the elements that are not allowed to be set."

@@ -1970,7 +1970,7 @@ class Layout(Element):
         return True
 
 
-class _TileBase(Layout):
+class TileElement(Layout):
     """
     Base element for Tile based element functionality. Provides base functionality for using layout strings and using color shorthands (the latter has by now been extended to layouts in general).
     Cannot be used as is, needs to be called from a childclass. The elements need to have been set before calling the init of the _TileBase.
@@ -2020,10 +2020,10 @@ class _TileBase(Layout):
         self._tile_layout = None
         self.__hide = ()
 
-        self._color_setter("_foreground_color",foreground_color,True, cls=_TileBase)
-        self._color_setter("_background_color",background_color,True, cls=_TileBase)
-        self._color_setter("_outline_color",outline_color,True, cls=_TileBase)
-        self._color_setter("_accent_color",accent_color,True, cls=_TileBase)
+        self._color_setter("_foreground_color",foreground_color,True, cls=TileElement)
+        self._color_setter("_background_color",background_color,True, cls=TileElement)
+        self._color_setter("_outline_color",outline_color,True, cls=TileElement)
+        self._color_setter("_accent_color",accent_color,True, cls=TileElement)
 
         self._vertical_sizes = {"inner": 0, "outer": 0}
         self._horizontal_sizes = {"inner": 0, "outer": 0}
@@ -2307,7 +2307,7 @@ class _TileBase(Layout):
         ##May be doable by overwriting async update and checking if a color property is in it.
 
 
-class TileLayout(_TileBase):
+class TileLayout(TileElement):
     """
     A general TileLayout, with self defined elements and layout.
 
@@ -5397,7 +5397,7 @@ class _ElementSelect(Element):
     @classproperty
     def _color_shorthands(cls) -> dict[str,str]:
         "Class method to get shorthands for color setters, to allow for parsing their values in element properties. Returns a dict with the [key] being the shorthand to use for element properties and [value] being the tile attribute it links to."
-        return {"active": "active_color", "inactive": "inactive_color"} | _TileBase._color_shorthands
+        return {"active": "active_color", "inactive": "inactive_color"} | TileElement._color_shorthands
 
     def __post_init__(self, id, _register):
         ##Since this works on already defined elements, the __post_init__ is overwritten as otherwise it'd be registered again.
