@@ -1998,7 +1998,7 @@ class _TileBase(Layout):
         Can be used in element_properties by `'outline``, which will parse the color to the element.
     """
 
-    _default_layouts : dict = {}
+    defaultLayouts : dict = {}    ##rename to defaultLayouts
     "Dict that can hold default layouts for elements."
 
     _restricted_element_properties : dict[str,set[str]] = {}
@@ -2042,7 +2042,7 @@ class _TileBase(Layout):
 
         if isinstance (tile_layout, str):
             self._tile_layout = tile_layout
-            if tile_layout in self.__class__._default_layouts:
+            if tile_layout in self.__class__.defaultLayouts:
                 self._reparse_layout = True
 
         for elt_str in  element_properties:
@@ -2056,8 +2056,8 @@ class _TileBase(Layout):
     @property
     def tile_layout(self) -> Optional[str]:
         "String used to set the layout. None if the layout was set directly"
-        if self._tile_layout in self.__class__._default_layouts:
-            l = self.__class__._default_layouts[self._tile_layout]
+        if self._tile_layout in self.__class__.defaultLayouts:
+            l = self.__class__.defaultLayouts[self._tile_layout]
             return l
         
         return self._tile_layout

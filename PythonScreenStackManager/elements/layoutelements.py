@@ -533,7 +533,7 @@ class NavigationTile(base._TileBase):
         tabparent : TabPages = self.parentLayouts[-2]
         parent_layout = tabparent._tile_layout
 
-        if parent_layout not in TabPages._default_layouts or parent_layout in {"top", "bottom"}:
+        if parent_layout not in TabPages.defaultLayouts or parent_layout in {"top", "bottom"}:
             return "[icon,name];line"
         elif parent_layout == "left":
             return "line,icon"
@@ -609,7 +609,7 @@ class TabPages(base._TileBase):
         For the latter, this means setting the active_color to the foreground_color of the `TabPages` and inactive to None, with line color and icon background_color being changed appropriately.
     """        
     
-    _default_layouts = {"top": "navigation;[handle-previous,tab,handle-next]",
+    defaultLayouts = {"top": "navigation;[handle-previous,tab,handle-next]",
                         "bottom": "[handle-previous,tab,handle-next];navigation",
                         "left": "navigation,[tab;[handle-previous,handle-next]]",
                         "right": "[tab;[handle-previous,handle-next]],navigation"
@@ -686,7 +686,7 @@ class TabPages(base._TileBase):
             return
         
         base._TileBase.tile_layout.fset(self, value)
-        if self._tile_layout != value or value not in TabPages._default_layouts:
+        if self._tile_layout != value or value not in TabPages.defaultLayouts:
             return ##This means something was wrong with the layout (or it's not a default one)
 
         self._resize_defaults = True
@@ -999,7 +999,7 @@ class TabPages(base._TileBase):
         Updates the NavigationBar and the navigation tiles to match the default styles for the current tile_layout.
         If `apply_default_sizes` is `False` or the tile_layout is not a default style, will do nothing.
         """
-        if not self.apply_default_sizes or self._tile_layout not in TabPages._default_layouts: 
+        if not self.apply_default_sizes or self._tile_layout not in TabPages.defaultLayouts: 
             return
 
         if self._tile_layout in {"top", "bottom"}:

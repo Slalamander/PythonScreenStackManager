@@ -2705,6 +2705,11 @@ class Counter(base._TileBase):
     """
 
     @classproperty
+    def tiles(self) -> tuple[str]:
+        "The names of the tiles that can be used"
+        return ("count", "up", "down")
+
+    @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["base.Element", CoordType],Any]]:
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
         return base._TileBase.action_shorthands | {"set-value": "set_counter", "increment": "increment", "decrement": "decrement"}
@@ -2772,6 +2777,8 @@ class Counter(base._TileBase):
         self.step = step
         self.roundDigits = roundDigits
         self.value = value
+
+        self.tile_layout
 
     #region
     @property
