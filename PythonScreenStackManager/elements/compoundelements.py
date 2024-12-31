@@ -726,6 +726,8 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
     ----------
     timezone : str, optional
         the timezone to associate this clock with. Uses system time by default, by default None
+    minimum_resolution: int, optional
+        Minimum image resolution to use when drawing the clock.
     clock_fill_color : Optional[ColorType], optional
         color of the inside circle of the clock. Defaults to none (copies background), by default None
     outline_color : Optional[ColorType], optional
@@ -757,7 +759,8 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
     @property
     def _emulator_icon(cls): return "mdi:clock"
 
-    def __init__(self, timezone=None, clock_fill_color : Optional[ColorType]=None, outline_color : Optional[ColorType]="black", outline_width = 5, 
+    def __init__(self, timezone: str = None, minimum_resolution: int = DrawShapes.MINRESOLUTION, outline_width: PSSMdimension = 5, 
+                clock_fill_color : Optional[ColorType]=None, outline_color : Optional[ColorType] = "black", 
                 hour_hand_color : Optional[ColorType] =None, minute_hand_color : Optional[ColorType] =None, 
                 show_ticks : bool = True, tick_color : Optional[ColorType] =None, 
                 show_digital:bool=False, digital_format : str = "%a", digital_font : str = DEFAULT_FONT_CLOCK, digital_color : Optional[ColorType] =None, 
@@ -768,6 +771,8 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
 
         self._genClock = True
         "Generates the entire clock image upon the next call to the generator, instead of just the hands (and possible time text). Is always reset to False after regenerating the clock image."
+
+        self.minimum_resolution = minimum_resolution
 
         self.show_digital = show_digital
 
@@ -893,6 +898,16 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             return self.outline_color
         return self._digital_color
 
+    @property
+    def minimum_resolution(self) -> int:
+        "The minimum resolution used to draw the clock. Increase this if the clock is pixelly."
+        return self._minimum_resolution
+    
+    @minimum_resolution.setter
+    def minimum_resolution(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(f"{self}: minimum resolution must be an integer. {value} is not valid")
+        self._minimum_resolution = value
     #endregion
 
     def _style_update(self, attribute: str, value):
@@ -911,24 +926,29 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             self._area = area
         (x, y), (w, h) = self.area
 
+        min_res = self.minimum_resolution
+        if w > h:
+            scale = min_res/h
+        else:
+            scale = min_res/w
+
         colorMode = self.parentPSSMScreen.imgMode
         img_background = Style.get_color(self.background_color,colorMode)
         clock_fill = Style.get_color(self.clock_fill_color, colorMode)
         clock_line = Style.get_color(self.outline_color, colorMode)
         timedt = dt.now(self.zoneInfo)
 
-        hour_width = round(self.outline_width*2.5)  ##Want to change these to be settable
-        mnt_width = round(self.outline_width*1.5)
+        outline_w = int(self._convert_dimension(self.outline_width)*scale)
+
+        hour_width = round(outline_w*2.5)  ##Want to change these to be settable
+        mnt_width = round(outline_w*1.5)
 
         if self._genClock:
-            min_resolution = DrawShapes.MINRESOLUTION
-            s = max(w,h,min_resolution)
             img = Image.new(
                 colorMode,
-                (s, s),
+                (min_res, min_res),
                 color=img_background
             )
-            img = ImageOps.cover(img, size=(min_resolution,min_resolution))
             (wc,hc) = img.size
             draw = ImageDraw.Draw(img)
 
@@ -964,7 +984,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
                 coo,
                 start=0,end=360,
                 outline=clock_line,
-                width=self.outline_width,
+                width=outline_w,
             )
             self._clockImg = img
             self._genClock = False
@@ -1030,7 +1050,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         )
 
         _LOGGER.verbose(f"Clock updated for {timedt.strftime('%H:%M')}")
-        self._imgData = ImageOps.pad(img,(w,h), color=img_background)
+        self._imgData = ImageOps.pad(img, (w,h), Image.Resampling.LANCZOS, color=img_background, )
         return self.imgData
 
 class DigitalClock(base.Button, dateTimeElementInterval):
