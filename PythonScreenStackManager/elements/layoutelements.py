@@ -497,6 +497,10 @@ class NavigationTile(base.TileElement):
         The name of this Tile, shows as the text.
     """
 
+    @classproperty
+    def tiles(cls):
+        return ("icon","name","line")
+
     @property
     def _emulator_icon(cls): return "mdi:navigation-variant"
 
@@ -524,6 +528,12 @@ class NavigationTile(base.TileElement):
             ##And also set the properties appropriately
             ##tab tile_layout setter: go through the tiles and set the lines etc. if _tile_layout is auto
         return base.TileLayout.tile_layout.fget(self)
+    
+    @tile_layout.setter
+    def tile_layout(self, value: str):
+        if value.lower() == "auto":
+            self._tile_layout = "auto"
+        base.TileLayout.tile_layout.fset(self, value)
 
     def get_auto_layout(self) -> PSSMLayoutString:
         "Returns the default layout as per the `TabPages` element this `NavigationTile` is contained in."
@@ -626,6 +636,9 @@ class TabPages(base.TileElement):
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
         return base.TileElement.action_shorthands | {"show-page": "show_page_shorthand", "show-tab": "show_tab_shorthand", "next-page": "next_page", "previous-page": "previous_page"}
 
+    @classproperty
+    def tiles(cls) -> tuple[str,str,str,str]:
+        return ("navigation", "handle-next", "handle-previous", "tab")
 
     def __init__(self, tabs : list[tabDict], tile_layout : Union[Literal["top","bottom","left","right"], PSSMLayoutString] = "bottom",
                 apply_default_sizes : bool = True, navigation_tile_size : Union[float,PSSMdimension] = 0.2,
