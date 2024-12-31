@@ -1402,8 +1402,6 @@ class Layout(Element):
                     elt._validate_color_properties()
 
             for elt in old_elts - new_elts: ##This returns every element that is in old_elts but not in new_elts
-                if "Clock" in elt.id:
-                    _LOGGER.error(f"{self}: Calling on remove via set_parent_layouts")
                 if elt.parentLayout == self: 
                     elt._parentLayout = None
                     if callable(getattr(elt,"on_remove",None)):
