@@ -5389,6 +5389,8 @@ class _ElementSelect(Element):
         Properties to apply to any element that are selected (i.e. considered active), by default {"background_color": "active"}
     inactive_properties : dict, optional
         Properties to apply to any element that are not selected (i.e. considered inactive), by default {"background_color": "inactive"}
+    option_properties: dict, optional
+        Properties to apply to all elements. Overwritten by both active and inactive properties.
     active_color : ColorType, optional
         Additional color property that can be used as a shorthand via 'active', by default DEFAULT_FOREGROUND_COLOR
     inactive_color : ColorType, optional
@@ -5410,7 +5412,7 @@ class _ElementSelect(Element):
         return
 
     def  __init__(self, layout_element : Union[Layout, "_ElementSelect"], elements : dict[Literal["option"], Element], select_multiple : bool = False, allow_deselect : bool = True, on_select : InteractionFunctionType = None,
-                active_properties : dict = {"background_color": "active"}, inactive_properties : dict = {"background_color": "inactive"}, element_properties: dict = {},
+                active_properties : dict = {"background_color": "active"}, inactive_properties : dict = {"background_color": "inactive"}, option_properties: dict = {},
                 active_color : ColorType = DEFAULT_FOREGROUND_COLOR, inactive_color : ColorType = DEFAULT_ACCENT_COLOR,
                 foreground_color : ColorType = DEFAULT_FOREGROUND_COLOR, accent_color : ColorType = DEFAULT_ACCENT_COLOR):
 
@@ -5455,9 +5457,9 @@ class _ElementSelect(Element):
 
         self._active_properties = {}
         self._inactive_properties = {}
-        self._element_properties = {}
+        self._option_properties = {}
 
-        self.element_properties = element_properties
+        self.option_properties = option_properties
         self.active_properties = active_properties
         self.inactive_properties = inactive_properties
 
