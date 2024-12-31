@@ -202,7 +202,7 @@ class PSSMScreen:
         elements.ScreenMenu()
 
         elements.StatusBar.add_statusbar_element("device", elements.DeviceIcon())
-        screen_name = "inkBoard" if const.INKBOARD else "screen"
+        screen_name = "inkboard" if const.INKBOARD else "screen"
         dashboardIcon = elements.Icon("mdi:view-dashboard", tap_action={"action": "element:show-popup", "element_id": "screen-menu"})
         elements.StatusBar.add_statusbar_element(screen_name, dashboardIcon)
         
