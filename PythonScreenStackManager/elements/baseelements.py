@@ -5410,7 +5410,7 @@ class _ElementSelect(Element):
         return
 
     def  __init__(self, layout_element : Union[Layout, "_ElementSelect"], elements : dict[Literal["option"], Element], select_multiple : bool = False, allow_deselect : bool = True, on_select : InteractionFunctionType = None,
-                active_properties : dict = {"background_color": "active"}, inactive_properties : dict = {"background_color": "inactive"},
+                active_properties : dict = {"background_color": "active"}, inactive_properties : dict = {"background_color": "inactive"}, element_properties: dict = {},
                 active_color : ColorType = DEFAULT_FOREGROUND_COLOR, inactive_color : ColorType = DEFAULT_ACCENT_COLOR,
                 foreground_color : ColorType = DEFAULT_FOREGROUND_COLOR, accent_color : ColorType = DEFAULT_ACCENT_COLOR):
 
@@ -5455,7 +5455,9 @@ class _ElementSelect(Element):
 
         self._active_properties = {}
         self._inactive_properties = {}
+        self._element_properties = {}
 
+        self.element_properties = element_properties
         self.active_properties = active_properties
         self.inactive_properties = inactive_properties
 
@@ -5541,6 +5543,19 @@ class _ElementSelect(Element):
         
         self._inactive_properties = tools.update_nested_dict(value, self._inactive_properties)
         self._reparse_colors = True
+
+    @property
+    def option_properties(self) -> dict:
+        "Properties to apply to all option elements."
+        return self._option_properties
+
+    @option_properties.setter
+    def option_properties(self, value: dict):
+
+        self._option_properties = tools.update_nested_dict(value, self._option_properties)
+        for elt in self.__option_elements.values():
+            elt.update(self._option_properties)
+        
 
     @elementaction
     def on_select(self) -> Callable[["Element",Union[list[Literal["selection"]]]],Any]:
