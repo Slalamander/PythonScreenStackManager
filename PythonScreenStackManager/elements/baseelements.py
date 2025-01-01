@@ -2329,6 +2329,7 @@ class TileLayout(TileElement):
 
     def __init__(self, tile_layout: Union[str,PSSMlayout], elements : dict[str,Element], vertical_sizes={ "inner": 0,"outer": 0 }, horizontal_sizes={ "inner": 0,"outer": 0 }, **kwargs):
 
+        self.__elements = {}
         for name, elt in elements.items():
             self.add_element(name, elt)
         
