@@ -507,7 +507,7 @@ class Device(PSSMdevice):
         #Called when the tkinter window is closed
         self.parentPSSMScreen.quit()
 
-    def _quit(self):
+    def _quit(self, exce):
         try:
             self._call_in_main_thread(self._quit_in_mainthread)
         except tk.TclError:
