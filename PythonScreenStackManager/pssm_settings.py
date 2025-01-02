@@ -146,7 +146,7 @@ class __settings():
             try:
                 d = dict(_data)
                 f.write(json.dumps(d, indent=4))
-                logger.info(f"Settings saved to {_configfile}")
+                logger.debug(f"Settings saved to {_configfile}")
             except Exception as e:
                 logger.exception("Settings dict is not of the correct type (There may be a mappingproxy in there)")
         return
