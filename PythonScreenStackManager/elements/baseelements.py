@@ -1159,7 +1159,7 @@ class Layout(Element):
     @property
     def _emulator_icon(cls): return "mdi:view-dashboard"
 
-    def __init__(self, layout : PSSMlayout, area=None, background_color : ColorType = None, isInverted=False, radius : PSSMdimension = 0, 
+    def __init__(self, layout : PSSMLayout, area=None, background_color : ColorType = None, isInverted=False, radius : PSSMdimension = 0, 
                 outline_color : ColorType=None, foreground_color : ColorType = DEFAULT_FOREGROUND_COLOR, accent_color : ColorType = DEFAULT_ACCENT_COLOR,
                 outline_width:PSSMdimension=0,
                 show_feedback : bool = False, _isSubLayout : bool = False, 
@@ -1373,7 +1373,7 @@ class Layout(Element):
         self.is_layout_valid(self.layout)
         self.set_parent_layouts([],self.layout)
 
-    def set_parent_layouts(self, old_layout : PSSMlayout, new_layout : PSSMlayout):
+    def set_parent_layouts(self, old_layout : PSSMLayout, new_layout : PSSMLayout):
         """
         Sets the parentLayout attributes for the elements in old_layout and new_layout appropriately
         I.e., any element that is in old_layout but not in new_layout will have its parentLayout set to None (since it was removed)
@@ -1736,7 +1736,7 @@ class Layout(Element):
         self._areaMatrix = matrix
         self._rebuild_area_matrix = False
 
-    def create_element_list(self, layout : Optional[PSSMlayout] = None, full_list : bool = False) -> list["Element"]:
+    def create_element_list(self, layout : Optional[PSSMLayout] = None, full_list : bool = False) -> list["Element"]:
         """
         Returns a list of all the elements the Layout Element contains
 
@@ -2016,7 +2016,7 @@ class TileElement(Layout):
     @property
     def _emulator_icon(cls): return "mdi:layers-triple"
 
-    def __init__(self, tile_layout : Union[str,PSSMlayout], vertical_sizes = {"inner": 0, "outer": 0}, horizontal_sizes = {"inner": 0, "outer": 0},
+    def __init__(self, tile_layout : Union[str,PSSMLayout], vertical_sizes = {"inner": 0, "outer": 0}, horizontal_sizes = {"inner": 0, "outer": 0},
                 foreground_color : Optional[ColorType] = DEFAULT_FOREGROUND_COLOR, accent_color : Optional[ColorType] = DEFAULT_ACCENT_COLOR, background_color : Optional[ColorType] = None, 
                 outline_color : Optional[ColorType] = None, element_properties = {},
                 **kwargs):
@@ -2327,7 +2327,7 @@ class TileLayout(TileElement):
         Horizontal sizes of the elements, by default { "inner": 0,"outer": 0 }
     """
 
-    def __init__(self, tile_layout: Union[str,PSSMlayout], elements : dict[str,Element], vertical_sizes={ "inner": 0,"outer": 0 }, horizontal_sizes={ "inner": 0,"outer": 0 }, **kwargs):
+    def __init__(self, tile_layout: Union[str,PSSMLayout], elements : dict[str,Element], vertical_sizes={ "inner": 0,"outer": 0 }, horizontal_sizes={ "inner": 0,"outer": 0 }, **kwargs):
 
         self.__elements = {}
         for name, elt in elements.items():
@@ -5956,7 +5956,7 @@ class _IntervalUpdate(ABC):
 
 def parse_layout_string(layout_string : str, sublayout : Optional[str] = None, hide : list[str] = [],
                         vertical_sizes : dict[str,PSSMdimension] = {"inner": 0, "outer": 0}, horizontal_sizes : dict[str,PSSMdimension] = {"inner": 0, "outer": 0},
-                        **elementParse : dict[str,Element]) -> PSSMlayout:
+                        **elementParse : dict[str,Element]) -> PSSMLayout:
     """
     Parses a layout from a string. Names defined in layout_string should be passed as an element via a keyword in elementParse.
 
