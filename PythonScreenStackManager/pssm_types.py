@@ -2,7 +2,8 @@
 Various type hints for use with pssm.
 """
 from typing import TYPE_CHECKING, \
-                Union, TypeVar, Literal, Optional, TypedDict, Callable, Any, Generic, NamedTuple
+                Union, TypeVar, Literal, Optional, TypedDict, Callable, Any, Generic, NamedTuple,\
+                Protocol
 import functools
 
 from mdi_pil import mdiType
@@ -21,10 +22,8 @@ ColorType = Union[str,int,list,
             tuple[TypeVar('R'),TypeVar('G'),TypeVar('B')], ##RGB type
             tuple[TypeVar('R'),TypeVar('G'),TypeVar('B'),TypeVar('A')] ##RGBA type
             ]
-"Types for valid colors in the supported color modes. Very broad, generally call tools.is_valid_color for actual validation."
 
-PSSMdimension =  Union[str,int,float,tuple[TypeVar("PSSMdimension")],list[TypeVar("PSSMdimension")]]
-"Possible types for dimensions. Accepts tuples and lists with dimension types as well."
+PSSMdimension =  Union[str,int,float]
 
 xType = TypeVar('x', bound=int)
 yType = TypeVar('y', bound=int)
@@ -33,20 +32,20 @@ hType = TypeVar('h', bound=int)
 
 PSSMarea = tuple[tuple[TypeVar('x', bound=int),TypeVar('y', bound=int)],
                 tuple[TypeVar('w', bound=int) ,TypeVar('h', bound=int)]]
-"Type hint for pssm areas"
+# "Type hint for pssm areas"
 
-PSSMlayout = list[list[Union[TypeVar('PSSMdimension'),tuple[TypeVar('Element'),TypeVar('PSSMdimension')]]]] #tuple[int,int]]
-"Layout typing. First entry of a row is ALWAYS a string with the rows height, and it then allows for unlimited tuples to be added with (Element, 'element_width')"
+PSSMLayout = list[list[Union[TypeVar('PSSMdimension'),tuple[TypeVar('Element'),TypeVar('PSSMdimension')]]]] #tuple[int,int]]
+# "Layout typing. First entry of a row is ALWAYS a string with the rows height, and it then allows for unlimited tuples to be added with (Element, 'element_width')"
 
 PSSMLayoutString = TypeVar('LayoutString')
-"""
-Strings that can be used to parse various elements into a tile using the `elements.parse_layout_string` function.
-A string is made up of the name of the elements, which can be separated by a ',' to denoted elements in a row, and ';' to indicate a new row.
-Enclosing elements between square brackets 'element0,[element1;element2]' will cause them to be put into a subelement. So in that example, element1 is put above element2, and that layout is put in next to element0.
-"""
+# """
+# Strings that can be used to parse various elements into a tile using the `elements.parse_layout_string` function.
+# A string is made up of the name of the elements, which can be separated by a ',' to denoted elements in a row, and ';' to indicate a new row.
+# Enclosing elements between square brackets 'element0,[element1;element2]' will cause them to be put into a subelement. So in that example, element1 is put above element2, and that layout is put in next to element0.
+# """
 
 CoordType = tuple[TypeVar('x', bound=int), TypeVar('y', bound=int)]
-"Type hint for returned coordinates"
+# "Type hint for returned coordinates"
 
 class TouchEvent(NamedTuple):
     "Events used to pass touches to the screen, use for devices"
@@ -68,26 +67,55 @@ class InteractEvent(NamedTuple):
     "Type of interaction function that was registered. I.e. 'tap', 'hold' or 'hold_release'"
 
 
+class ElementActionFunction(Protocol):
+    def __call__(self, element: "Element", any: Any, **kwargs) -> Any:
+        """Type hint for how an element's action is called.
+
+        The element and any parameters are passed as positional arguments.
+
+        Parameters
+        ----------
+        element : Element
+            The element from which the function was called
+        Any : Any
+            Any additional data corresponding to the action. For interaction actions that is an `InteractEvent`, for others it may be a string.
+        """        
+        return
+
+class ElementActionType(dict):
+    
+    action: Union[ElementActionFunction,str]
+    "The function to call. Either a string mapping to a shorthand, or a direct function. Depending on the shorthand action, additional keys may be required."
+
+    data: dict[str,Any]
+    "Fixed keyword values to pass to the function"
+
+    map: dict[str,Any]
+    "Keywords whos value will be passed as the value of the corresponding attribute of the element"
+
+
 InteractionFunctionType = Union[str,Callable[["Element",InteractEvent,Any],Any],None]
-"Type hint for interaction functions, like tap_action"
+# "Type hint for interaction functions, like tap_action"
 
 DurationType = TypeVar("duration", float, int, str)
-"""
-Durational strings to denote time intervals. E.g. 2h, 50min etc.
-"""
+# """
+# Durational strings to denote time intervals. E.g. 2h, 50min etc.
+# """
 
 RotationValues = Literal["UR", "CW", "UD", "CCW"]
-"""
-Allowed values for the rotation. Abbreviations come from allowed values used for FBink for the ereader implementation of PSSM. \n
-values:\n
-    UR: 'upright' [0°] \n
-    CW: 'clockwise' [90°] \n
-    UD: 'upsidedown' [180°] \n
-    CCW: 'counterclockwise' [270°] \n
-"""
+# """
+# Allowed values for the rotation. Abbreviations come from allowed values used for FBink for the ereader implementation of PSSM. \n
+
+# values
+# --------
+# UR: 'upright' [0°] \n
+# CW: 'clockwise' [90°] \n
+# UD: 'upsidedown' [180°] \n
+# CCW: 'counterclockwise' [270°] \n
+# """
 
 textAlignmentType = tuple[TypeVar('horizontal'), TypeVar('vertical')]
-"Text alignment type hint"
+# "Text alignment type hint"
 
 TouchActionType = Literal["tap", "hold", "hold_release"]
 
@@ -139,14 +167,14 @@ class interact_actionDict(TypedDict):
 
 #region Element Types
 BadgeLocationType = Literal["UR", "LR", "UL", "LL"]
-"""
-Allowed values for badge locations.
-Values:\n
-    UR: Upper Right\n
-    LR: Lower Right\n
-    UL: Upper Left\n
-    LL: Lower Left\n
-"""
+# """
+# Allowed values for badge locations.
+# Values:\n
+#     UR: Upper Right\n
+#     LR: Lower Right\n
+#     UL: Upper Left\n
+#     LL: Lower Left\n
+# """
 
 class BatteryIconSettings(TypedDict):
     fillIcon: Optional[mdiType]
