@@ -59,7 +59,8 @@ class _DeviceMonitor(base.Element):
     
     @property
     def monitor_feature(self) -> Literal["battery", "network", "backlight"]:
-        "String with the device feature being monitored"
+        """The feature being monitored
+        """
         return self.__monitor_feature
 
     @monitor_feature.setter
@@ -105,12 +106,16 @@ class _DeviceMonitor(base.Element):
 
     @abstractmethod
     async def feature_update(self, value):
-        "Function that is called when the whenever the monitored value changes. Passed is the new value of the monitored attribute."
+        """Called when the the monitored value changes, or called manually to force an update.
+        Passed is the new value of the monitored attribute.
+        Can be accessed as a shorthand to forcibly update
+        """
         return
                 
 class DeviceButton(_DeviceMonitor, base.Button):
-    """
-    Button that shows the state of a device feature. Updates automatically.
+    """Button that shows the state of a device feature.
+    
+    Updates automatically.
 
     Parameters
     ----------
@@ -197,8 +202,7 @@ class DeviceButton(_DeviceMonitor, base.Button):
 _backlightDict = TypedDict("backlightDict", {"on": mdiType, "off": mdiType}, total=True) 
 
 class DeviceIcon(_DeviceMonitor, base.Icon):
-    """
-    Icon element that can be linked to a device Feature, like for example showing the charge of the battery.
+    """Icon element that can be linked to a device Feature, like for example showing the charge of the battery.
 
     Parameters
     ----------
@@ -601,8 +605,9 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         
 
 class BacklightSlider(_DeviceMonitor, comps.Slider):
-    """
-    A slider that controls the backlight
+    """A slider that controls the device's backlight.
+
+    Not available on devices without the appropriate feature.
 
     Parameters
     ----------

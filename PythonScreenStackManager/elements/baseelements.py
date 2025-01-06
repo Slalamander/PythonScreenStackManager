@@ -1129,9 +1129,9 @@ colorproperty._base_element_class = Element
 #region Layout elements
 # ########################## - Layout Elements - ##############################
 class Layout(Element):
-    """
-    A layout is collects elements, and creates an image out of them. Elements in a layout can also be layouts.
-    If must be given the working area, and a layout, and will generate every element of the layout.
+    """A layout collects elements, and creates an image out of them.
+    
+    Elements in a layout can also be layouts.
 
     Parameters
     ----------
@@ -3815,9 +3815,6 @@ class ImageElement(Element):
         """Settings for the background shape.
         Advanced setting, generally best to leave it as an emtpy dict. Stuff may not work as intended as I cannot test everything.
         Optional arguments are required using ADVANCED, except for icon_coords (icon will default to being centered)
-        Usage:
-            method[Optional] (str): ImageDraw method to call. Only used when using background_shape ADVANCED
-            drawArgs (dict): dict with arguments to be passed to the ImageDraw function. If background_shape is an implemented shape, omitting arguments will means default values will be used.
         """
         return self._shape_settings.copy()
     
@@ -3976,11 +3973,6 @@ class Picture(ImageElement):
         When using crop, the image will be resized to the alloted area if it is not the correct size
 
         If the image still does not happen to be the correct size, it will be forcibly fitted.
-
-        Returns
-        -------
-        Literal["contain", "cover", "fit", "pad", "resize", "crop"]
-            The method to used to fit the picture.
         """
         return self.__fit_method
     
@@ -3997,17 +3989,10 @@ class Picture(ImageElement):
     def fit_method_arguments(self) -> dict:
         """Arguments to apply to the fitting method.
 
-        For resize, see: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.resize
-        For crop, see: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.crop
+        For resize, see ``https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.resize``
+        For crop, see ``https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.crop``
         
-        For the other methods, see: https://pillow.readthedocs.io/en/stable/reference/ImageOps.html
-
-        
-
-        Returns
-        -------
-        dict
-            arguments for the fitting method.
+        For the other methods, see ``https://pillow.readthedocs.io/en/stable/reference/ImageOps.html``
         """
         
         ##For resampling method: each method has an integer value: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Resampling.NEAREST
@@ -6031,7 +6016,7 @@ def parse_layout_string(layout_string : str, sublayout : Optional[str] = None, h
                         vertical_sizes : dict[str,PSSMdimension] = {"inner": 0, "outer": 0}, horizontal_sizes : dict[str,PSSMdimension] = {"inner": 0, "outer": 0},
                         **elementParse : dict[str,Element]) -> PSSMLayout:
     """Parses a tile_layout.
-    
+
     Parses a layout from a string. Names defined in layout_string should be passed as an element via a keyword in elementParse.
 
     Example

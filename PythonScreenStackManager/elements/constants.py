@@ -47,10 +47,10 @@ DEFAULT_FONT = SHORTHAND_FONTS["default"]
 DEFAULT_FONT_BOLD: str  = SHORTHAND_FONTS['default-bold']
 "Default bold font"
 
-DEFAULT_FONT_CLOCK : str = SHORTHAND_FONTS['clock']
+DEFAULT_FONT_CLOCK : str = "clock" #SHORTHAND_FONTS['clock']
 "Default font for digital clocks"
 
-DEFAULT_FONT_HEADER : str = SHORTHAND_FONTS['header']
+DEFAULT_FONT_HEADER : str = 'header'
 
 DEFAULT_FONT_SIZE: str  = "H*0.036"
 "Default size used for fonts"

@@ -19,7 +19,7 @@ from . import baseelements as base
 from . import compoundelements as comps
 from . import deviceelements as develts
 from . import layoutelements as layouts
-from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_FONT_BOLD, \
+from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_FONT_BOLD, DEFAULT_FONT_HEADER,\
     DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR, DEFAULT_FONT_SIZE
 
 from .baseelements import _LOGGER
@@ -27,6 +27,11 @@ if TYPE_CHECKING:
     from ..devices import PSSMdevice
 
 class StatusBar(layouts.GridLayout):
+    """A StatusBar to show the status of your dashboard and various other things.
+
+    The added elements are the same for all instances, but which ones are shown can be configured via the ``hide`` parameter.
+    """
+
     ##GridLayout cause: makes it easy to set orientation
     ##For space between icons and clock/data: use a None type and set the spacing to '?'
     ##Icon space is r anyways; Just figure out how to reliably get the rest in the right position
@@ -262,7 +267,7 @@ class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
     "Base class for popups that can only be defined once."
     
     ##Give this a title element, and then the close button in the corner. Everything else is a layout element.
-    def __init__(self, popupID : str, title : str, title_font : PSSMdimension = DEFAULT_FONT_BOLD, **kwargs):
+    def __init__(self, popupID : str, title : str, title_font : PSSMdimension = DEFAULT_FONT_HEADER, **kwargs):
         layout = self.build_menu()
         base.PopupMenu.__init__(self,layout,title, title_font, popupID=popupID, **kwargs)
 
@@ -271,9 +276,9 @@ class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
         pass
 
 class DeviceMenu(UniquePopupMenu): 
-    """
-    The menu for the pssm device. Only allows one instance (i.e. the same instance is always returned when instantiating it).
-    Altering the appearance can be done by calling DeviceMenu().update() in the usual manner. When running inkboard, a lot can be set in the config already, however some values are determined by constants for consistency.
+    """The menu for the device connected to the screen. 
+    
+    It can be accessed and shown via its id ``device-menu``.
     """
 
     @property
@@ -346,9 +351,9 @@ class DeviceMenu(UniquePopupMenu):
         return self.menu_layout
 
 class ScreenMenu(UniquePopupMenu):
-    """
-    Popup Menu to control and set various settings for the screen. 
-    Can be stylised by calling ScreenMenu.update().
+    """Popup Menu to control and set various settings for the screen.
+
+    It can be accessed via the popup_id ``screen-menu``.
     """
 
     if INKBOARD:

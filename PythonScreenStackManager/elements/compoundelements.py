@@ -78,6 +78,14 @@ class Tile(base.TileElement):
         Restricted properties for the icon are 'icon', 'badge_icon' and 'badge_settings'. For 'text' and 'title', the 'text' property is restricted.
     """
 
+    @classproperty
+    def tiles(cls):
+        return ("icon", "title", "text")
+
+    @classproperty
+    def defaultLayouts(cls):
+        return {"vertical": "icon;title;text", "horizontal": "icon,[title;text]"}
+
     _restricted_element_properties : dict[str,set[str]] = {"icon": {"icon", "badge_icon", "badge_settings"}, "text": {"text"}, "title": {"text"}}
     "Properties of the elements that are not allowed to be set."
 
@@ -719,8 +727,9 @@ class dateTimeElementInterval(base._IntervalUpdate):
     #endregion
 
 class AnalogueClock(base.Element, dateTimeElementInterval):
-    """
-    An analogue clock that updates at the start of each minute
+    """An analogue clock (on a digital screen) that updates at the start of each minute.
+
+    It is quite stylable, most attributes allow to have their color set. It is also possible to show a digital time on the bottom.
 
     Parameters
     ----------
@@ -1054,8 +1063,9 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         return self.imgData
 
 class DigitalClock(base.Button, dateTimeElementInterval):
-    """
-    A digital clock that updates at the start of each minute.
+    """A digital clock that updates at the start of each minute.
+
+    Can be styled similar to a :py:class:`Button`, it simply has the functionality build in to show the time.
 
     Parameters
     ----------
@@ -2264,8 +2274,9 @@ class TimerSlider(Slider):
 
 
 class CheckBox(base._BoolElement, base.Icon):
-    """
-    Checkbox element. Derived from the base icon, accepts every option from Icon except icon, which is controlled by the state.
+    """Checkbox element.
+    
+    Derived from the base icon, accepts every option from Icon except icon, which is controlled by the state.
 
     Parameters
     ----------
@@ -2401,8 +2412,9 @@ class CheckBox(base._BoolElement, base.Icon):
             return bg_img
 
 class Toggle(CheckBox):
-    """
-    CheckBox element, but with a toggle switch as icon. (I.e. the same as a CheckBox with checked_icon = mdi:toggle-switch and unchecked_icon = mdi:toggle-switch-off)
+    """CheckBox element, but with a toggle switch as icon.
+    
+    So basically the same as a CheckBox with ``checked_icon`` = ``mdi:toggle-switch`` and ``unchecked_icon`` = ``mdi:toggle-switch-off``)
 
     Parameters
     ----------
@@ -2434,7 +2446,10 @@ class Toggle(CheckBox):
         return "mdi:toggle-switch-off"
 
 class CheckButton(base._BoolElement, base.Button):
-    "Boolean Text Element (Changes settings based on state. Defaults to coloring in the background.)"
+    """NOT IMPLEMENTED
+    Boolean Text Element (Changes settings based on state. Defaults to coloring in the background.)
+    
+    """
     pass
 
 class DropDown(base.Button):
@@ -2655,7 +2670,7 @@ class DropDown(base.Button):
         self.update(updated=True)
 
     async def open_menu(self, elt : base.Element = None, coords : tuple = None):
-        "Open the menu"
+        "Opens the menu"
         ##Add a radius parameter to the popup class? If necessary, maybe the layout one already works.
         ##Pass it by converting the radius to an integer btw.
         [(x,y),(w,h)] = self.area
@@ -2691,6 +2706,7 @@ class DropDown(base.Button):
         )
 
     async def close_menu(self, *args):
+        "Closes the menu"
         await self._menuPopup.async_close()
         self.__menuOpen = False
 
