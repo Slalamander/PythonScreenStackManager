@@ -69,8 +69,9 @@ IMPLEMENTED_ICON_SHAPES_HINT = Literal[None, "circle", "square", "rounded_square
 # ########################## - Core Element    - ##############################
 
 class Element(ABC):
-    """
-    Everything which is going to be displayed on the screen is an Element. Accepts all keyword arguments when defining it, and sets them as object attributes so they can be used to store data too.
+    """Everything which is going to be displayed on the screen is an Element.
+
+    Accepts all keyword arguments when defining it, and sets them as object attributes so they can be used to store data too.
 
     Parameters
     ----------
@@ -124,6 +125,7 @@ class Element(ABC):
             init(self, *args, **kwargs)
             if cls is type(self):
                 self.__post_init__(id, _register)
+        cls.__elt_init__ = init
         cls.__init__ = new_init
 
     def __post_init__(self, id, _register):
@@ -216,7 +218,8 @@ class Element(ABC):
     #region Element Properties
     @property
     def id(self) -> str:
-        "The element id. Can be set when instantiating the element, but must be unique too."
+        """The element id. 
+        Can be set when instantiating the element, but must be unique too."""
         return self.__id
     
     @property
@@ -235,30 +238,32 @@ class Element(ABC):
     
     @colorproperty
     def background_color(self) -> Union[ColorType,None]:
-        "Color of the element background. Set to None to take on the color of its parent layout"
+        """Color of the element background."""
+        # Set to None to take on the color of its parent layout"""
         return self._background_color
         
     @property
     def isInverted(self) -> bool:
-        "True if the element is currently shown as inverted. Can be due to a temporary inversion (hardware inversion), a parent layout element or if inverted is true and it is printed as such."
+        """True if the element is currently shown as inverted. 
+        Can be due to a temporary inversion (hardware inversion), a parent layout element or if inverted is true and it is printed as such."""
         return self._isInverted
 
     @property
     def inverted(self) -> bool:
-        "True if the default inverted state of the element is inverted (i.e. the image made in the generator will be inverted if true)."
+        """True if the default inverted state of the element is inverted 
+        (i.e. the image made in the generator will be inverted if true)."""
         return self._inverted
 
     @property
     def isTemporaryInverted(self) -> bool:
-        """
-        Returns true show_feedback is true and invert Element has been called.
+        """Returns true show_feedback is true and invert Element has been called.
         """
         return self._isTemporaryInverted
 
     @property
-    def feedback_duration(self) -> float:
-        """
-        Duration of the element's feedback function, before returning to its normal state
+    def feedback_duration(self) -> DurationType:
+        """Duration of the element's feedback function
+        The time an element will stay in 'feedback state', before returning to its normal state.
         Can be set to a string, which will be parsed to the right amount of seconds.
         """
         return self._feedback_duration
@@ -312,7 +317,7 @@ class Element(ABC):
 
     @property
     def area(self) -> PSSMarea:
-        """ Returns the area of the element, as [(x,y), (w,h)]"""
+        """Returns the area of the element, as [(x,y), (w,h)]"""
         return self._area
     
     @property
@@ -362,32 +367,32 @@ class Element(ABC):
 
     @elementaction
     def tap_action(self) -> InteractionFunctionType: 
-        """
-        The function called when the element is tapped. Set to None to have nothing called.
+        """The function called when the element is tapped.
+
+        Set to None to have nothing called.
         If set to a dict, the values for tap_action_data and tap_action_map will be overwritten if the respective key is present.
         """
         return self._tap_action 
     
     @elementaction
     def hold_action(self) -> InteractionFunctionType: 
-        """
-        The function called when the element is held. Set to None to have nothing called.
+        """The function called when the element is held.
+        Set to None to have nothing called.
         If set to a dict, the values for hold_action_data and hold_action_map will be overwritten if the respective key is present.
         """
         return self._hold_action 
     
     @elementaction
     def hold_release_action(self) -> InteractionFunctionType:
-        """
-        The function called when the element is held. Set to None to have nothing called.
+        """The function called when the element is released from being held down.
+        This function is only available on devices with the HOLD_RELEASE feature. Set to None to have nothing called.
         If set to a dict, the values for hold_release_action_data and hold_release_action_map will be overwritten if the respective key is present.
         """
         return self._hold_release_action 
 
     @property
     def parentBackground(self) -> Union[ColorType,None]:
-        """
-        The background color of the youngest parent layout of this element with a background defined.
+        """The background color of the youngest parent layout of this element with a background defined.
         Returns None if no layout have its color set.
         If the element is a layout itself, and the background is set, will return that value.
         """
@@ -399,7 +404,8 @@ class Element(ABC):
     
     @property
     def parentBackgroundColor(self) -> ColorType:
-        "The assumed color of the parent background, in case none have a color defined. If it is determined to be an image, returns the default device color"
+        """The assumed color of the parent background, in case none have a color defined.
+        If it is determined to be an image, returns the default device color"""
         if self.parentBackground == None or isinstance(self.parentBackground,Image.Image):
             if Style.is_valid_color(self.parentPSSMScreen.background):
                 return self.parentPSSMScreen.background
@@ -480,15 +486,17 @@ class Element(ABC):
                 reprintOnTop=False, updated : bool = False):
         """
         Pass a dict as argument, and it will update the attributes. Passes it on to _async_update, so execution does not wait until the element is done updating.  
-        Note:
-            Updating an element can be very slow ! It depends on every specific
-            cases, but know there are a few ways to make it faster:
-            - Use `screen.start_batch_writing()` and `screen.stop_batch_writing()`. This skips generating until the batch is stopped.
-            - If you know this specific element is on top of the screen, use:
-                `elt.update(updateAttributes=myDict, reprintOnTop=True)`
-                Which will do the same, except it won't rebuild the whole stack
-                image, it will just print this object on top. (On my tests, I
-                could spare up to 0.5s !)
+        
+        Notes
+        -----
+        Updating an element can be very slow ! It depends on every specific
+        cases, but know there are a few ways to make it faster:
+        - Use `screen.start_batch_writing()` and `screen.stop_batch_writing()`. This skips generating until the batch is stopped.
+        - If you know this specific element is on top of the screen, use:
+        `elt.update(updateAttributes=myDict, reprintOnTop=True)`
+        Which will do the same, except it won't rebuild the whole stack
+        image, it will just print this object on top. (On my tests, I
+        could spare up to 0.5s !)
 
         Parameters
         ----------
@@ -1251,13 +1259,19 @@ class Layout(Element):
 
     @colorproperty
     def foreground_color(self) ->  Union[ColorType,None]:
-        "Additional color property for Layouts. Not inherently used in the layout itself, but can be used in child elements, to give them a uniform style"
+        """Foreground color to style child elements
+        Additional color property for Layouts. Not inherently used in the layout itself, but can be used in child elements, to give them a uniform style.
+        Set a color_property of one to "foreground" to do so.
+        """
         return self._foreground_color
 
 
     @colorproperty
     def accent_color(self) ->  Union[ColorType,None]:
-        "Additional color property for Layouts. Not inherently used in the layout itself, but can be used in child elements, to give them a uniform style"
+        """Accent color to style child elements.
+        Not inherently used in the layout itself, but can be used in child elements, to give them a uniform style
+        Set a color_property of one to "accent" to do so.
+        """
         return self._accent_color
 
 
@@ -1267,7 +1281,8 @@ class Layout(Element):
 
     @colorproperty
     def outline_color(self) ->  Union[ColorType,None]:
-        "Color of the elements outline. Set to None to use no outline (i.e. the background color)"
+        """Color of the layout's outline. 
+        Set to None to use no outline"""
         return self._outline_color
 
     @property
@@ -1293,8 +1308,7 @@ class Layout(Element):
 
     @property
     def _isSubLayout(self) -> bool:
-        """
-        Helper property to indicate this layout is considered a sublayout.
+        """Helper property to indicate this layout is considered a sublayout.
         If True, this means this layout will not be considered a parentLayout of elements, which is useful when parsing colors in TileLayouts for example.
         """
         try:
@@ -1451,7 +1465,7 @@ class Layout(Element):
             elt._update_parent_colors(*update_list)
 
     def generator(self, area=None, skipNonLayoutGen=False):
-        """
+        """Creates a full image with all its child elements.
         Builds one img out of all the Elements it is being given
         """
 
@@ -1818,8 +1832,7 @@ class Layout(Element):
         return cols
 
     async def _dispatch_click(self, interaction: InteractEvent) -> list[Callable]:
-        """
-        Finds the element on which the user clicked and returns a list of the found onTap functions
+        """Finds the element on which the user clicked and returns a list of the found onTap functions
         """
         return await self._dispatch_click_LINEAR(interaction)
 
@@ -2059,7 +2072,8 @@ class TileElement(Layout):
     #region
     @property
     def tile_layout(self) -> Optional[str]:
-        "String used to set the layout. None if the layout was set directly"
+        """String used to set the layout. 
+        None if the layout was set directly"""
         if self._tile_layout in self.__class__.defaultLayouts:
             l = self.__class__.defaultLayouts[self._tile_layout]
             return l
@@ -2102,12 +2116,15 @@ class TileElement(Layout):
     @property
     @abstractmethod
     def elements(self) -> MappingProxyType[str,Element]:
-        "Elements in the layout. This property needs to be redefined for subclasses."
+        """Elements in the layout.
+        This property needs to be redefined for subclasses."""
         return self.__elements
 
     @property
     def hide(self) -> tuple[str]:
-        "Elements that will be explicitly removed from the layout parsed from `tile_layout`. Set to None, or an empty iterable to hide nothing."
+        """Elements that will be explicitly removed from the layout parsed from `tile_layout`. 
+        Set to None, or an empty iterable to hide nothing.
+        Elements can also be hidden by simply omitting them from the tile_layout"""
         return self.__hide
 
     @hide.setter
@@ -2131,7 +2148,9 @@ class TileElement(Layout):
 
     @property
     def vertical_sizes(self) -> dict[str,PSSMdimension]:
-        "Vertical sizing of the elements in layout strings. Setting this will update from the current values, not overwrite it."
+        """Vertical sizing of the tiles.
+        Setting this will update from the current values, not overwrite it.
+        """
         return self._vertical_sizes
     
     @vertical_sizes.setter
@@ -2149,7 +2168,9 @@ class TileElement(Layout):
 
     @property
     def horizontal_sizes(self) -> dict[str,PSSMdimension]:
-        "Vertical sizing of the elements in layout strings. Setting this will update from the current values, not overwrite it."
+        """Horizontal sizing of the tiles.
+        Setting this will update from the current values, not overwrite it.
+        """
         return self._horizontal_sizes
     
     @horizontal_sizes.setter
@@ -2167,8 +2188,8 @@ class TileElement(Layout):
 
     @property
     def element_properties(self) -> dict[str,dict]:
-        """
-        Dict with properties for each element. Accepts parsing colors.
+        """Dict with properties for each element.
+        Accepts parsing colors.
         Use as nested dicts, the first key specifying the element tag, with the dict within  denoting the properties to set.
         """
         return self._element_properties
@@ -2204,12 +2225,10 @@ class TileElement(Layout):
     
     @colorproperty
     def foreground_color(self) -> Union[ColorType]:
-        "The main color to use for the icon and text. Can be overwritten by iconSettings and buttonSettings respectively."
         return self._foreground_color
 
     @colorproperty
     def accent_color(self) -> Union[ColorType]:
-        "The main color to use for the icon and text. Can be overwritten by iconSettings and buttonSettings respectively."
         return self._accent_color
 
     @colorproperty
@@ -2425,8 +2444,11 @@ class ButtonList(Layout):
 
 #region Popups
 class Popup(Layout):
-    """
-    A popup to be displayed above everything else. Can be added by calling screen.add_element, or Popup.show()
+    """A popup to be displayed above everything else. 
+    
+    Call its show function (show-popup) to display it. 
+    Optionally you can blur the background behind the popup.
+    Use ``width`` and ``height`` to set the popups size and ``horizontal_position`` and ``vertical_position`` to set the position of the upper left corner.
 
     Parameters
     ----------
@@ -2505,7 +2527,8 @@ class Popup(Layout):
     
     @property
     def blur_background(self) -> bool:
-        "If true, when adding the popup to the screen, the background around it is blurred"
+        """Blurs the dashboards behind the popup when it is shown.
+        If true, when adding the popup to the screen, the background around it is blurred"""
         return self.__blur_background
     
     @blur_background.setter
@@ -2551,19 +2574,23 @@ class Popup(Layout):
         self._dimension_setter("_vertical_position", value)
 
     @property
-    def auto_close(self) -> Union[float,bool]:
-        "The time with no interaction after which this popup is automatically closed. Set to False to disable. If True, it will use the default value of the screen instance."
+    def auto_close(self) -> DurationType:
+        """The time with no interaction after which this popup is automatically closed.
+        Set to False to disable. If True, it will use the default value of the screen instance.
+        """
         return self._auto_close
     
     @auto_close.setter
     def auto_close(self,value: Union[float,bool]):
         if value == False:
             self._auto_close = False
-        elif type(value) is int or type(value) is float:
+        elif isinstance(value, (int,float)):
             if value < 0:
                 self._auto_close = False
             else:
                 self._auto_close = value
+        elif isinstance(value,str):
+            self._auto_close = tools.parse_duration_string(value)
         else:
             self._auto_close = True
     #endregion
@@ -2585,6 +2612,8 @@ class Popup(Layout):
 
     @elementactionwrapper.method
     async def async_show(self):
+        "Shows the popup on screen"
+
         ##Only allows adding one of a popup.
         if self.area != (a:= self.make_area()):
             self._area = a
@@ -2610,6 +2639,7 @@ class Popup(Layout):
 
     @elementactionwrapper.method
     async def async_close(self, *args, **kwargs):
+        "Removes the popup from the screen"
         loop = self.screen.mainLoop
         task = loop.create_task(self.screen.async_remove_element(self))
         await task
@@ -2797,7 +2827,7 @@ class PopupMenu(Popup):
     #region
     @colorproperty
     def header_color(self) -> ColorType:
-        " Color of the header bar"
+        "Color of the header bar"
         return self._header_color
 
     @colorproperty
@@ -3274,7 +3304,8 @@ class Button(Element):
     
     @property 
     def text(self) -> str:
-        "The current text displayed on the button. Setting this attribute automatically converts the value into a string."
+        """The current text displayed on the button.
+        Setting this attribute automatically converts the value into a string."""
         return self.__text
     
     @text.setter
@@ -3286,7 +3317,8 @@ class Button(Element):
 
     @property
     def font(self):
-        "The path to the element's font. If set to a known font, the path will automatically be added"
+        """The path to the element's font.
+        If set to a shorthand font, the path will automatically be parsed"""
         return self._font
     
     @font.setter
@@ -3300,12 +3332,12 @@ class Button(Element):
         return self._loadedFont
 
     @colorproperty
-    def font_color(self):
+    def font_color(self) -> ColorType:
         "The color of the font"
         return self._font_color
 
     @property
-    def font_size(self) -> Union[str,int]:
+    def font_size(self) -> PSSMdimension:
         "The size of the font"
         return self._font_size
     
@@ -3315,8 +3347,9 @@ class Button(Element):
         self._dimension_setter("_font_size", value)
     
     @property
-    def radius(self) -> Union[str,int]:
-        "Corner radius of the encapsulating rectangle. Currently only accepts integers"
+    def radius(self) -> PSSMdimension:
+        """Corner radius of the encapsulating rectangle.
+        Currently only accepts integers"""
         return self._radius
     
     @radius.setter
@@ -3325,7 +3358,8 @@ class Button(Element):
 
     @colorproperty
     def outline_color(self) ->  Union[ColorType,None]:
-        "Color of the elements outline. Set to None to use no outline (i.e. the background color)"
+        """Color of the elements outline. 
+        Set to None to use no outline (i.e. the background color)"""
         return self._outline_color
 
     @property
@@ -3344,8 +3378,8 @@ class Button(Element):
     # ---------------------------- Textbox properties ---------------------------- #
     @property
     def margins(self) -> tuple[int,int,int,int]:
-        """
-        The text margins. Always returns a 4 tuple, but can be set to a single number, or two/three/four item iterable. 
+        """The text margins.
+        Always returns a 4 tuple, but can be set to a single number, or two/three/four item iterable. 
         Same as css margins, so the values are returned as (top,right,bottom,left), and set according to css margins (https://www.w3schools.com/css/css_margin.asp)
         """
         return self._margins
@@ -3373,7 +3407,9 @@ class Button(Element):
     
     @property
     def multiline(self) -> bool:
-        "Will text not fitting within the bounding box be wrapped to the next line?"
+        """Allows the button to try and fit its text over multiple lines.
+        May not work very well with the settings that automatically set the font size.
+        """
         return self._multiline
     
     @multiline.setter
@@ -3382,7 +3418,9 @@ class Button(Element):
 
     @property
     def fit_text(self) -> bool:
-        "Is text fitted within the bounding box? If true, font_size will be used as minimum font_size"
+        """Adjusts the font size automatically to make it fit.
+        If true, ``font_size`` will be used as a minimum allowed font_size.
+        """
         if self.resize != False: ##This prevents a value of 0 from messing stuff up
             return True
         return self._fit_text
@@ -3392,8 +3430,8 @@ class Button(Element):
         self._fit_text = value
 
     @property
-    def resize(self) -> Union[bool,str,int,float]:
-        """
+    def resize(self) -> Union[bool,PSSMdimension]:
+        """Tracks the ``font_size`` and adjusts it to fit. The ``resize`` value updates and will be used as a starting point for the next update.
         If not False, will use this value as a minimum allowed size for any text displayed. 
         Changes the font_size parameter when needed, such that the text size won't change with every new text. Sizes are not saved upon resets, so finding a good size takes a few changes. 
         The same goes when the element is resized.
@@ -3418,7 +3456,8 @@ class Button(Element):
             
     @property
     def text_x_position(self) -> Union[int,Literal["l","m","r","s"]]:
-        "Horizontal alignment of the text. Can be top, bottom or center, a Pillow textanchor (shorthand and longhand), a pssm dimensional string or an integer."
+        """Horizontal alignment of the text.
+        Can be top, bottom or center, a Pillow textanchor (shorthand and longhand), a pssm dimensional string or an integer."""
         return self._text_x_position
 
     @text_x_position.setter
@@ -3443,7 +3482,8 @@ class Button(Element):
 
     @property
     def text_y_position(self) -> Union[int,Literal["a","t","m","s","b","d"]]:
-        "Vertical alignment of the text. Can be top, bottom or center, a Pillow textanchor (shorthand and longhand), a pssm dimensional string or an integer."
+        """Vertical alignment of the text.
+        Can be top, bottom or center, a Pillow textanchor (shorthand and longhand), a pssm dimensional string or an integer."""
         return self._text_y_position
 
     @text_y_position.setter
@@ -3466,7 +3506,8 @@ class Button(Element):
 
     @property
     def text_anchor_alignment(self) -> tuple[Literal[None,"l","m","r","s"],Literal[None,"a","t","m","s","b","d"]]:
-        "Alignment of the textAnchor as (horizontal,vertical). Leave (one of) None to determine the anchor from text_x_position or text_y_position respectively. See https://pillow.readthedocs.io/en/stable/handbook/text-anchors.html#text-anchors for possible values, only accepts shorthands."
+        """Alignment of the textAnchor as (horizontal,vertical).
+        Leave (one of) None to determine the anchor from text_x_position or text_y_position respectively. See https://pillow.readthedocs.io/en/stable/handbook/text-anchors.html#text-anchors for possible values, only accepts shorthands."""
         return self._text_anchor_alignment
     
     @text_anchor_alignment.setter
@@ -3491,8 +3532,8 @@ class Button(Element):
 
     @property
     def textAlignment(self) -> tuple[tuple[xType,yType],str]:
-        """
-        The text's (x,y) coordinates and the alignment of the text anchor, depends on text_x_position and text_y_position. 
+        """The text's (x,y) coordinates and the alignment of the text anchor
+        Depends on text_x_position and text_y_position. 
         If both are integers, or pssm dimensional strings, it will default to 'la'.
         """
         (xAnch,yAnch) = self.text_anchor_alignment
@@ -3740,15 +3781,15 @@ class Button(Element):
 
 
 class ImageElement(Element):
-    """
-    Base class for the Picture and Icon element, for shared properties
+    """Base class for the Picture and Icon element, for shared properties
+    
     Currently not implemented for the Icon class yet.
     """
 
     @property
     def background_shape(self) -> Literal[IMPLEMENTED_ICON_SHAPES_HINT]:
-        """
-        The shape of the icons background. If not set, no shape is used and background color is used as the background color of the entire element of the area.
+        """The shape of the element's background.
+        If not set, no shape is used and background color is used as the background color of the entire element of the area.
         Can be one of ["circle", "square", "rounded_square", "rounded_rectangle", "octagon", "hexagon"], None or ADVANCED. See background_shapeDict for usage of advanced (Not fully tested, so be aware)
         Set to None for no background shape.
         """
@@ -3771,8 +3812,8 @@ class ImageElement(Element):
 
     @property
     def shape_settings(self) -> dict:
-        """
-        Settings for the background shape. Advanced setting, generally best to leave it as an emtpy dict. Stuff may not work as intended as I cannot test everything.
+        """Settings for the background shape.
+        Advanced setting, generally best to leave it as an emtpy dict. Stuff may not work as intended as I cannot test everything.
         Optional arguments are required using ADVANCED, except for icon_coords (icon will default to being centered)
         Usage:
             method[Optional] (str): ImageDraw method to call. Only used when using background_shape ADVANCED
@@ -3787,7 +3828,7 @@ class ImageElement(Element):
 
     @property
     def mirrored(self) -> bool:
-        """Is the icon mirrored?"""
+        """Mirrors the element"""
         return self._mirrored
     
     @mirrored.setter
@@ -3799,10 +3840,8 @@ class ImageElement(Element):
         """Returns true if the currently set value for icon did not return a valid icon or image"""
         return self._fileError
 
-
 class Picture(ImageElement):
-    """
-    Element that can be used to display picture files.
+    """Element that can be used to display picture files.
 
     Parameters
     ----------
@@ -3872,7 +3911,8 @@ class Picture(ImageElement):
     #region
     @property
     def picture(self) -> Union[str, Path, Image.Image]:
-        "The file or Image object use as the picture. By default searched the folder that is set as the custom picture folder for the picture file."
+        """The file or Image object use as the picture. 
+        By default searched the folder that is set as the custom picture folder for the picture file."""
         return self._picture
     
     @picture.setter
@@ -3910,7 +3950,7 @@ class Picture(ImageElement):
 
     @property
     def pictureData(self) -> Any:
-        "Property that can be used to hold additional data for the picture"
+        """Property that can be used to hold additional data for the picture"""
         #Leaving this in camelCase since it's generally not used for how the element looks, despite it having a setter
         return self.__pictureData
     
@@ -3929,8 +3969,7 @@ class Picture(ImageElement):
 
     @property
     def fit_method(self) -> Literal["contain", "cover", "fit", "pad", "resize", "crop"]:
-        """
-        The way to fit the picture to the element area. 
+        """The way to fit the picture to the element area. 
         Cover and Contain are the base methods, and will always work (i.e. won't break no matter what is set in fit_method_arguments)
         All other functions do work without setting the fit_method_arguments, but can break when setting options for that.
         
@@ -3956,8 +3995,7 @@ class Picture(ImageElement):
 
     @property
     def fit_method_arguments(self) -> dict:
-        """
-        Arguments to apply to the fitting method.
+        """Arguments to apply to the fitting method.
 
         For resize, see: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.resize
         For crop, see: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.crop
@@ -3982,8 +4020,8 @@ class Picture(ImageElement):
     
     @property
     def _area(self):
-        """
-        Private area property. Has a setter to allow for reopening the image file when it changes (cause it can also be set by layouts). Generally don't touch this.
+        """Private area property.
+        Has a setter to allow for reopening the image file when it changes (cause it can also be set by layouts). Generally don't touch this.
         """
         return self.__area
 
@@ -4138,8 +4176,10 @@ BADGE_LOCATIONS = Literal[None, "UR", "UL", "LL", "LR"]
 "Type hint for possible badge locations"
 
 class Icon(ImageElement):
-    """
-    An icon, built from an mdi icon or an image. Optionally add a badge. Takes all options from Element too.
+    """Creates a small icon element with various options to style it.
+
+    Icons can be picked from the mdi icon library via ``"mdi:icon"``, or can be set to an image file.
+    Also allows adding an additional icon via a badge.
     If an image file is supplied, it is automatically converted to the same sizing as mdi icons use, so the icon margins are constant.
     
     Parameters
@@ -4226,8 +4266,8 @@ class Icon(ImageElement):
     # -------------------------- Icon Element properties ------------------------- #      
     @property
     def icon(self) -> Optional[Union[str,Image.Image]]:
-        """
-        The current icon. Can be set to a str (either an mdi icon or image file), or a PIL image instance directly.
+        """The element's icon.
+        Can be set to a str (either an mdi icon or image file), or a PIL image instance directly.
         If the latter, the image will still be treated as an image file i.e. any icon settings etc. are applied to it regardless (This does also mean you don't need to worry about sizing, as that is also taken care of).
         Can also be set to None for no icon.
         """
@@ -4277,7 +4317,8 @@ class Icon(ImageElement):
 
     @property
     def iconData(self) -> tuple:
-        "Returns data related to the icon. For mdi icon, it's (unicode, hexcode) or (False, False) if it could not be found. For an image, it is (pathToImage,True/False) depending on if it was found"
+        """Returns data related to the icon. 
+        For mdi icon, it's (unicode, hexcode) or (False, False) if it could not be found. For an image, it is (pathToImage,True/False) depending on if it was found"""
         return self._iconData
 
     @property
@@ -4287,7 +4328,8 @@ class Icon(ImageElement):
 
     @property
     def rotation(self) -> Union[int,float]:
-        "The rotation of the icon in degrees. Positive for counterclockwise, negative for clockwise."
+        """The rotation of the icon in degrees. 
+        Positive for counterclockwise, negative for clockwise."""
         return self._rotation
     
     @rotation.setter
@@ -4296,25 +4338,36 @@ class Icon(ImageElement):
 
     @colorproperty
     def icon_color(self) -> Union[ColorType,bool]:
-        """
-        Color of the icon, defaults to True, so you need to specify this as false to make images keep their color.
+        """Color of the icon. 
         If a boolean and an mdi icon, the color is set automatically for best contrast. 
-        If an image file, a boolean of True will fill the image with the best chosen color, and if False, will use the original image.
+        If an image file, a boolean of True will fill the image with the a contrasting color, and if False, will use the original image.
         Otherwise will use the provided value as color.
+        I would advise against using booleans on screens that are not black and white.
         """
         return self._icon_color
 
     @property
     def shape_settings(self) -> dict:
+        """Settings for the background shape.
+        Advanced setting, generally best to leave it as an emtpy dict. Stuff may not work as intended as I cannot test everything.
+        Optional arguments are required using ADVANCED, except for icon_coords (icon will default to being centered).
+        The following keys can be used:: \n
+        ``method`` the ImageDraw method to call. Only used if ``background_shape`` is ``"ADVANCED"``;
+        ``icon_size`` the size of the icon. Accepts dimensional strings;
+        ``icon_coords`` the center coordinates of the icon in case of an mdi icon. The upper left corner is used if an image is used as an icon;
+        ``drawArgs`` a dict with arguments to pass to the ImageDraw function. Rather advanced method, don't use it if you don't know what you're up to;
         """
-        Settings for the background shape. Advanced setting, generally best to leave it as an emtpy dict. Stuff may not work as intended as I cannot test everything.
-        Optional arguments are required using ADVANCED, except for icon_coords (icon will default to being centered)
-        Usage:
-            method[Optional] (str): ImageDraw method to call. Mainly usefull when using background_shape ADVANCED
-            icon_size[Optional] (str or int): size of the icon
-            icon_coords[Optional] (tuple): center coordinates of the icon when using an mdi icon, or the coordinates of the upper left corner if using an image
-            drawArgs (dict): dict with arguments to be passed to the ImageDraw function. If background_shape is an implemented shape, omitting arguments will means default values will be used.
-        """
+        # Usage
+        # ----------
+        # method : [Optional] (str):
+        #     ImageDraw method to call. Mainly usefull when using background_shape ADVANCED
+        # icon_size : [Optional] (str or int)
+        #     size of the icon
+        # icon_coords : [Optional] (tuple)
+        #     center coordinates of the icon when using an mdi icon, or the coordinates of the upper left corner if using an image
+        # drawArgs : (dict)
+        #     dict with arguments to be passed to the ImageDraw function. If background_shape is an implemented shape, omitting arguments will means default values will be used.
+
         return self._shape_settings.copy()
     
     @shape_settings.setter
@@ -4325,7 +4378,7 @@ class Icon(ImageElement):
     # ---------------------------- Boolean properties ---------------------------- #
     @property
     def mirrored(self) -> bool:
-        """Is the icon mirrored?"""
+        """Mirrors the icon"""
         return self._mirrored
     
     @mirrored.setter
@@ -4334,8 +4387,8 @@ class Icon(ImageElement):
 
     @property
     def invert_icon(self) -> bool:
-        """
-        True if the icon only is inverted. This works seperately from isInverted, which inverts an entire element, and is applicable to all elements. 
+        """Inverts *only* the icon, not the entier element.
+        This works seperately from isInverted, which inverts an entire element, and is applicable to all elements. 
         invert_icon is only applicable for icons, mainly to provide a way to give images which do not have a solid color (like filled meteocons) more contrast without being confined to a single colored icon.
         """
         return self._invert_icon
@@ -4346,7 +4399,7 @@ class Icon(ImageElement):
 
     @property
     def force_aspect(self) -> bool:
-        """Is the icon forceable squared?"""
+        """Forces the aspect ratio of the icon to fit."""
         return self._force_aspect
     
     @force_aspect.setter
@@ -4361,7 +4414,8 @@ class Icon(ImageElement):
     # ----------------------------- Badge properties ----------------------------- #
     @property
     def badge_icon(self) -> Optional[mdiType]:
-        """The current icon of the badge. Must be None, an mdi icon or a PIL image instance."""
+        """The current icon of the badge. 
+        Must be None, an mdi icon or a PIL image instance."""
         return self._badge_icon
 
     @badge_icon.setter
@@ -4374,8 +4428,7 @@ class Icon(ImageElement):
 
     @property
     def badge_settings(self) -> dict:
-        """
-        Dict with settings to apply to the badge
+        """Dict with settings to apply to the badge
         """
         d = self._badge_settings.copy()
         d.setdefault("icon_color", self.badge_color)
@@ -4392,8 +4445,7 @@ class Icon(ImageElement):
 
     @property
     def badge_location(self) -> BadgeLocationType:
-        """
-        The location of the badge. 
+        """The location of the badge. 
         Can be Can be one of UR, LR, UL or LL (Upper Right, Lower Right, Upper Left, Lower Left). Also accepts the fully written strings, but will be set to  the abbreviated location.
         """
         return self._badge_location
@@ -4425,7 +4477,8 @@ class Icon(ImageElement):
 
     @property
     def badge_size(self) -> Union[float,None]:
-        "Size of the badge relative to the parent icon. Must be between 0 and 1. If set to a percantage, will be converted to such a value."
+        """Size of the badge relative to the parent icon. 
+        Must be between 0 and 1. If set to a percantage, will be converted to such a value."""
         return self._badge_size
 
     @badge_size.setter
@@ -4706,8 +4759,7 @@ class Icon(ImageElement):
 
     def add_badge(self, img : Image.Image, drawImg = False, parentIconSize=None,  background_color=None,
                         icon_color = None, relSize : float = 0.4, location=DEFAULT_BADGE_LOCATION, offset : tuple =(0,0)) -> Image.Image:
-        """
-        Adds a badge to the icon.
+        """Adds a badge to the icon.
         args:
             img: PILLOW image object to add the badge to
             colorMode (str): colortype of the image
@@ -4871,8 +4923,7 @@ class Icon(ImageElement):
 #endregion
 
 class Line(Element):
-    """
-    Draws a simple line
+    """A simple line element
 
     Parameters
     ----------
@@ -4915,7 +4966,8 @@ class Line(Element):
 
     @property
     def orientation(self) -> Literal["horizontal","vertical","diagonal1", "diagonal2"]:
-        "Line orientation. Diagonal1 goes from top right to bottom left, diagonal2 goes from bottom right to top left"
+        """Line orientation.
+        Diagonal1 goes from top right to bottom left, diagonal2 goes from bottom right to top left"""
         return self.__orientation
     
     @orientation.setter
@@ -4929,8 +4981,8 @@ class Line(Element):
     
     @property
     def alignment(self) -> Union[Literal["center","top","bottom", "left", "right"], PSSMdimension]:
-        """
-        Alignment of the line relative to it's area. top/bottom and left/right are adjusted respectively for the orientation.
+        """Alignment of the line relative to it's area.
+        top/bottom and left/right are adjusted respectively for the orientation.
         Has no affect when orientation is diagonal
         """
         val = self.__alignment 
@@ -5019,8 +5071,8 @@ class Line(Element):
 
 
 class _BaseSlider(Element):
-    """
-    Base class for sliders, provides necessary properties and some functions.
+    """Base class for sliders, provides necessary properties and some functions.
+    
     Can only be used as a parent class, not as an element on its own.
 
     Parameters
@@ -5137,7 +5189,8 @@ class _BaseSlider(Element):
     
     @property
     def lineCoords(self) -> list[tuple,tuple]:
-        """ The current coordinates (min,max) of the line. Set by the generator."""
+        """The current coordinates (min,max) of the line.
+        Set by the generator."""
         return self._lineCoords
     
     @property
@@ -5155,8 +5208,8 @@ class _BaseSlider(Element):
 
     @elementaction
     def tap_action(self) -> InteractionFunctionType:
-        """
-        Slider tap_action. First updates the slider position, then calls the set tap_action.
+        """Slider ``tap_action`` that allows intercepting touches to update the position.
+        First updates the slider position, then calls the set tap_action.
         tap_action can be set by changing tap_action without it interfering with the slider update (I think).
         Use Slider._tap_action to access the actual function after setting.
         """
@@ -5164,7 +5217,8 @@ class _BaseSlider(Element):
 
     @elementaction
     def on_position_set(self) -> Callable[["_BaseSlider",Union[float,int]],Any]:
-        "Function that is called whenever the slider's position changes. Passes the element and the new position."
+        """Action that is called whenever the slider's position changes.
+        Passes the element and the new position."""
         return self._on_position_set
 
     #endregion
@@ -5239,14 +5293,15 @@ class _BaseSlider(Element):
 
     @elementactionwrapper.method
     async def _set_position_action(self, new_position):
-        "Set position function that can be used as a tap_action (so long as new_position is defined as a keyword)"
+        """Sets the position of the slider.
+        Requires new_position to be passed.
+        """
         asyncio.create_task(self.async_set_position(new_position=new_position))
 
 CheckStateDict = TypedDict("CheckStateDict", {'True': dict, 'False': dict})
 
 class _BoolElement(Element):
-    """
-    Building Block for elements that can be set to a true or false state (i.e. checkboxes).
+    """Building Block for elements that can be set to a true or false state (i.e. checkboxes).
 
     Parameters
     ----------
@@ -5312,7 +5367,7 @@ class _BoolElement(Element):
 
     @Element.tap_action.getter
     def tap_action(self) -> list[Callable[["_BoolElement",tuple[int,int]],Any]]:
-        """
+        """BoolElement ``tap_action``. Allows changing the state on tap aside from calling the function.
         _BoolElement tap_action. Accessing this during runtime will have the element's state toggle. Access _tap_action to get the function without that happening during runtime.
         """
         if self.parentPSSMScreen.mainLoop.is_running() and self.interactive:
@@ -5321,7 +5376,9 @@ class _BoolElement(Element):
 
     @elementaction
     def on_set(self) -> Callable[["_BoolElement",bool],Any]:
-        "Action that is called whenever the box is checked/unchecked. Passed are the element itself, and a boolean with the new state (True for checked, False for unchecked)"
+        """Action that is called whenever the box is checked/unchecked.
+        Passed are the element itself, and a boolean with the new state (True for checked, False for unchecked)
+        """
         return self._on_set
     #endregion
 
@@ -5334,8 +5391,9 @@ class _BoolElement(Element):
         asyncio.create_task(self.set_state_async(new_state))
 
     async def set_state_async(self, new_state : Optional[bool] = None, *args):
-        """
-        Set the new state of the element. on_set is processed first before updating the element, so be wary it does not block
+        """Set the new state of the element.
+        
+        on_set is processed first before updating the element, so be wary it does not block the event loop.
 
         Parameters
         ----------
@@ -5358,20 +5416,23 @@ class _BoolElement(Element):
             await asyncio.gather(*coro_list)
 
     def toggle_state(self, *args):
-        "Toggles the current state"
+        "Toggles the current state of the element"
         asyncio.create_task(self.set_state_async())
 
     async def async_toggle_state(self, *args):
-        "Toggles the current state"
+        "Toggles the current state of the element"
         await self.set_state_async()
 
 
 class _ElementSelect(Element):
-    """
+    """Advanced building block element. Can be used to wrap other elements to turn them into selectors.
+
     Provides a base for a layout of connected elements which can be selected.
     This class wraps the provided layout into a selector. The instance that is returned should _NOT_ be used as the element.
     All the properties needed are put into the element's class (only for that element, not globally).
     
+    For terminilogy: an element is considered active if it is selected, otherwise it is considered inactive.
+
     Parameters
     ----------
     layout_element : Union[Layout, &quot;_ElementSelect&quot;]
@@ -5477,20 +5538,24 @@ class _ElementSelect(Element):
     #region
     @property
     def option_elements(self) -> dict[Literal["option"],Element]:
+        """All options and their associated elements.
+        """        
         return self.__option_elements
 
     @property
     def options(self) -> list:
+        """All the registered options of the selector.
+        """        
         return list(self.__option_elements.keys())
 
     @property
     def selected(self) -> Union[str,list[str],None]:
-        "The selected option(s), or None if nothing is selected"
+        "The selected option(s), or ``None`` if nothing is selected"
         return self.__selected
     
     @property
     def selected_elements(self) -> list[Element]:
-        "The elements that are selected"
+        "The element(s) that are selected"
         if self.selected == None:
             return []
         elif not isinstance(self.selected,list):
@@ -5504,7 +5569,7 @@ class _ElementSelect(Element):
 
     @property
     def select_multiple(self) -> bool:
-        "True if multiple options can be selected at once"
+        "Allows for having multiple options selected."
         return self.__select_multiple
     
     @select_multiple.setter
@@ -5513,7 +5578,8 @@ class _ElementSelect(Element):
 
     @property
     def allow_deselect(self) -> bool:
-        "True if multiple options can be selected at once"
+        """Allows for deselecting the selected option by clicking it again.
+        """        
         return self.__allow_deselect
     
     @allow_deselect.setter
@@ -5522,7 +5588,8 @@ class _ElementSelect(Element):
 
     @property
     def active_properties(self) -> dict:
-        "Attributes that are applied to an element when it becomes active (i.e. is selected)"
+        """Attributes that are applied to an element when it becomes active.
+        """
         ##Do use a parser in here maybe?
         return self._active_properties
     
@@ -5536,7 +5603,8 @@ class _ElementSelect(Element):
 
     @property
     def inactive_properties(self) -> dict:
-        "Attributes that are applied to an element when it becomes inactive (at the start or when deselected)"
+        """Attributes that are applied to an element when it becomes inactive.
+        When the selector is setup, these properties are applied to all elements."""
         return self._inactive_properties
     
     @inactive_properties.setter
@@ -5559,15 +5627,17 @@ class _ElementSelect(Element):
         for elt in self.__option_elements.values():
             elt.update(self._option_properties)
         
-
     @elementaction
     def on_select(self) -> Callable[["Element",Union[list[Literal["selection"]]]],Any]:
-        "Function that is called when the selection changes. Passes the element itself and the current selection. Optionally waits for `on_select_delay` seconds before continueing to the function."
+        """Function that is called when the selection changes.
+        Passes the element itself and the current selection. Optionally waits for `on_select_delay` seconds before continueing to the function.
+        """
         return self._on_select
 
     @property
     def on_select_delay(self) -> float:
-        "An optional delay that the element will wait to pass without any changes in the selection, before calling `on_select`"
+        """An optional delay that the element will wait to pass without any changes in the selection, before calling `on_select`
+        """
         return self.__on_select_delay
 
     @on_select_delay.setter
@@ -5580,18 +5650,17 @@ class _ElementSelect(Element):
                 
     @colorproperty
     def foreground_color(self) -> Union[ColorType]:
-        "Additional color attribute for styling, if not present in the original layout element"
+        "Additional color attribute for styling."
         return self._foreground_color
 
     @colorproperty
     def accent_color(self) -> Union[ColorType]:
-        "Additional color attribute for styling, if not present in the original layout element"
+        "Additional color attribute for styling."
         return self._accent_color
 
     @colorproperty
     def background_color(self) ->  Union[ColorType,None]:
         return self._background_color
-
 
     @colorproperty  ##Can't recall why I redefined these.
     def outline_color(self) ->  Union[ColorType,None]:
@@ -5599,12 +5668,16 @@ class _ElementSelect(Element):
 
     @colorproperty
     def active_color(self) -> ColorType:
-        "A color value that can be used to style the active element(s)"
+        """A color value that can be used to style the active elements.
+        Access it via the shorthand "active".
+        """
         return self._active_color
 
     @colorproperty
     def inactive_color(self) -> ColorType:
-        "A color value that can be used to style the inactive element(s)"
+        """A color value that can be used to style the inactive elements
+        Access it via the shorthand "inactive".
+        """
         return self._inactive_color
 
     def _color_setter(self,attribute:str, value : ColorType, allows_None : bool = True, cls : type = None):
@@ -5706,8 +5779,7 @@ class _ElementSelect(Element):
         await self.async_select(option)
 
     async def async_select(self, option : str, call_on_select : bool = True):
-        """
-        Select or de select the provided option
+        """Select or deselect the provided option
 
         Parameters
         ----------
@@ -5757,8 +5829,7 @@ class _ElementSelect(Element):
                 _LOGGER.warning(f"Counter error: {res}")        
 
     def add_option(self, option, element : Element, overwrite = False):
-        """
-        Adds a new element to the options to be selected and sets the tap_action appropriately
+        """Adds a new element to the options to be selected and sets the tap_action appropriately
 
         Parameters
         ----------
@@ -5778,8 +5849,7 @@ class _ElementSelect(Element):
         self._reparse_element_colors(element)
 
     def remove_option(self, option : str):
-        """
-        Removes an option from the selectors, and resets the associated element's tap_action (styling is not reset)
+        """Removes an option from the selectors, and resets the associated element's tap_action (styling is not reset)
 
         Parameters
         ----------
@@ -5801,8 +5871,9 @@ class _ElementSelect(Element):
 
 
 class _IntervalUpdate(ABC):
-    """
-    Base for elements that periodically update. Not an Element, that should be the other super class of the element you're basing this on.
+    """Base for elements that periodically update.
+    
+    Not an Element, that should be the other super class of the element you're basing this on.
     To disable the interval update, call `stop_wait_loop`, or set both update_interval and update_every to None.
     To manually start the loop, call `start_wait_loop`, which loops until it is either cancelled, or both update_interval and update_every are None (i.e. the wait time between loops is smaller than or equal to 0).
 
@@ -5844,7 +5915,8 @@ class _IntervalUpdate(ABC):
 
     @property
     def update_every(self) -> str:
-        "Update at the top of the [hour/minute/second]. Can be one of hour, minute or second. If setting it to None, _update_interval will be used to set the wait time between updates."
+        """Update at the top of the [hour/minute/second].
+        Can be one of hour, minute or second. If setting it to None, _update_interval will be used to set the wait time between updates."""
         return self.__update_every
     
     @update_every.setter
@@ -5882,12 +5954,13 @@ class _IntervalUpdate(ABC):
 
     @property
     def update_interval(self) -> Union[DurationType,int, float, None]:
-        "interval between updates, if update_every is not None"
+        """interval between updates, if ``update_every`` is not None"""
         return self.__update_interval
     
     @property
     def update_intervalSeconds(self) -> Optional[float]:
-        "update interval parsed to the amount of seconds. Used if update_every is None"
+        """update interval parsed to the amount of seconds. 
+        Used if ``update_every`` is None"""
         return self.__update_intervalSeconds
 
     @update_interval.setter
@@ -5957,7 +6030,8 @@ class _IntervalUpdate(ABC):
 def parse_layout_string(layout_string : str, sublayout : Optional[str] = None, hide : list[str] = [],
                         vertical_sizes : dict[str,PSSMdimension] = {"inner": 0, "outer": 0}, horizontal_sizes : dict[str,PSSMdimension] = {"inner": 0, "outer": 0},
                         **elementParse : dict[str,Element]) -> PSSMLayout:
-    """
+    """Parses a tile_layout.
+    
     Parses a layout from a string. Names defined in layout_string should be passed as an element via a keyword in elementParse.
 
     Example
