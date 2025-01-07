@@ -2825,6 +2825,18 @@ class PopupMenu(Popup):
         super().__init__(layout, **kwargs)
     
     #region
+    @property
+    def title(self) -> str:
+        """The title of the popup.
+
+        Shown in the header.
+        """        
+        return self._title
+    
+    @title.setter
+    def title(self, value):
+        self._title = str(value)
+
     @colorproperty
     def header_color(self) -> ColorType:
         "Color of the header bar"

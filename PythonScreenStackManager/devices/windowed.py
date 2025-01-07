@@ -489,6 +489,7 @@ class Device(PSSMdevice):
         self._windowHeight = self.window.winfo_height()
 
         await self.parentPSSMScreen._screen_resized()
+        
 
         self._screenImage = Image.new(self.screenMode,(self.screenWidth,self.screenHeight),None)
         self.__last_printed_PIL = self._screenImage.copy()

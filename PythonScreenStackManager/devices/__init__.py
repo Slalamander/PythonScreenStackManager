@@ -125,8 +125,8 @@ class PSSMdevice(ABC):
 
     @property
     def updateCondition(self) -> asyncio.Condition:
-        """
-        Asyncio condition that is notified when the device states updates have been called (so every config.device["update_interval"]), or when the backlight changed.
+        """Asyncio condition that is notified when the device states updates have been called (so every config.device["update_interval"]), or when the backlight changed.
+        
         For usage see: https://superfastpython.com/asyncio-condition-variable/#Wait_to_be_Notified
         """
         return self._updateCondition
@@ -182,7 +182,7 @@ class PSSMdevice(ABC):
         return  "RGB" in self.screenMode
 
     @property
-    def colorType(self) -> Image.ImageMode:
+    def colorType(self) -> str: #Image.ImageMode:
         "Same as screenMode. Implemented for legacy purposes"
         return  self._screenMode
 
@@ -193,7 +193,7 @@ class PSSMdevice(ABC):
         return getattr(self,"_screenType",None)
 
     @property
-    def screenMode(self) -> Image.ImageMode:
+    def screenMode(self) -> str: #Image.ImageMode.ModeDescriptor:
         "Mode of the screen i.e. the mode a PILLOW image must be to be able to be displayed"
         return  self._screenMode
 
@@ -239,7 +239,8 @@ class PSSMdevice(ABC):
 
     #region methods
     def _set_screen(self):
-        """
+        """Called after the device has been passed to a Screen instance.
+
         This method sets the screen property. Can be used to set additional settings, or register shorthand functions.
         ScreenInstance is the running PSSMScreen instance.
         """
@@ -264,8 +265,8 @@ class PSSMdevice(ABC):
     
     @abstractmethod
     async def async_pol_features(self):
-        """
-        This method takes care of polling and updating all necessary features.
+        """This method takes care of polling and updating all necessary features.
+
         The ScreenInstance takes care of requesting this and notifying the update condition.
         This function should ensure that all necessary features are up to date when it returns.
         If the device has the Backlight feature, this does not need to be polled, as it has it's own condition, which the screen connects to the deviceUpdateCondition. 
@@ -274,37 +275,45 @@ class PSSMdevice(ABC):
 
     @abstractmethod
     def print_pil(self, imgData : Image.Image,x:int,y:int,isInverted=False):
-        """
-        Prints a pillow image onto the screen at the provided coordinates. Ensure the mode of the pillow image matches that of the screen.
-        arguments:
-            pil_image: the image object to be printed
-            x (int): x coordinates on the screen where the top left corner of the image will be placed.
-            y (int): y coordinates on the screen where the top left corner of the image will be placed.
-            isInverted (bool): use hardware invertion on the printed area?
+        """Prints a pillow image onto the screen at the provided coordinates. 
+
+        Ensure the mode of the pillow image matches that of the screen.
+
+        Parameters
+        ----------
+        imgData : Image.Image
+            the image object to be printed
+        x : int
+            x coordinates on the screen where the top left corner of the image will be placed.
+        y : int
+            y coordinates on the screen where the top left corner of the image will be placed.
+        isInverted : bool, optional
+            use hardware invertion on the printed area, by default False (E-reader leftover)
         """
         pass
 
     def do_screen_refresh(self, isInverted=False, isFlashing=True, isInvertionPermanent=True, area=[(0,0),("W","H")], useFastInvertion=False):
-        """
+        """DEPRECATED
         Refreshes the screen. On ereaders, this can help get rid of ghosting.
-        args:
-            isInverted (bool): invert the screen area
-            isFlashing (bool): flash the screen on refresh
-            isInvertionPermanent (bool): permanently invert this area
-            area (list[(x,y),(w,h)]): area to refresh. Defaults to the entire screen.
-            useFastInversion (bool): perform a fast invertion of this area.
         """
+        # args:
+        #     isInverted (bool): invert the screen area
+        #     isFlashing (bool): flash the screen on refresh
+        #     isInvertionPermanent (bool): permanently invert this area
+        #     area (list[(x,y),(w,h)]): area to refresh. Defaults to the entire screen.
+        #     useFastInversion (bool): perform a fast invertion of this area.
         ##This function is a leftover from the pure Eink version. Will be deprecated
         _LOGGER.debug("This base device function is deprecated")
         pass
 
     def do_screen_clear(self):
-        "Completely clear the screen"
+        "Completely clears the screen"
         _LOGGER.debug("This base device function is deprecated")
 
     async def _rotate(self, rotation : RotationValues):
-        """
-        Rotates the screen. Check the device features to see if this is possible during runtime.
+        """Rotates the screen. 
+        
+        Check the device features to see if this is possible during runtime.
         Called via screen.rotate(), since there are some software things that need to happen too to reprint the screen correctly.
         
         Parameters
@@ -320,8 +329,7 @@ class PSSMdevice(ABC):
 
     @abstractmethod
     async def event_bindings(self, touch_queue : "asyncio.Queue" = None):
-        """
-        async function that starts the print loop on the device as well the touch listerner, if able to.
+        """async function that starts the print loop on the device as well the touch listerner, if able to.
 
         Parameters
         ----------
@@ -351,17 +359,18 @@ class PSSMdevice(ABC):
         return
 
     def _quit(self):
-        """"
-        This function is called by pssm when the quit function is called.
-        Used to save any device specific settings or perform other tasks that need doing before quitting. May also be called in power_off/reboot
+        """"This function is called by pssm when the quit function is called.
+
+        Use it to save any device specific settings or perform other tasks that need doing before quitting. May also be called in power_off/reboot
         """
 
     #endregion
 
 #region subclasses
 class Network(ABC):
-    '''
-    Gets info on the Network. Gets IP Adress, network SSID etc.
+    '''Base class to get information on a device's network.
+
+    Gets IP Adress, network SSID etc.
     Properties: IP, wifiOn, connected, SSID
     '''
 
@@ -420,12 +429,13 @@ class Network(ABC):
 
 
 class Backlight(ABC):
-    '''
-    The backlight of the device. Provides callbacks to the state, and functions to turn on, off, or toggle it. Upon initialising this class, the light will be set to 0 to ensure the level is correct
-    the default values need to be 
-        defaultBrightness (int): default brightness to turn on the backlight too, if not brightness provided (between 1-100)
-        defaultTransition (float): default time in seconds for the fade. For smooth fades, 0.5 seems to be the minimum value from my tests.
-        device : the device instance
+    '''Baseclass to control a device's backlight, screen brightness and the like.
+
+    The backlight of the device. Provides callbacks to the state, and functions to turn on, off, or toggle it. Upon initialising this class, the light will be set to 0 to ensure the level is correct.
+    It should also allow setting the default transition values and the default brightness, although the screen instance will be in charge of managing those.
+
+    Depending on how the device handles, either ``turn_on`` or ``turn_on_async`` should be defined, and the other can simple call the defined function. But be careful with blocking the event loop.
+    To keep connected elements in synch with the backlight's state, whenever it is updated the ``notify_condition`` function can be awaited, which will ensure all elements are notified of the new state.    
     '''
     def __init__(self, device: "PSSMdevice", defaultBrightness : int = 50, defaultTransition : float = 0):
         ##Ensuring the backlight is off when the dashboard starts, so the brightness and state are correct
@@ -480,8 +490,8 @@ class Backlight(ABC):
 
     @property
     def minimumLevel(self) -> int:
-        """
-        The minimum backlight/brightness level to turn the backlight on at. 
+        """The minimum backlight/brightness level to turn the backlight on at. 
+
         I.e., if this value is 30, turning on the backlight at 1 will be the same brightness as having this value at 0 and turning it on at 30 brightness.
         Not yet implemented.
         """
@@ -503,7 +513,9 @@ class Backlight(ABC):
 
     @property
     def behaviour(self) -> Literal["Manual", "On Interact", "Always"]:
-        "Backlight behaviour. Since it affects screen interaction, you can set this via the parent screen (set_backlight_behaviour)."
+        """Backlight behaviour. 
+        Since it affects screen interaction, you can set this via the parent screen (set_backlight_behaviour).
+        """
         return self._behaviour
 
     @property
@@ -539,72 +551,88 @@ class Backlight(ABC):
     #endregion
 
     async def notify_condition(self):
-        """
-        Acquires the lock and notifies all awaiting on _updateCondition
+        """Acquires the lock and notifies all awaiting on _updateCondition
         """           
         async with self._updateCondition:
             self._updateCondition.notify_all()
 
     @abstractmethod
     def turn_on(self, brightness : int = None, transition : float = None):
-        """
-        Turn on the backlight to the set level
-        args:
-            brightness (int): brightness (0-100) to set the light to
-            transition (float): transition time (in seconds) to take to get to brightness (Ereaders are slow, so be aware that it will likely take longer)
+        """Turn on the backlight to the set level
+
+        Parameters
+        ----------
+        brightness : int, optional
+            brightness (0-100) to set the light to, by default None
+        transition : float, optional
+            transition time (in seconds) to take to get to brightness (Ereaders are slow, so be aware that it will likely take longer), by default None
         """
         pass
     
     @abstractmethod
     async def turn_on_async(self, brightness : int = None, transition : float = None):
-        """
-        Async method for turning on the backlight to the set level
-        args:
-            brightness (int): brightness (0-100) to set the light to
-            transition (float): transition time (in seconds) to take to get to brightness (Ereaders are slow, so be aware that it will likely take longer)
+        """Async method for turning on the backlight to the set level
+
+        Parameters
+        ----------
+        brightness : int, optional
+            brightness (0-100) to set the light to, by default None
+        transition : float, optional
+            transition time (in seconds) to take to get to brightness (Ereaders are slow, so be aware that it will likely take longer), by default None
         """
         pass
 
     @abstractmethod
     def turn_off(self, transition : float = None):
-        """
-        Turns off the backlight to the set level
-        args:
-            transition (float): transition time (in seconds) to take fully turn off (Ereaders are slow, so be aware that it will likely take longer)
+        """Turns off the backlight to the set level
+
+        Parameters
+        ----------
+        transition : float, optional
+            transition time (in seconds) to take fully turn off (Ereaders are slow, so be aware that it will likely take longer), by default None
         """
         pass
     
     @abstractmethod
     async def turn_off_async(self, transition : float = None):
-        """
-        Async method for turning off the backlight
-        args:
-            transition (float): transition time (in seconds) to take fully turn off (Ereaders are slow, so be aware that it will likely take longer)
+        """Async method for turning off the backlight
+
+        Parameters
+        ----------
+        transition : float, optional
+            transition time (in seconds) to take fully turn off (Ereaders are slow, so be aware that it will likely take longer), by default None
         """
         pass
 
     @abstractmethod
     def toggle(self, brightness : int = None, transition : float = None):
-        """
-        Toggles the backlight, if it is off turns on to defined brightness
-        args:
-            brightness (int): brightness (0-100) to set the light to if it is off
-            transition (float): transition time (in seconds) to take to get to brightness or turn off. (Ereaders are slow, so be aware that it will likely take longer)
+        """Toggles the backlight, if it is off turns on to defined brightness
+
+        Parameters
+        ----------
+        brightness : int, optional
+            brightness (0-100) to set the light to if it is off, by default None
+        transition : float, optional
+            transition time (in seconds) to take to get to brightness or turn off. (Ereaders are slow, so be aware that it will likely take longer), by default None
         """
         pass
 
     @abstractmethod
     def toggle_async(self, brightness : int = None, transition : float = None):
-        """
-        Async method for toggling the backlight, if it is off turns on to defined brightness
-        args:
-            brightness (int): brightness (0-100) to set the light to if it is off
-            transition (float): transition time (in seconds) to take to get to brightness or turn off. (Ereaders are slow, so be aware that it will likely take longer)
+        """Async method for toggling the backlight, if it is off turns on to defined brightness
+
+        Parameters
+        ----------
+        brightness : int, optional
+            brightness (0-100) to set the light to if it is off, by default None
+        transition : float, optional
+            transition time (in seconds) to take to get to brightness or turn off. (Ereaders are slow, so be aware that it will likely take longer), by default None
         """
         pass
 
 class Battery(ABC):
-    '''
+    '''Base class for interfacing with a battery.
+
     The battery of the device. Provides callbacks to get the battery state and charge level, as well as update it.
     '''
     def __init__(self, device : "PSSMdevice", charge : int, state: Literal["full","charging","discharging"]):
@@ -613,7 +641,7 @@ class Battery(ABC):
         ----------
         charge : int
             the initial charge level
-        state : Literal[&quot;full&quot;,&quot;charging&quot;,&quot;discharging&quot;]
+        state : Literal["full","charging","discharging"]
             the initial battery state
         """
         _LOGGER.debug("Setting up base device battery class")
@@ -623,12 +651,13 @@ class Battery(ABC):
 
     @property
     def charge(self) -> int:
-        """The battery charge percentage"""
+        """The battery charge, in percentage (from 0 - 100)"""
         return self._batteryCharge
     
     @property
     def state(self) -> Literal["full","charging","discharging"]:
-        """The state of the battery (not charging, charging, full)"""
+        """The state of the battery
+        """
         return self._batteryState
 
     def update_battery_state(self):

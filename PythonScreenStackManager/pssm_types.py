@@ -48,14 +48,23 @@ CoordType = tuple[TypeVar('x', bound=int), TypeVar('y', bound=int)]
 # "Type hint for returned coordinates"
 
 class TouchEvent(NamedTuple):
-    "Events used to pass touches to the screen, use for devices"
+    """NamedTuple used to pass touches to the screen.
+    
+    used by devices, this class can be put into ``touch_queue``
+    """
+    
     x: int
-    y: int
-    touch_type: Literal[const.TOUCH_PRESS, const.TOUCH_RELEASE]
+    "The x-coordinate of the touch"
 
+    y: int
+    "The y-coordinate of the touch"
+
+    touch_type: Literal[const.TOUCH_PRESS, const.TOUCH_RELEASE, const.TOUCH_TAP, const.TOUCH_LONG]
+    "The type of touch"
 
 class InteractEvent(NamedTuple):
-    "This event is passed to functions when dispatched from a screen interaction. "
+    """This event is passed to functions when dispatched from a screen interaction.
+    """
 
     x: int
     "x coordinate of the interaction"

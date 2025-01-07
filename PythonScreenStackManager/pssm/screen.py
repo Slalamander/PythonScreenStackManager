@@ -95,10 +95,12 @@ class PSSMScreen:
         return PSSMScreen._instance
 
     def __init__(self, device : PSSMdevice,  
-                touch_debounce_time: DurationType = const.DEFAULT_DEBOUNCE_TIME, minimum_hold_time: DurationType = const.DEFAULT_HOLD_TIME, on_interact: Union[Callable[[dict, 'PSSMScreen', CoordType], None], bool,None] = None, on_interact_data : dict = {}, #stack=[], 
-                background=DEFAULT_BACKGROUND, background_fit : Literal["contain", "cover", "crop", "resize"] = "cover", background_fit_arguments : dict = {}, 
-                poll_interval : Union[float, DurationType] = SETTINGS["screen"]["poll_interval"], close_popup_time: Union[float, DurationType] =  SETTINGS["screen"]["close_popup_time"],
-                backlight_behaviour : Optional[Literal["Manual", "On Interact", "Always"]] = None, backlight_time_on : Union[float, DurationType] = None):
+                touch_debounce_time: DurationType = const.DEFAULT_DEBOUNCE_TIME, minimum_hold_time: DurationType = const.DEFAULT_HOLD_TIME, 
+                on_interact: Union[Callable[[dict, 'PSSMScreen', CoordType], None], bool,None] = None, on_interact_data : dict = {}, #stack=[], 
+                background : Union[str,ColorType] = DEFAULT_BACKGROUND, background_fit : Literal["contain", "cover", "crop", "resize"] = "cover", background_fit_arguments : dict = {}, 
+                poll_interval : DurationType = SETTINGS["screen"]["poll_interval"],
+                close_popup_time: DurationType =  SETTINGS["screen"]["close_popup_time"],
+                backlight_behaviour : Optional[Literal["Manual", "On Interact", "Always"]] = "Manual", backlight_time_on : Union[float, DurationType] = None):
 
         ##Placeholder loop to have the atttribute set
         Style.screen = self
@@ -412,6 +414,11 @@ class PSSMScreen:
 
     @on_interact.setter
     def on_interact(self, func : Callable):
+        if isinstance(func,str):
+            if not self.printing:
+                self._add_element_attribute_check(self,"on_interact", func)
+            else:
+                func = self.parse_shorthand_function(func, self.on_interact_data)
         self._on_interact = tools.function_checker(func, default=False)
 
     @property
