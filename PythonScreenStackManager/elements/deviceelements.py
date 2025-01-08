@@ -398,8 +398,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
     #endregion
 
     def get_brightness_color(self, color : ColorType, background_color : Optional[ColorType]=None) -> tuple[int,int,int,int]:
-        """
-        Returns a new color based on the icon color, with it's transparency set depending on the brighntess of the backlight
+        """Returns a new color based on the icon color, with it's transparency set depending on the brighntess of the backlight
 
         Parameters
         ----------

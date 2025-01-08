@@ -31,8 +31,9 @@ BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
 _LOGGER = logging.getLogger(__package__)
 
 class Tile(base.TileElement):
-    """
-    Element that combines an icon, text and optional title into a versatile element. A lot of defaults are present, such that making custom layout elements combining icons and text is generally not needed.
+    """Element that combines an icon, text and optional title into a versatile element.
+    
+    A lot of defaults are present, such that making custom layout elements combining icons and text is generally not needed.
 
     Parameters
     ----------
@@ -1168,8 +1169,7 @@ class DigitalClock(base.Button, dateTimeElementInterval):
             self.parentPSSMScreen.device.do_screen_refresh(area=self.area)
 
 class DateElement(base.Button, dateTimeElementInterval):
-    """
-    This element shows a date and updates at the top of every hour.
+    """This element shows a date and updates at the top of every hour.
 
     Parameters
     ----------
@@ -1226,8 +1226,9 @@ class DateElement(base.Button, dateTimeElementInterval):
 
 #region Sliders
 class LineSlider(base._BaseSlider):
-    """
-    Makes an (interactive) slider with a thumb and a line. See _BaseSlider for all slider specific parameters.
+    """Makes an (interactive) slider with a thumb and a line.
+    
+    See _BaseSlider for all slider specific parameters.
 
     Parameters
     ----------
@@ -1611,8 +1612,9 @@ class LineSlider(base._BaseSlider):
         return
 
 class BoxSlider(base._BaseSlider):
-    """
-    Makes an (interactive) slider that fills a box. See _BaseSlider for all slider specific parameters.
+    """Makes an (interactive) slider that fills a box.
+    
+    See _BaseSlider for all slider specific parameters.
 
     Parameters
     ----------
@@ -1959,8 +1961,9 @@ class BoxSlider(base._BaseSlider):
         return
 
 class Slider(LineSlider, BoxSlider):
-    """
-    Element combining all the different sliders to be used in a single element. Set the type of slider by setting the style property.
+    """Element combining all the different sliders to be used in a single element.
+    
+    Set the type of slider by setting the style property.
     Properties for any style can be passed as kwargs.
     
     Parameters
@@ -2561,10 +2564,11 @@ class DropDown(base.Button):
     def on_select(self) -> Callable[["DropDown",str],Any]:
         """
         Function to call when an option is selected from the menu.
-        
-        2 Parameters are passed to the function:
 
+        The element and the selected value are passed to the function.
+        
         ----------
+        2 Parameters are passed to the function:
         element : Element
             The DropDown element this is attached to
         option : str
