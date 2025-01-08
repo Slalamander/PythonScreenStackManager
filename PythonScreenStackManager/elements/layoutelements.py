@@ -587,12 +587,13 @@ class tabDict(TypedDict):
 
 
 class TabPages(base.TileElement):
-    """
-    A layout that can hold multiple other elements (as tabs). 
+    """A layout that can hold multiple other elements (as tabs). 
+
     Comes with elements to cycle through the tab list, as well as a navigation bar that can be used to go to a specific tab.
     Generally, when referring to a page, an index (page number) is required. When referring to a tab, the tab name is required.
     The hide property has been restricted, and hiding the tab element is not permitted. Use `hide_navigation_bar` and `hide_page_handles` instead.
-
+    Each entry in the navigation bar is made using a :py:class:`NavigationTile`
+    
     Parameters
     ----------
     tabs : list[tabDict]
