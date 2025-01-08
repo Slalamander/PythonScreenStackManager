@@ -593,7 +593,7 @@ def parse_known_image_file(file):
             ##Maybe make it possible to not parse the file?
             return file
         else:
-            return const.CUSTOM_FOLDERS["icon_folder"] / file
+            return const.CUSTOM_FOLDERS["picture_folder"] / file
 
 def parse_known_fonts(font:str):
     """

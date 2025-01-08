@@ -1778,10 +1778,7 @@ class PSSMScreen:
                 if isinstance(background, Path):
                     p = background
                 else:
-                    if background[0] == "/" or background[0:2] != "./":
-                        p = CUSTOM_FOLDERS["picture_folder"] / background
-                    else:
-                        p = Path(background)
+                    p = tools.parse_known_image_file(background)
                 
                 if not p.exists():
                     msg = f"Background Image file {p} does not exist."
