@@ -6,6 +6,7 @@ from abc import abstractmethod, ABC
 import asyncio
 from typing import TYPE_CHECKING, Literal, Optional, Union, TypedDict, Callable, Any
 from types import MappingProxyType
+from contextlib import suppress
 
 from PIL import Image
 import mdi_pil as mdi
@@ -98,11 +99,12 @@ class _DeviceMonitor(base.Element):
         asyncio.create_task(self.feature_update(testVal))
 
         while self.onScreen:
-            async with condition:
-                await condition.wait_for(lambda : testVal != getattr(self.monitor,self.monitor_attribute))
+            with suppress(asyncio.CancelledError):
+                async with condition:
+                    await condition.wait_for(lambda : testVal != getattr(self.monitor,self.monitor_attribute))
 
-                testVal = getattr(self.monitor,self.monitor_attribute)
-                asyncio.create_task(self.feature_update(testVal))
+                    testVal = getattr(self.monitor,self.monitor_attribute)
+                    asyncio.create_task(self.feature_update(testVal))
 
     @abstractmethod
     async def feature_update(self, value):
