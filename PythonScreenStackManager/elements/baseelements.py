@@ -1007,10 +1007,10 @@ class Element(ABC):
 
     def _get_action(self, touch_type: Literal["tap", "hold","hold_release"]) -> Optional[tuple[InteractionFunctionType, dict]]:        
         
-        if getattr(self, f"_{touch_type}_action", None) != None:
-            func = getattr(self, f"{touch_type}_action")
+        if (func := getattr(self, f"{touch_type}_action", None)) != None:
             kwargs = getattr(self, f"{touch_type}_action_kwargs",{})
-            return (func, kwargs)
+            if func:
+                return (func, kwargs)
 
 
     @abstractmethod
