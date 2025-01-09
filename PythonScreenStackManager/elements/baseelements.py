@@ -1007,7 +1007,7 @@ class Element(ABC):
 
     def _get_action(self, touch_type: Literal["tap", "hold","hold_release"]) -> Optional[tuple[InteractionFunctionType, dict]]:        
         
-        if getattr(self, f"{touch_type}_action", None) != None:
+        if getattr(self, f"_{touch_type}_action", None) != None:
             func = getattr(self, f"{touch_type}_action")
             kwargs = getattr(self, f"{touch_type}_action_kwargs",{})
             return (func, kwargs)
