@@ -6,6 +6,7 @@ from abc import abstractmethod, ABC
 import asyncio
 from typing import TYPE_CHECKING, Literal, Optional, Union, TypedDict, Callable, Any
 from types import MappingProxyType
+from contextlib import suppress
 
 from PIL import Image
 import mdi_pil as mdi
@@ -59,7 +60,8 @@ class _DeviceMonitor(base.Element):
     
     @property
     def monitor_feature(self) -> Literal["battery", "network", "backlight"]:
-        "String with the device feature being monitored"
+        """The feature being monitored
+        """
         return self.__monitor_feature
 
     @monitor_feature.setter
@@ -97,20 +99,25 @@ class _DeviceMonitor(base.Element):
         asyncio.create_task(self.feature_update(testVal))
 
         while self.onScreen:
-            async with condition:
-                await condition.wait_for(lambda : testVal != getattr(self.monitor,self.monitor_attribute))
+            with suppress(asyncio.CancelledError):
+                async with condition:
+                    await condition.wait_for(lambda : testVal != getattr(self.monitor,self.monitor_attribute))
 
-                testVal = getattr(self.monitor,self.monitor_attribute)
-                asyncio.create_task(self.feature_update(testVal))
+                    testVal = getattr(self.monitor,self.monitor_attribute)
+                    asyncio.create_task(self.feature_update(testVal))
 
     @abstractmethod
     async def feature_update(self, value):
-        "Function that is called when the whenever the monitored value changes. Passed is the new value of the monitored attribute."
+        """Called when the the monitored value changes, or called manually to force an update.
+        Passed is the new value of the monitored attribute.
+        Can be accessed as a shorthand to forcibly update
+        """
         return
                 
 class DeviceButton(_DeviceMonitor, base.Button):
-    """
-    Button that shows the state of a device feature. Updates automatically.
+    """Button that shows the state of a device feature.
+    
+    Updates automatically.
 
     Parameters
     ----------
@@ -197,8 +204,7 @@ class DeviceButton(_DeviceMonitor, base.Button):
 _backlightDict = TypedDict("backlightDict", {"on": mdiType, "off": mdiType}, total=True) 
 
 class DeviceIcon(_DeviceMonitor, base.Icon):
-    """
-    Icon element that can be linked to a device Feature, like for example showing the charge of the battery.
+    """Icon element that can be linked to a device Feature, like for example showing the charge of the battery.
 
     Parameters
     ----------
@@ -394,8 +400,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
     #endregion
 
     def get_brightness_color(self, color : ColorType, background_color : Optional[ColorType]=None) -> tuple[int,int,int,int]:
-        """
-        Returns a new color based on the icon color, with it's transparency set depending on the brighntess of the backlight
+        """Returns a new color based on the icon color, with it's transparency set depending on the brighntess of the backlight
 
         Parameters
         ----------
@@ -601,8 +606,9 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         
 
 class BacklightSlider(_DeviceMonitor, comps.Slider):
-    """
-    A slider that controls the backlight
+    """A slider that controls the device's backlight.
+
+    Not available on devices without the appropriate feature.
 
     Parameters
     ----------

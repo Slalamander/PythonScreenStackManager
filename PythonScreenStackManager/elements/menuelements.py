@@ -19,7 +19,7 @@ from . import baseelements as base
 from . import compoundelements as comps
 from . import deviceelements as develts
 from . import layoutelements as layouts
-from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_FONT_BOLD, \
+from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_FONT_BOLD, DEFAULT_FONT_HEADER,\
     DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR, DEFAULT_FONT_SIZE
 
 from .baseelements import _LOGGER
@@ -27,6 +27,11 @@ if TYPE_CHECKING:
     from ..devices import PSSMdevice
 
 class StatusBar(layouts.GridLayout):
+    """A StatusBar to show the status of your dashboard and various other things.
+
+    The added elements are the same for all instances, but which ones are shown can be configured via the ``hide`` parameter.
+    """
+
     ##GridLayout cause: makes it easy to set orientation
     ##For space between icons and clock/data: use a None type and set the spacing to '?'
     ##Icon space is r anyways; Just figure out how to reliably get the rest in the right position
@@ -44,7 +49,7 @@ class StatusBar(layouts.GridLayout):
         return MappingProxyType(cls._statusbar_elements)
 
     def __init__(self, orientation : Literal["horizontal","vertical"] = "horizontal", show_clock = True,
-                outer_margins = [0, 10], inner_margins = 0, hide : list[str] = [], element_size : PSSMdimension = "default",
+                outer_margins = [0, 10], inner_margins = [0,5], hide : list[str] = [], element_size : PSSMdimension = "default",
                 element_properties : dict = {}, status_element_properties : dict = {"background_shape": "circle", "background_color": DEFAULT_BACKGROUND_COLOR},
                 **kwargs):
         
@@ -262,7 +267,7 @@ class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
     "Base class for popups that can only be defined once."
     
     ##Give this a title element, and then the close button in the corner. Everything else is a layout element.
-    def __init__(self, popupID : str, title : str, title_font : PSSMdimension = DEFAULT_FONT_BOLD, **kwargs):
+    def __init__(self, popupID : str, title : str, title_font : PSSMdimension = DEFAULT_FONT_HEADER, **kwargs):
         layout = self.build_menu()
         base.PopupMenu.__init__(self,layout,title, title_font, popupID=popupID, **kwargs)
 
@@ -271,9 +276,9 @@ class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
         pass
 
 class DeviceMenu(UniquePopupMenu): 
-    """
-    The menu for the pssm device. Only allows one instance (i.e. the same instance is always returned when instantiating it).
-    Altering the appearance can be done by calling DeviceMenu().update() in the usual manner. When running inkboard, a lot can be set in the config already, however some values are determined by constants for consistency.
+    """The menu for the device connected to the screen. 
+    
+    It can be accessed and shown via its id ``device-menu``.
     """
 
     @property
@@ -294,7 +299,7 @@ class DeviceMenu(UniquePopupMenu):
         fSize = DEFAULT_FONT_SIZE
         buttonSettings = {"text_x_position": "left", "font_size":fSize}
         m = "w*0.02"
-        h = 50
+        h = "?"
         h_margin = 5
 
         deviceText = self.device.deviceName if self.device.deviceName != None else "PSSM"
@@ -304,7 +309,7 @@ class DeviceMenu(UniquePopupMenu):
         layout = [[h,(deviceButton,"?"),(None,"r")]]
 
         if self.device.has_feature(FEATURES.FEATURE_BATTERY) or self.device.has_feature(FEATURES.FEATURE_NETWORK):
-            row = [h*2 + h_margin]
+            row = [f"{h}*2"]
             if not self.device.has_feature(FEATURES.FEATURE_NETWORK):
                 row.append((None,"?"))
             else:
@@ -340,15 +345,15 @@ class DeviceMenu(UniquePopupMenu):
 
         restartButton = base.Button("Reload", font_size=fSize, background_color=col, tap_action=self.parentPSSMScreen.reload, resize=fSize)
         buttonRow.append((restartButton,"?"))
-        buttonRow = ["?*0.25",(base.Layout([buttonRow], background_color=col),"w")]
+        buttonRow = ["h*0.25",(base.Layout([buttonRow], background_color=col),"w")]
         layout.append(buttonRow)
         self.menu_layout = base.Layout(layout)
         return self.menu_layout
 
 class ScreenMenu(UniquePopupMenu):
-    """
-    Popup Menu to control and set various settings for the screen. 
-    Can be stylised by calling ScreenMenu.update().
+    """Popup Menu to control and set various settings for the screen.
+
+    It can be accessed via the popup_id ``screen-menu``.
     """
 
     if INKBOARD:
@@ -446,6 +451,13 @@ class ScreenMenu(UniquePopupMenu):
         ##A version check using github is also useful
         ##I think it may be useful to do that using a special icon/element like the device status one?
         ##That uses the interval timer to check like, every 12 hours
+        if self.device.has_feature(FEATURES.FEATURE_AUTOSTART):
+            state = self.device.autoStart
+            elt = comps.CheckBox(state, checked_icon="mdi:checkbox-marked", unchecked_icon="mdi:checkbox-blank", on_set = self.device.toggle_autostart)
+            button = base.Button("Auto start",font_size=buttonSettings["font_size"], text_x_position="right")
+            row1, row2 = layout
+            row1.extend([(elt,"r"),(None,"r")])
+            row2.extend([(button,"?"),(None,"r")])
 
         setter_bg = DEFAULT_MENU_BUTTON_COLOR
         buttSett = {"font_color": DEFAULT_FOREGROUND_COLOR}
@@ -539,3 +551,4 @@ class ScreenMenu(UniquePopupMenu):
         elif action == "invert":
             self.parentPSSMScreen.invert()
         return
+

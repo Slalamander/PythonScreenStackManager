@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 PSSM_DIR = Path(__file__).parent
 
-_configfile = Path("settings.json").resolve()
+_configfile = PSSM_DIR / "config" /"settings.json"
 
 _screen_defaults = {"rotation": "UR", 
                     "refresh_interval": "15min",
@@ -145,8 +145,8 @@ class __settings():
         with open(self.file, 'w') as f:
             try:
                 d = dict(_data)
-                f.write(json.dumps(d))
-                logger.info(f"Settings saved to {_configfile}")
+                f.write(json.dumps(d, indent=4))
+                logger.debug(f"Settings saved to {_configfile}")
             except Exception as e:
                 logger.exception("Settings dict is not of the correct type (There may be a mappingproxy in there)")
         return

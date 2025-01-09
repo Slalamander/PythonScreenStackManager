@@ -30,9 +30,10 @@ BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
 
 _LOGGER = logging.getLogger(__package__)
 
-class Tile(base._TileBase):
-    """
-    Element that combines an icon, text and optional title into a versatile element. A lot of defaults are present, such that making custom layout elements combining icons and text is generally not needed.
+class Tile(base.TileElement):
+    """Element that combines an icon, text and optional title into a versatile element.
+    
+    A lot of defaults are present, such that making custom layout elements combining icons and text is generally not needed.
 
     Parameters
     ----------
@@ -77,6 +78,14 @@ class Tile(base._TileBase):
         default: {"icon": {"icon_color": 'foreground'}, "text": {"font_color": "foreground"}, "title": {"font": DEFAULT_FONT_HEADER, "font_color": "foreground"}}. Additionally, the text elements have a default alignment value set depending on the tile_layout.
         Restricted properties for the icon are 'icon', 'badge_icon' and 'badge_settings'. For 'text' and 'title', the 'text' property is restricted.
     """
+
+    @classproperty
+    def tiles(cls):
+        return ("icon", "title", "text")
+
+    @classproperty
+    def defaultLayouts(cls):
+        return {"vertical": "icon;title;text", "horizontal": "icon,[title;text]"}
 
     _restricted_element_properties : dict[str,set[str]] = {"icon": {"icon", "badge_icon", "badge_settings"}, "text": {"text"}, "title": {"text"}}
     "Properties of the elements that are not allowed to be set."
@@ -454,7 +463,13 @@ class Tile(base._TileBase):
         if value == "default":
             self._vertical_sizes = value
             return
-        base._TileBase.vertical_sizes.fset(self,value)
+        
+        if self._vertical_sizes == "default":
+            if self.__tile_layout in self._default_vertical_sizes:
+                self._vertical_sizes = self._default_vertical_sizes.get(self.__tile_layout, {})
+            else:
+                self._vertical_sizes = self._default_vertical_sizes["custom"]
+        base.TileElement.vertical_sizes.fset(self,value)
 
     @property
     def horizontal_sizes(self) -> 'Tile._EltSizeDict':
@@ -473,7 +488,14 @@ class Tile(base._TileBase):
         if value == "default":
             self._horizontal_sizes = value
             return
-        base._TileBase.horizontal_sizes.fset(self,value)
+        
+        if self._horizontal_sizes == "default":
+            if self.__tile_layout in self._default_horizontal_sizes:
+                self._horizontal_sizes = self._default_horizontal_sizes.get(self.__tile_layout, {})
+            else:
+                self._horizontal_sizes = self._default_horizontal_sizes["custom"]
+
+        base.TileElement.horizontal_sizes.fset(self,value)
 
     #region subelements
     @property
@@ -706,13 +728,16 @@ class dateTimeElementInterval(base._IntervalUpdate):
     #endregion
 
 class AnalogueClock(base.Element, dateTimeElementInterval):
-    """
-    An analogue clock that updates at the start of each minute
+    """An analogue clock (on a digital screen) that updates at the start of each minute.
+
+    It is quite stylable, most attributes allow to have their color set. It is also possible to show a digital time on the bottom.
 
     Parameters
     ----------
     timezone : str, optional
         the timezone to associate this clock with. Uses system time by default, by default None
+    minimum_resolution: int, optional
+        Minimum image resolution to use when drawing the clock.
     clock_fill_color : Optional[ColorType], optional
         color of the inside circle of the clock. Defaults to none (copies background), by default None
     outline_color : Optional[ColorType], optional
@@ -744,7 +769,8 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
     @property
     def _emulator_icon(cls): return "mdi:clock"
 
-    def __init__(self, timezone=None, clock_fill_color : Optional[ColorType]=None, outline_color : Optional[ColorType]="black", outline_width = 5, 
+    def __init__(self, timezone: str = None, minimum_resolution: int = DrawShapes.MINRESOLUTION, outline_width: PSSMdimension = 5, 
+                clock_fill_color : Optional[ColorType]=None, outline_color : Optional[ColorType] = "black", 
                 hour_hand_color : Optional[ColorType] =None, minute_hand_color : Optional[ColorType] =None, 
                 show_ticks : bool = True, tick_color : Optional[ColorType] =None, 
                 show_digital:bool=False, digital_format : str = "%a", digital_font : str = DEFAULT_FONT_CLOCK, digital_color : Optional[ColorType] =None, 
@@ -755,6 +781,8 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
 
         self._genClock = True
         "Generates the entire clock image upon the next call to the generator, instead of just the hands (and possible time text). Is always reset to False after regenerating the clock image."
+
+        self.minimum_resolution = minimum_resolution
 
         self.show_digital = show_digital
 
@@ -880,6 +908,16 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             return self.outline_color
         return self._digital_color
 
+    @property
+    def minimum_resolution(self) -> int:
+        "The minimum resolution used to draw the clock. Increase this if the clock is pixelly."
+        return self._minimum_resolution
+    
+    @minimum_resolution.setter
+    def minimum_resolution(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(f"{self}: minimum resolution must be an integer. {value} is not valid")
+        self._minimum_resolution = value
     #endregion
 
     def _style_update(self, attribute: str, value):
@@ -898,24 +936,29 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             self._area = area
         (x, y), (w, h) = self.area
 
+        min_res = self.minimum_resolution
+        if w > h:
+            scale = min_res/h
+        else:
+            scale = min_res/w
+
         colorMode = self.parentPSSMScreen.imgMode
         img_background = Style.get_color(self.background_color,colorMode)
         clock_fill = Style.get_color(self.clock_fill_color, colorMode)
         clock_line = Style.get_color(self.outline_color, colorMode)
         timedt = dt.now(self.zoneInfo)
 
-        hour_width = round(self.outline_width*2.5)  ##Want to change these to be settable
-        mnt_width = round(self.outline_width*1.5)
+        outline_w = int(self._convert_dimension(self.outline_width)*scale)
+
+        hour_width = round(outline_w*2.5)  ##Want to change these to be settable
+        mnt_width = round(outline_w*1.5)
 
         if self._genClock:
-            min_resolution = DrawShapes.MINRESOLUTION
-            s = max(w,h,min_resolution)
             img = Image.new(
                 colorMode,
-                (s, s),
+                (min_res, min_res),
                 color=img_background
             )
-            img = ImageOps.cover(img, size=(min_resolution,min_resolution))
             (wc,hc) = img.size
             draw = ImageDraw.Draw(img)
 
@@ -951,7 +994,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
                 coo,
                 start=0,end=360,
                 outline=clock_line,
-                width=self.outline_width,
+                width=outline_w,
             )
             self._clockImg = img
             self._genClock = False
@@ -1017,12 +1060,13 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         )
 
         _LOGGER.verbose(f"Clock updated for {timedt.strftime('%H:%M')}")
-        self._imgData = ImageOps.pad(img,(w,h), color=img_background)
+        self._imgData = ImageOps.pad(img, (w,h), Image.Resampling.LANCZOS, color=img_background, )
         return self.imgData
 
 class DigitalClock(base.Button, dateTimeElementInterval):
-    """
-    A digital clock that updates at the start of each minute.
+    """A digital clock that updates at the start of each minute.
+
+    Can be styled similar to a :py:class:`Button`, it simply has the functionality build in to show the time.
 
     Parameters
     ----------
@@ -1125,8 +1169,7 @@ class DigitalClock(base.Button, dateTimeElementInterval):
             self.parentPSSMScreen.device.do_screen_refresh(area=self.area)
 
 class DateElement(base.Button, dateTimeElementInterval):
-    """
-    This element shows a date and updates at the top of every hour.
+    """This element shows a date and updates at the top of every hour.
 
     Parameters
     ----------
@@ -1183,8 +1226,9 @@ class DateElement(base.Button, dateTimeElementInterval):
 
 #region Sliders
 class LineSlider(base._BaseSlider):
-    """
-    Makes an (interactive) slider with a thumb and a line. See _BaseSlider for all slider specific parameters.
+    """Makes an (interactive) slider with a thumb and a line.
+    
+    See _BaseSlider for all slider specific parameters.
 
     Parameters
     ----------
@@ -1323,7 +1367,6 @@ class LineSlider(base._BaseSlider):
             self.__thumb_height = value
         else:
             self._dimension_setter("__thumb_height",value,["l"])
-
 
     @colorproperty
     def thumb_color(self) -> Optional[ColorType]:
@@ -1569,8 +1612,9 @@ class LineSlider(base._BaseSlider):
         return
 
 class BoxSlider(base._BaseSlider):
-    """
-    Makes an (interactive) slider that fills a box. See _BaseSlider for all slider specific parameters.
+    """Makes an (interactive) slider that fills a box.
+    
+    See _BaseSlider for all slider specific parameters.
 
     Parameters
     ----------
@@ -1917,8 +1961,9 @@ class BoxSlider(base._BaseSlider):
         return
 
 class Slider(LineSlider, BoxSlider):
-    """
-    Element combining all the different sliders to be used in a single element. Set the type of slider by setting the style property.
+    """Element combining all the different sliders to be used in a single element.
+    
+    Set the type of slider by setting the style property.
     Properties for any style can be passed as kwargs.
     
     Parameters
@@ -1964,20 +2009,12 @@ class Slider(LineSlider, BoxSlider):
 
         return
 
-    @property
+    @colorproperty
     def thumb_color(self):
         if self.style == "line":
             return LineSlider.thumb_color.fget(self)
         elif self.style == "box":
             return BoxSlider.thumb_color.fget(self)
-    
-    @thumb_color.setter
-    def thumb_color(self, value : ColorType):
-        if self.style == "line":
-            val = LineSlider.thumb_color.fset(self, value)
-        elif self.style == "box":
-            val =  BoxSlider.thumb_color.fset(self, value)
-        return val
 
     @property
     def SliderClass(self) -> Union[type[LineSlider], type[BoxSlider]]:
@@ -2034,7 +2071,7 @@ class TimerSlider(Slider):
         self._timerTask : asyncio.Task = DummyTask()
         "Task running the timed slider update loop"
 
-        self.__timerLock = asyncio.Lock(loop=self.mainLoop)
+        self.__timerLock = asyncio.Lock()
 
         super().__init__(style, orientation, interactive=interactive, **kwargs)
         
@@ -2240,8 +2277,9 @@ class TimerSlider(Slider):
 
 
 class CheckBox(base._BoolElement, base.Icon):
-    """
-    Checkbox element. Derived from the base icon, accepts every option from Icon except icon, which is controlled by the state.
+    """Checkbox element.
+    
+    Derived from the base icon, accepts every option from Icon except icon, which is controlled by the state.
 
     Parameters
     ----------
@@ -2377,8 +2415,9 @@ class CheckBox(base._BoolElement, base.Icon):
             return bg_img
 
 class Toggle(CheckBox):
-    """
-    CheckBox element, but with a toggle switch as icon. (I.e. the same as a CheckBox with checked_icon = mdi:toggle-switch and unchecked_icon = mdi:toggle-switch-off)
+    """CheckBox element, but with a toggle switch as icon.
+    
+    So basically the same as a CheckBox with ``checked_icon`` = ``mdi:toggle-switch`` and ``unchecked_icon`` = ``mdi:toggle-switch-off``)
 
     Parameters
     ----------
@@ -2410,7 +2449,10 @@ class Toggle(CheckBox):
         return "mdi:toggle-switch-off"
 
 class CheckButton(base._BoolElement, base.Button):
-    "Boolean Text Element (Changes settings based on state. Defaults to coloring in the background.)"
+    """NOT IMPLEMENTED
+    Boolean Text Element (Changes settings based on state. Defaults to coloring in the background.)
+    
+    """
     pass
 
 class DropDown(base.Button):
@@ -2522,10 +2564,11 @@ class DropDown(base.Button):
     def on_select(self) -> Callable[["DropDown",str],Any]:
         """
         Function to call when an option is selected from the menu.
-        
-        2 Parameters are passed to the function:
 
+        The element and the selected value are passed to the function.
+        
         ----------
+        2 Parameters are passed to the function:
         element : Element
             The DropDown element this is attached to
         option : str
@@ -2622,7 +2665,7 @@ class DropDown(base.Button):
         await asyncio.gather(
             self._menuPopup.async_close(),
             self._async_select(elt.text),
-            loop=self.parentPSSMScreen.mainLoop
+            # loop=self.parentPSSMScreen.mainLoop
         )
 
     def _menu_closed(self):
@@ -2631,7 +2674,7 @@ class DropDown(base.Button):
         self.update(updated=True)
 
     async def open_menu(self, elt : base.Element = None, coords : tuple = None):
-        "Open the menu"
+        "Opens the menu"
         ##Add a radius parameter to the popup class? If necessary, maybe the layout one already works.
         ##Pass it by converting the radius to an integer btw.
         [(x,y),(w,h)] = self.area
@@ -2667,10 +2710,11 @@ class DropDown(base.Button):
         )
 
     async def close_menu(self, *args):
+        "Closes the menu"
         await self._menuPopup.async_close()
         self.__menuOpen = False
 
-class Counter(base._TileBase):
+class Counter(base.TileElement):
     """
     Tile based element that can increment a numeric value with two buttons.
 
@@ -2686,24 +2730,33 @@ class Counter(base._TileBase):
         Maximum counter value, by default None (No maximum)
     on_count : Callable, optional
         Optional function to call when the counter value is changed, defaults to None
-    counter_layout : str, optional
-        The counter layout, as a string. See the description of the property for more explanation on how to use it. By default "count,[up;down]"
+    to;e_layout : str, optional
+        The tile layout of the counter. By default default ("count,[up;down]")
     downIcon : MDItype, optional
         Mdi icon of the decrementing button, by default "mdi:minus-box"
     upIcon : MDItype, optional
         Mdi icon of the incrementing button, by default "mdi:plus-box"
     horizontal_sizes : dict[str,PSSMdimension], optional
-            horizontal sizes for the tile elements, by default None, which applies default values depending on the value of counter_layout
+            horizontal sizes for the tile elements, by default None, which applies default values depending on the value of tile_layout
     vertical_sizes : dict[str,PSSMdimension], optional
-            vertical sizes for the tile elements, by default None, which applies default values depending on the value of counter_layout
+            vertical sizes for the tile elements, by default None, which applies default values depending on the value of tile_layout
     element_properties : dict[str,dict[str,str]], optional
             Properties for the counter elements, by default {"count": {}, "up": {"icon_color": "foreground"},"down": {"icon_color": "foreground"}}
     """
 
     @classproperty
+    def tiles(cls) -> tuple[str]:
+        "The names of the tiles that can be used"
+        return ("count", "up", "down")
+
+    @classproperty
+    def defaultLayouts(cls):
+        return {"default": "count,[up;down]", "horizontal": "down,count,up"}
+
+    @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["base.Element", CoordType],Any]]:
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
-        return base._TileBase.action_shorthands | {"set-value": "interact_set_counter", "increment": "increment", "decrement": "decrement"}
+        return base.TileElement.action_shorthands | {"set-value": "set_counter", "increment": "increment", "decrement": "decrement"}
 
     _restricted_element_properties : dict[str,set[str]] = {"count": {"text"}, "up": {"icon", "tap_action"}, "down": {"icon", "tap_action"}}
     "Properties of the elements that are not allowed to be set."
@@ -2711,7 +2764,7 @@ class Counter(base._TileBase):
     @property
     def _emulator_icon(cls): return "mdi:counter"
 
-    def __init__(self, counter_layout : Union[Literal["default", "horizontal"], PSSMLayoutString] = "default", value : float = 0, step : float = 1, roundDigits : int = None, minimum : float = None, maximum : float = None, 
+    def __init__(self, tile_layout : Union[Literal["default", "horizontal"], PSSMLayoutString] = "default", value : float = 0, step : float = 1, roundDigits : int = None, minimum : float = None, maximum : float = None, 
                 on_count : Callable[["Counter",Union[float,int]],Any] = None,  downIcon : MDItype = "mdi:minus-box", upIcon : MDItype = "mdi:plus-box", 
                 horizontal_sizes : dict[str,PSSMdimension] = None, vertical_sizes : dict[str,PSSMdimension] = None, 
                 element_properties : dict[str,dict[str,str]] = {"count": {}, "up": {"icon_color": "foreground"},"down": {"icon_color": "foreground"}},
@@ -2741,25 +2794,23 @@ class Counter(base._TileBase):
 
         element_properties = default_properties
 
-        self.counter_layout = counter_layout
-
         if not isinstance(vertical_sizes, dict):
-            if counter_layout == "default":
+            if tile_layout == "default":
                 vertical_sizes = {"outer": "h*0.1", "up": "?", "down": "?"}
-            elif counter_layout == "horizontal":
+            elif tile_layout == "horizontal":
                 vertical_sizes = {"up": "?", "down": "?", "outer": "h*0.05"}
             else:
                 vertical_sizes = {}
 
         if not isinstance(horizontal_sizes, dict):
-            if counter_layout == "default":
+            if tile_layout == "default":
                 horizontal_sizes = {"count": "w*0.6", "up": "r", "down": "r"}
-            elif counter_layout == "horizontal":
-                horizontal_sizes = {"up": "r", "down": "r"}
+            elif tile_layout == "horizontal":
+                horizontal_sizes = {"up": "?", "down": "?"}
             else:
                 horizontal_sizes = {}
 
-        super().__init__(self.tile_layout, element_properties=element_properties, horizontal_sizes=horizontal_sizes, vertical_sizes= vertical_sizes,  **kwargs)
+        super().__init__(tile_layout, element_properties=element_properties, horizontal_sizes=horizontal_sizes, vertical_sizes= vertical_sizes,  **kwargs)
 
         self.minimum = minimum
         self.maximum = maximum
@@ -2769,34 +2820,13 @@ class Counter(base._TileBase):
         self.roundDigits = roundDigits
         self.value = value
 
+        self.tile_layout
+
     #region
     @property
     def elements(self) -> MappingProxyType[Literal["count","up","down"],base.Element]:
         "The elements in the counter"
         return self.__elements
-    
-    @property
-    def counter_layout(self) -> str:
-        """
-        The counter layout, as a string. Needs to contain up, down and count to indicate where to place the up Icon, down Icon and counter Button respectively.
-        Use ',' to separate columns, and ';' to separate rows. You can encapsulate within [...] to use a sublayout, so you can stack items within a single row, for example. \n
-        Examples: 
-            count,[up;down] \n
-            down,count,up   
-        """
-        return self.__counter_layout
-    
-    @counter_layout.setter
-    def counter_layout(self, value:str):
-        if value.lower() == "default":
-            layout_str = "count,[up;down]"
-        elif value.lower() in {"horizontal","hor"}:
-            layout_str = "down,count,up"
-        else:
-            layout_str = value
-
-        self.__counter_layout = value
-        self.tile_layout = layout_str
 
     @property
     def valueText(self) -> str:
@@ -2979,6 +3009,9 @@ class Counter(base._TileBase):
         value : Union[float,int]
             the new value to set
         """
+        if value == self.value:
+            return
+        
         i = (value - self.value)/self.step
         i = round(i)
         value = self.value + self.step*i
@@ -3000,18 +3033,6 @@ class Counter(base._TileBase):
         for res in L:
             if isinstance(res,Exception):
                 _LOGGER.warning(f"Counter error: {res}")
-
-    async def interact_set_counter(self, value : Union[float,int], *args):
-        "Function that can be used to set the value by interacting with other elements."
-        
-        if not isinstance(value,(int,float)):
-            if isinstance(value, base.Element):
-                msg = f"{self}: value got passed as an Element: {value}. Make sure you set the appropriate data or map correctly to hold a key defined as value."
-            else:
-                msg = f"{self}: Value must be an integer or float, not {type(value)}"
-            _LOGGER.exception(TypeError(msg))
-            return
-        await self._async_set_counter(value)
 
     @elementactionwrapper.method
     async def increment(self, *args):

@@ -27,7 +27,7 @@ from ..exceptions import *
 from ..constants import CUSTOM_FOLDERS, DEFAULT_BACKGROUND
 from .. import constants as const
 
-from ..pssm_settings import SETTINGS
+from ..pssm_settings import SETTINGS, settings_type
 
 from ..devices import PSSMdevice, FEATURES
 from .. import elements, devices
@@ -95,10 +95,12 @@ class PSSMScreen:
         return PSSMScreen._instance
 
     def __init__(self, device : PSSMdevice,  
-                touch_debounce_time: DurationType = const.DEFAULT_DEBOUNCE_TIME, minimum_hold_time: DurationType = const.DEFAULT_HOLD_TIME, on_interact: Union[Callable[[dict, 'PSSMScreen', CoordType], None], bool,None] = None, on_interact_data : dict = {}, #stack=[], 
-                background=DEFAULT_BACKGROUND, background_fit : Literal["contain", "cover", "crop", "resize"] = "cover", background_fit_arguments : dict = {}, 
-                poll_interval : Union[float, DurationType] = SETTINGS["screen"]["poll_interval"], close_popup_time: Union[float, DurationType] =  SETTINGS["screen"]["close_popup_time"],
-                backlight_behaviour : Optional[Literal["Manual", "On Interact", "Always"]] = None, backlight_time_on : Union[float, DurationType] = None):
+                touch_debounce_time: DurationType = const.DEFAULT_DEBOUNCE_TIME, minimum_hold_time: DurationType = const.DEFAULT_HOLD_TIME, 
+                on_interact: Union[Callable[[dict, 'PSSMScreen', CoordType], None], bool,None] = None, on_interact_data : dict = {}, #stack=[], 
+                background : Union[str,ColorType] = DEFAULT_BACKGROUND, background_fit : Literal["contain", "cover", "crop", "resize"] = "cover", background_fit_arguments : dict = {}, 
+                poll_interval : DurationType = SETTINGS["screen"]["poll_interval"],
+                close_popup_time: DurationType =  SETTINGS["screen"]["close_popup_time"],
+                backlight_behaviour : Optional[Literal["Manual", "On Interact", "Always"]] = "Manual", backlight_time_on : Union[float, DurationType] = None):
 
         ##Placeholder loop to have the atttribute set
         Style.screen = self
@@ -121,7 +123,7 @@ class PSSMScreen:
 
         self.__shorthandFunctionGroups = {"element": self.parse_element_function}
 
-        self._printLock = asyncio.Lock(loop=self.mainLoop)
+        self._printLock = asyncio.Lock()
         "Lock to ensure only one print loop can run"
 
         self._printGather : asyncio.Future = DummyTask()
@@ -141,9 +143,9 @@ class PSSMScreen:
 
         self._device = device
         self._device._Screen = self
-        self._device._updateCondition = asyncio.Condition(loop=self.mainLoop)
+        self._device._updateCondition = asyncio.Condition()
         if self._device.has_feature(FEATURES.FEATURE_BACKLIGHT):
-            self._device.backlight._updateCondition = asyncio.Condition(loop=self.mainLoop)
+            self._device.backlight._updateCondition = asyncio.Condition()
         
         self._device._set_screen()
 
@@ -170,7 +172,7 @@ class PSSMScreen:
         self._isInputThreadStarted = False
 
         self._lastCoords = (-1,-1)
-        self._interactEvent = asyncio.Event(loop=self.mainLoop)
+        self._interactEvent = asyncio.Event()
         self.__touchDebounceTime = tools.parse_duration_string(touch_debounce_time)
         self.__minimumHoldTime = tools.parse_duration_string(minimum_hold_time)
 
@@ -202,7 +204,7 @@ class PSSMScreen:
         elements.ScreenMenu()
 
         elements.StatusBar.add_statusbar_element("device", elements.DeviceIcon())
-        screen_name = "inkBoard" if const.INKBOARD else "screen"
+        screen_name = "inkboard" if const.INKBOARD else "screen"
         dashboardIcon = elements.Icon("mdi:view-dashboard", tap_action={"action": "element:show-popup", "element_id": "screen-menu"})
         elements.StatusBar.add_statusbar_element(screen_name, dashboardIcon)
         
@@ -212,6 +214,11 @@ class PSSMScreen:
     def device(self) -> "PSSMdevice":
         """The device of the screen. For handling battery, screen printing etc."""
         return self._device
+
+    @property
+    def _SETTINGS(self) -> settings_type:
+        "The settings instance, use with care"
+        return SETTINGS
 
     @property
     def colorMode(self):
@@ -407,6 +414,11 @@ class PSSMScreen:
 
     @on_interact.setter
     def on_interact(self, func : Callable):
+        if isinstance(func,str):
+            if not self.printing:
+                self._add_element_attribute_check(self,"on_interact", func)
+            else:
+                func = self.parse_shorthand_function(func, self.on_interact_data)
         self._on_interact = tools.function_checker(func, default=False)
 
     @property
@@ -452,9 +464,9 @@ class PSSMScreen:
     
     @background.setter
     def background(self, value : Union[str, ColorType]):
-        if is_valid_Color(value):
+        if Style.is_valid_color(value):
             self.__background = value
-            self.__baseBackgroundImage = Image.new(self.imgMode, self.size, color = get_Color(value,self.imgMode))
+            self.__baseBackgroundImage = Image.new(self.imgMode, self.size, color = Style.get_color(value,self.imgMode))
         elif isinstance(value,(str,Path)):
             try:
                 img = Image.open(value)
@@ -1766,10 +1778,7 @@ class PSSMScreen:
                 if isinstance(background, Path):
                     p = background
                 else:
-                    if background[0] == "/" or background[0:2] != "./":
-                        p = CUSTOM_FOLDERS["picture_folder"] / background
-                    else:
-                        p = Path(background)
+                    p = tools.parse_known_image_file(background)
                 
                 if not p.exists():
                     msg = f"Background Image file {p} does not exist."
@@ -1830,6 +1839,7 @@ class PSSMScreen:
         if not self.device.has_feature(FEATURES.FEATURE_ROTATION):
             return
         
+        _LOGGER.info("Rotating screen")
         if rotation  != None:
             pass
         else:
@@ -1839,6 +1849,8 @@ class PSSMScreen:
             rotation = r_list[idx]                
         
         await self.device._rotate(rotation)
+
+        SETTINGS["screen"]["rotation"] = rotation
 
         return
 

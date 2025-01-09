@@ -462,7 +462,7 @@ class Device(PSSMdevice):
             else:
                 if not self._resizeTask.done():
                     return
-                resize_event = asyncio.Event(loop=self.Screen.mainLoop)
+                resize_event = asyncio.Event()
                 self.window.bind("<ButtonRelease-1>", lambda event: resize_event.set(), add="+") ##Won't add this to bind as it is removed upon releasing the mouse button
 
             with suppress(RuntimeError):
@@ -489,6 +489,7 @@ class Device(PSSMdevice):
         self._windowHeight = self.window.winfo_height()
 
         await self.parentPSSMScreen._screen_resized()
+        
 
         self._screenImage = Image.new(self.screenMode,(self.screenWidth,self.screenHeight),None)
         self.__last_printed_PIL = self._screenImage.copy()
@@ -507,7 +508,7 @@ class Device(PSSMdevice):
         #Called when the tkinter window is closed
         self.parentPSSMScreen.quit()
 
-    def _quit(self):
+    def _quit(self, exce):
         try:
             self._call_in_main_thread(self._quit_in_mainthread)
         except tk.TclError:

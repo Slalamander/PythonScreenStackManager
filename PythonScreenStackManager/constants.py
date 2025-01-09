@@ -51,13 +51,31 @@ class FEATURES:
     "Names for device features. Use them as constants when checking for features."
 
     FEATURE_POWER = "FEATURE_POWER"
-    "Power features indicate the device is able to turn the hardware off and reboot it"
+    """Power feature to indicate the device is able to turn the hardware off and reboot it
+
+    Adds the following shorthand functions:
+
+    - ``power-off`` to power off the device
+    - ``reboot`` to reboot the device
+    """
+
+    FEATURE_AUTOSTART = "FEATURE_AUTOSTART"
+    "Feature to indicate the device allows starting the programme on boot AND change this setting from within the programme"
 
     FEATURE_INTERACTIVE = "FEATURE_INTERACTIVE"
     "Interactive feature to indicate the device supports screen interaction"
 
     FEATURE_BACKLIGHT = "FEATURE_BACKLIGHT"
-    "Backlight feature to indicate the device can control the screen's brightness (may be renamed)"
+    """Backlight feature to indicate the device can control the screen's brightness, or something akin to it.
+
+    Adds the following shorthand functions:
+
+    - ``backlight-toggle`` to toggle the backlight
+    - ``backlight-turn-on`` to turn on the backlight
+    - ``backlight-turn-off`` to turn off the backlight
+    - ``backlight-temporary`` to temporarily turn on the backlight
+    - ``backlight-set-behaviour`` to set the behaviour of the backlight when interacting with the screen
+    """
 
     FEATURE_NETWORK = "FEATURE_NETWORK"
     "Network feature to indicate the device has internet connectivity and is able to retrieve information on it"
@@ -66,13 +84,20 @@ class FEATURES:
     "Battery feature to indicate the device has a battery and is able to report the charge level and state"
 
     FEATURE_RESIZE = "FEATURE_RESIZE"
-    "Resize feature to indicate the device's screen size can change"
+    "Resize feature to indicate the device's screen size can change and this functionality is implemented"
 
     FEATURE_ROTATION = "FEATURE_ROTATION"
-    "Rotation feature to indicate the device can rotate during runtime."
+    """Rotation feature to indicate the device can rotate during runtime.
+
+    Adds the following shorthand functions:
+    - ``rotate`` to rotate the screen
+    """
 
     FEATURE_PRESS_RELEASE = "FEATURE_PRESS_RELEASE"
-    "Feature to indicate the device is interactive and can report the coordinates of a press and the coordinates of a release"
+    """Feature to indicate the device is interactive and can report the coordinates of a press and the coordinates of a release
+    
+    This feature allows elements to use the ``hold_release_action``.
+    """
 
     @classmethod
     def get_feature_string(cls, feature: str):
@@ -103,6 +128,8 @@ TOUCH_TAP = "TOUCH-TAP"
 
 TOUCH_LONG = "TOUCH-LONG"
 "Indicates a long touch, for devices that do not support reporting both press and release events. Dispatches to element's `hold_action`"
+
+_touch_types = (TOUCH_PRESS, TOUCH_RELEASE)
 
 DEFAULT_DEBOUNCE_TIME = '1ms'
 DEFAULT_HOLD_TIME = '0.5s'
@@ -159,6 +186,7 @@ SHORTHAND_FONTS : dict[fontType, Path] = {
 }
 "Paths to some default implemented fonts. Also has shorthands for default, clock and header fonts. Allows for other libraries to add to it."
 
+SHORTHAND_FONTS["merriweather"] = SHORTHAND_FONTS["merriweather-regular"]
 SHORTHAND_FONTS['default'] = SHORTHAND_FONTS['notosans']
 SHORTHAND_FONTS['default-regular'] = SHORTHAND_FONTS['notosans-regular']
 SHORTHAND_FONTS['default-bold'] = SHORTHAND_FONTS['notosans-bold']

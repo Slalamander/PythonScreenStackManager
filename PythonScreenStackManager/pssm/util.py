@@ -24,11 +24,11 @@ class colorproperty(customproperty):
     
     Usage
     ------
-    ```
-    @colorproperty
-    def my_color(self):
-        return self._my_color
-    ```
+    .. code-block:: python
+
+        @colorproperty
+        def my_color(self):
+            return self._my_color
     """   
 
     _found_properties = set()
@@ -161,19 +161,18 @@ class colorproperty(customproperty):
 
 
 class styleproperty(Generic[T]):
-    """
-    Decorator that can be used to indicate a property is a style property. It also automatically applied the logic to allow using color shorthands to reference colors from parents.
+    """Decorator that can be used to indicate a property is a style property. It also automatically applied the logic to allow using color shorthands to reference colors from parents.
+
     Does not provide functionality to automatically add a setter, but is used to aggregate all color properties such that they can be easily gotten by calling a classes color_properties
 
     Usage
     ------
-    ```
-    @property
-    @e
-    def element_action(self):
-        "performs an action for the element'
-        return self._myColor
-    ```
+    .. code-block: python
+
+        @styleproperty
+        def element_action(self):
+            "performs an action for the element'
+            return self._myColor
 
     Most important is to use the decorator after the `@property` decorator.
     Also, it is best to make any colorProperty return a private variable, i.e. use a single `_` and append the name of the property. Using double `__` causes problems when parsing parent colors.
@@ -184,20 +183,20 @@ class elementaction(customproperty):
     """Decorator to quickly setup actions for an element.
 
     Provides some convenience, as applying this decorator instead of a property immediately applies the following:
-        - specific setter for functions that hooks into the screen's shorthand action parser for strings, but is also able to set it to one of the element's own shorthand actions. It also provides functionality to accept a callable, a string or a dict which combines them all to set them.
-        - Sets up the appropriate {action}_data property for the class
-        - Sets up the appropriate {action}_map property for the class
-        - Sets up the appropriate {action}_kwargs property for the class, which combines the data and map property to construct keyword arguments to pass to the function.
+    
+    - specific setter for functions that hooks into the screen's shorthand action parser for strings, but is also able to set it to one of the element's own shorthand actions. It also provides functionality to accept a callable, a string or a dict which combines them all to set them.
+    - Sets up the appropriate ``{action}_data`` property for the class
+    - Sets up the appropriate ``{action}_map`` property for the class
+    - Sets up the appropriate ``{action}_kwargs`` property for the class, which combines the data and map property to construct keyword arguments to pass to the function.
 
     Usage
     ------
-    ```python
+    .. code-block:: python
 
-    @elementaction
-    def my_element_action(self) -> Callable
-        "An example action for the decorator"
-        return self._my_element_action
-    ```
+        @elementaction
+        def my_element_action(self) -> Callable
+            "An example action for the decorator"
+            return self._my_element_action
 
     Just be mindful that the returned variable has to be the private variation of the property name.
     """
@@ -380,10 +379,10 @@ class elementaction(customproperty):
 class elementactionwrapper:
     """Decorator for functions and methods to allow for usage as element interaction actions, without rewriting them.
 
-    Checks if a function is passed 2 positional arguments, and whether they are instances of `Element` and `InteractEvent`, and accordingly returns either a wrapped function or the original one.
-    Use `@elementactionwrapper.method` to decorate method and classmethod functions, to correctly pass the right parameter for `self` or `cls`respectively.
+    Checks if a function is passed 2 positional arguments, and whether they are instances of :py:class:`Element <PythonScreenStackManager.elements.baseelements.Element>` and :py:class:`InteractEvent`, and accordingly returns either a wrapped function or the original one.
+    Use ``@elementactionwrapper.method`` to decorate method and classmethod functions, to correctly pass the right parameter for ``self`` or ``cls`` respectively.
 
-    When using with a `@staticmethod`, place the `@elementactionwrapper` underneath the staticmethod decorator.
+    When using with a ``@staticmethod``, place the ``@elementactionwrapper`` underneath the staticmethod decorator.
     """    
 
     def __new__(cls, func):

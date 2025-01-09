@@ -19,9 +19,15 @@ license = {file = "LICENSE"}
 requires-python = ">=3.9"
 keywords = ["gui", "pixels", "interface", "MaterialDesignIcon", "mdi icons"]
 classifiers = [
-    "Programming Language :: Python :: 3",
+
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+
     "Operating System :: OS Independent",
+
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
 ]
+
 dependencies = [
     "Pillow", "mdi-pil>=1.1.3"
 ]
@@ -29,6 +35,7 @@ dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://github.com/Slalamander/PythonScreenStackManager"
+source = "https://github.com/Slalamander/PythonScreenStackManager"
 
 [tool.setuptools.dynamic]
 version = {attr = "PythonScreenStackManager.__version__"}

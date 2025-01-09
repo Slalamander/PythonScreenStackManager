@@ -481,7 +481,7 @@ class GridLayout(base.Layout):
                 self.build_layout()
         return await super().async_generate(area, skipNonLayoutGen)
 
-class NavigationTile(base._TileBase):
+class NavigationTile(base.TileElement):
     """
     Styled Tile Element to use with the TabPages. Used to show and select the tabs.
     Not quite fully developed since it's not meant to be used as a standalone element.
@@ -496,6 +496,10 @@ class NavigationTile(base._TileBase):
     name : str
         The name of this Tile, shows as the text.
     """
+
+    @classproperty
+    def tiles(cls):
+        return ("icon","name","line")
 
     @property
     def _emulator_icon(cls): return "mdi:navigation-variant"
@@ -524,6 +528,12 @@ class NavigationTile(base._TileBase):
             ##And also set the properties appropriately
             ##tab tile_layout setter: go through the tiles and set the lines etc. if _tile_layout is auto
         return base.TileLayout.tile_layout.fget(self)
+    
+    @tile_layout.setter
+    def tile_layout(self, value: str):
+        if value.lower() == "auto":
+            self._tile_layout = "auto"
+        base.TileLayout.tile_layout.fset(self, value)
 
     def get_auto_layout(self) -> PSSMLayoutString:
         "Returns the default layout as per the `TabPages` element this `NavigationTile` is contained in."
@@ -533,7 +543,7 @@ class NavigationTile(base._TileBase):
         tabparent : TabPages = self.parentLayouts[-2]
         parent_layout = tabparent._tile_layout
 
-        if parent_layout not in TabPages._default_layouts or parent_layout in {"top", "bottom"}:
+        if parent_layout not in TabPages.defaultLayouts or parent_layout in {"top", "bottom"}:
             return "[icon,name];line"
         elif parent_layout == "left":
             return "line,icon"
@@ -576,13 +586,14 @@ class tabDict(TypedDict):
     "Optional index (page number) that will be given to this tab"
 
 
-class TabPages(base._TileBase):
-    """
-    A layout that can hold multiple other elements (as tabs). 
+class TabPages(base.TileElement):
+    """A layout that can hold multiple other elements (as tabs). 
+
     Comes with elements to cycle through the tab list, as well as a navigation bar that can be used to go to a specific tab.
     Generally, when referring to a page, an index (page number) is required. When referring to a tab, the tab name is required.
     The hide property has been restricted, and hiding the tab element is not permitted. Use `hide_navigation_bar` and `hide_page_handles` instead.
-
+    Each entry in the navigation bar is made using a :py:class:`NavigationTile`
+    
     Parameters
     ----------
     tabs : list[tabDict]
@@ -609,7 +620,7 @@ class TabPages(base._TileBase):
         For the latter, this means setting the active_color to the foreground_color of the `TabPages` and inactive to None, with line color and icon background_color being changed appropriately.
     """        
     
-    _default_layouts = {"top": "navigation;[handle-previous,tab,handle-next]",
+    defaultLayouts = {"top": "navigation;[handle-previous,tab,handle-next]",
                         "bottom": "[handle-previous,tab,handle-next];navigation",
                         "left": "navigation,[tab;[handle-previous,handle-next]]",
                         "right": "[tab;[handle-previous,handle-next]],navigation"
@@ -624,8 +635,11 @@ class TabPages(base._TileBase):
     @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["base.Element", CoordType],Any]]:
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
-        return base._TileBase.action_shorthands | {"show-page": "show_page_shorthand", "show-tab": "show_tab_shorthand", "next-page": "next_page", "previous-page": "previous_page"}
+        return base.TileElement.action_shorthands | {"show-page": "show_page_shorthand", "show-tab": "show_tab_shorthand", "next-page": "next_page", "previous-page": "previous_page"}
 
+    @classproperty
+    def tiles(cls) -> tuple[str,str,str,str]:
+        return ("navigation", "handle-next", "handle-previous", "tab")
 
     def __init__(self, tabs : list[tabDict], tile_layout : Union[Literal["top","bottom","left","right"], PSSMLayoutString] = "bottom",
                 apply_default_sizes : bool = True, navigation_tile_size : Union[float,PSSMdimension] = 0.2,
@@ -680,13 +694,13 @@ class TabPages(base._TileBase):
     def elements(self) -> dict[Literal["navigation","handle-previous","handle-next","tab"], Union[base.Layout,GridLayout, base.Icon]]:
         return self.__elements | {"tab": self.__currentTab}
 
-    @base._TileBase.tile_layout.setter
+    @base.TileElement.tile_layout.setter
     def tile_layout(self, value):
         if value == getattr(self,"_tile_layout",None):
             return
         
-        base._TileBase.tile_layout.fset(self, value)
-        if self._tile_layout != value or value not in TabPages._default_layouts:
+        base.TileElement.tile_layout.fset(self, value)
+        if self._tile_layout != value or value not in TabPages.defaultLayouts:
             return ##This means something was wrong with the layout (or it's not a default one)
 
         self._resize_defaults = True
@@ -999,7 +1013,7 @@ class TabPages(base._TileBase):
         Updates the NavigationBar and the navigation tiles to match the default styles for the current tile_layout.
         If `apply_default_sizes` is `False` or the tile_layout is not a default style, will do nothing.
         """
-        if not self.apply_default_sizes or self._tile_layout not in TabPages._default_layouts: 
+        if not self.apply_default_sizes or self._tile_layout not in TabPages.defaultLayouts: 
             return
 
         if self._tile_layout in {"top", "bottom"}:
