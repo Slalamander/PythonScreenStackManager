@@ -13,7 +13,8 @@ I have not done extensive testing with pssm outside of inkBoard, so I cannot pro
 
 # Documentation
 
-WIP
+The documentation is hosted on readthedocs:
+https://inkboard-documentation.readthedocs.io/en/latest/
 
 # Examples
 
