@@ -716,6 +716,14 @@ class TabPages(base.TileElement):
         return self.__currentTab
 
     @property
+    def currentPage(self) -> str:
+        "The name of the current page being shown"
+        if self._currentIdx != None:
+            return self.__tabNames[self._currentIdx]
+        else:
+            return None
+
+    @property
     def pageElements(self) -> tuple:
         "Tuple with the registered tabs, in order"
         return tuple(self.__tabElements)
