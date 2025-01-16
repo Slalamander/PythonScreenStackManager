@@ -36,6 +36,9 @@ class DuplicateElementError(ElementRegisterError):
     "Raised when an element is registered with an id that already exists."
     pass
 
+class MissingFeature(AttributeError):
+    "Raised if the device does have a certain feature"
+    pass
 
 class ShorthandNotFound(ValueError):
     "Raised when a requested shorthand is not found"
