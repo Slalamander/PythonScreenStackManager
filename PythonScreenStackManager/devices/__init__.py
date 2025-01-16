@@ -5,6 +5,8 @@ Base device module for pssm devices. The `windowed` package is an out of the box
 import asyncio
 from typing import TYPE_CHECKING, TypedDict, Literal, Optional, Union
 import logging
+from functools import cached_property
+
 from PIL import Image
 from abc import ABC, abstractmethod
 from contextlib import suppress
@@ -112,6 +114,15 @@ class PSSMdevice(ABC):
     def name(self) -> str:
         "The name of the device as set by the user."
         return self._name
+
+    @cached_property
+    def features(self) -> tuple[str]:
+        """Returns a tuple with all the features the device has
+        """
+        features = []
+        for feat, val in self._features._asdict().items():
+            if val: features.append(feat)
+        return tuple(features)
 
     @property
     def Screen(self) -> "PSSMScreen":
