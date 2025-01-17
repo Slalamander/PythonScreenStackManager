@@ -631,7 +631,17 @@ class Backlight(BaseDeviceFeature):
     #endregion
 
     def get_feature_state(self) -> dict:
-        
+        """Returns the currently known state of the backlight feature
+
+        This is a dict with the properties that can change or be set.
+        It returns the properties ``state``, ``brightness``, ``behaviour``, ``default_time_on``, ``default_brightness`` and ``default_transition``
+
+        Returns
+        -------
+        dict
+            The state dict
+        """
+
         state = {
             "state": self.state,
             "brightness": self.brightness,
@@ -641,6 +651,7 @@ class Backlight(BaseDeviceFeature):
             "default_brightness": self.default_brightness,
             "default_transition": self.default_transition
         }
+        return state
 
     async def notify_condition(self):
         """Acquires the lock and notifies all awaiting on _updateCondition
@@ -722,7 +733,7 @@ class Backlight(BaseDeviceFeature):
         """
         pass
 
-class Battery(ABC):
+class Battery(BaseDeviceFeature):
     '''Base class for interfacing with a battery.
 
     The battery of the device. Provides callbacks to get the battery state and charge level, as well as update it.
@@ -751,6 +762,18 @@ class Battery(ABC):
         """The state of the battery
         """
         return self._batteryState
+
+    def get_feature_state(self):
+        """Returns the currently known state of the battery feature
+
+        This is a dict with the battery's state and charge level
+
+        Returns
+        -------
+        dict
+            The state dict
+        """
+        return {"state": self.state, "charge": self.charge}
 
     def update_battery_state(self):
         """
