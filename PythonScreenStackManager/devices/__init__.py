@@ -508,7 +508,7 @@ class Network(BaseDeviceFeature):
         pass
 
 
-class Backlight(ABC):
+class Backlight(BaseDeviceFeature):
     '''Baseclass to control a device's backlight, screen brightness and the like.
 
     The backlight of the device. Provides callbacks to the state, and functions to turn on, off, or toggle it. Upon initialising this class, the light will be set to 0 to ensure the level is correct.
@@ -517,7 +517,7 @@ class Backlight(ABC):
     Depending on how the device handles, either ``turn_on`` or ``turn_on_async`` should be defined, and the other can simple call the defined function. But be careful with blocking the event loop.
     To keep connected elements in synch with the backlight's state, whenever it is updated the ``notify_condition`` function can be awaited, which will ensure all elements are notified of the new state.    
     '''
-    def __init__(self, device: "PSSMdevice", defaultBrightness : int = 50, defaultTransition : float = 0):
+    def __init__(self, device: "PSSMdevice", default_brightness : int = 50, defaultTransition : float = 0):
         ##Ensuring the backlight is off when the dashboard starts, so the brightness and state are correct
         _LOGGER.verbose("Setting up base device backlight class")
         self._updateCondition = asyncio.Condition()
@@ -536,7 +536,7 @@ class Backlight(ABC):
         self.default_time_on = SETTINGS["device"]["backlight_time_on"]
 
         self.defaultTransition = defaultTransition
-        self.defaultBrightness = defaultBrightness
+        self.default_brightness = default_brightness
 
         self._lightLock = asyncio.Lock()
         "Lock that is meant to prevent multiple functions setting the light state at the same time."
@@ -554,14 +554,14 @@ class Backlight(ABC):
         return True if self._level > 0 else False
 
     @property
-    def defaultBrightness(self) -> int:
+    def default_brightness(self) -> int:
         """The default brightness to turn the backlight on to"""
-        return self.__defaultBrightness
+        return self.__default_brightness
 
-    @defaultBrightness.setter
-    def defaultBrightness(self, value : int):
+    @default_brightness.setter
+    def default_brightness(self, value : int):
         if value >= 0 and value <= 100:
-            self.__defaultBrightness = value
+            self.__default_brightness = value
             SETTINGS["device"]["backlight_default_brightness"] = value
             with suppress(RuntimeError):
                 asyncio.create_task(self.notify_condition())
@@ -629,6 +629,18 @@ class Backlight(ABC):
             loop.create_task(
                 self.notify_condition())
     #endregion
+
+    def get_feature_state(self) -> dict:
+        
+        state = {
+            "state": self.state,
+            "brightness": self.brightness,
+            "behaviour": self.behaviour,
+            
+            "default_time_on": self.default_time_on,
+            "default_brightness": self.default_brightness,
+            "defaultTransition": self.defaultTransition
+        }
 
     async def notify_condition(self):
         """Acquires the lock and notifies all awaiting on _updateCondition

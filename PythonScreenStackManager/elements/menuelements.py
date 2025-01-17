@@ -525,7 +525,7 @@ class ScreenMenu(UniquePopupMenu):
 
     async def _set_backlight_slider(self, elt, option):
         if option == "Default Brightness":
-            attr = "defaultBrightness"
+            attr = "default_brightness"
         elif option == "Brightness":
             attr = "brightness"
         self.backlightSlider.monitor_attribute = attr

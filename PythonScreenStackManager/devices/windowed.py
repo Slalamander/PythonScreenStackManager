@@ -694,7 +694,7 @@ class Backlight(BaseBacklight):
         logger.verbose(f"Async turning on in {transition} seconds")
         
         if brightness == None:
-            brightness = self.defaultBrightness
+            brightness = self.default_brightness
         
         if transition == None:
             transition = self.defaultTransition
@@ -712,7 +712,7 @@ class Backlight(BaseBacklight):
             transition = self.defaultTransition
 
         if brightness == None:
-            brightness = self.defaultBrightness
+            brightness = self.default_brightness
         
         if transition < 0:
             logger.error("Transition time cannot be negative.")

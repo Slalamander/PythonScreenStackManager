@@ -712,7 +712,7 @@ class PSSMScreen:
                     'device' : {'backlight_behaviour': 'backlight.behaviour',
                                 'backlight_time_on': 'backlight.default_time_on',
                                 'backlight_default_transition': 'backlight.defaultTransition',
-                                'backlight_default_brightness': 'backlight.defaultBrightness',
+                                'backlight_default_brightness': 'backlight.default_brightness',
                                 }
                     }
         sett_map = SETTINGS.attribute_map
@@ -1951,7 +1951,7 @@ class PSSMScreen:
         reset : bool, optional
             Set to true to restart the timer if it is already running, by default True
         brightness : int, optional
-            The brightness to set the backlight to, by default None (Translates to `backlight.defaultBrightness`)
+            The brightness to set the backlight to, by default None (Translates to `backlight.default_brightness`)
         transition : float, optional
             The time it will take (approximately) to transition to `brightness`, by default None (Translates to `backlight.defaultTransition`)
         """
@@ -1968,7 +1968,7 @@ class PSSMScreen:
         reset : bool, optional
             Set to true to restart the timer if it is already running, by default True
         brightness : int, optional
-            The brightness to set the backlight to, by default None (Translates to `backlight.defaultBrightness`)
+            The brightness to set the backlight to, by default None (Translates to `backlight.default_brightness`)
         transition : float, optional
             The time it will take (approximately) to transition to `brightness`, by default None (Translates to `backlight.defaultTransition`)
         """

@@ -612,15 +612,15 @@ class BacklightSlider(_DeviceMonitor, comps.Slider):
 
     Parameters
     ----------
-    monitor_attribute : Literal[&quot;brightness&quot;, &quot;defaultBrightness&quot;], optional
-        Either brightness or defaultBrightness, by default "brightness"
+    monitor_attribute : Literal[&quot;brightness&quot;, &quot;default_brightness&quot;], optional
+        Either brightness or default_brightness, by default "brightness"
         If brightness, the brightness is directly changed to the new value
     """  
 
     @property
     def _emulator_icon(cls): return "mdi:brightness-percent"
 
-    def __init__(self, monitor_attribute : Literal["brightness", "defaultBrightness"]= "brightness", **kwargs):
+    def __init__(self, monitor_attribute : Literal["brightness", "default_brightness"]= "brightness", **kwargs):
 
         comps.Slider.__init__(self,position=50, minimum=0, maximum=100, value_type=int, **kwargs)
 
@@ -652,14 +652,14 @@ class BacklightSlider(_DeviceMonitor, comps.Slider):
         return "backlight"
     
     @property
-    def monitor_attribute(self) -> Literal["brightness", "defaultBrightness"]:
+    def monitor_attribute(self) -> Literal["brightness", "default_brightness"]:
         "The attribute of the feature being monitored"
         return self.__monitor_attribute
     
     @monitor_attribute.setter
-    def monitor_attribute(self, value:Literal["brightness", "defaultBrightness"]):
-        if value not in ["brightness", "defaultBrightness"]:
-            _LOGGER.error("BacklightSlider can only monitor brightness or defaultBrightness")
+    def monitor_attribute(self, value:Literal["brightness", "default_brightness"]):
+        if value not in ["brightness", "default_brightness"]:
+            _LOGGER.error("BacklightSlider can only monitor brightness or default_brightness")
             return
         self.__monitor_attribute = value
         val = getattr(self.monitor, value)
@@ -678,13 +678,13 @@ class BacklightSlider(_DeviceMonitor, comps.Slider):
         
         ##Not fully sure why, but control needs to go back to the event loop twice, probaly due to some other await in the lightuptask?
         ##Anyhow this works, it only doesn't turn off anymore, but ill give an option for that.
-        ##Also don't forget to implement the option for the defaultBrightness
-        if self.monitor_attribute == "defaultBrightness":
+        ##Also don't forget to implement the option for the default_brightness
+        if self.monitor_attribute == "default_brightness":
             ##This changes the default brightness, which means the backlight (if it turns on by interact) will turn on to the new value
             ##Also changes if the backlight is already on since it restarts the task
             ##Should actually change that to prevent the brightness from changing constantly
             ##Simple to do by just passing the current value if it is already on.
-            self.monitor.defaultBrightness = self.position
+            self.monitor.default_brightness = self.position
         else:
             await asyncio.sleep(0)
             await asyncio.sleep(0)
