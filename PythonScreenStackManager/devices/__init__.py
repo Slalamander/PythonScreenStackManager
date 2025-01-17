@@ -378,7 +378,54 @@ class PSSMdevice(ABC):
     #endregion
 
 #region subclasses
-class Network(ABC):
+
+class BaseDeviceFeature(ABC):
+    """Base class for device features that require a class
+    """
+
+    @abstractmethod
+    def __init__(self):
+        return
+    
+    @abstractmethod
+    def get_feature_state(self) -> dict:
+        """Creates a state dict for the feature
+
+        It should return the value of any properties that can update dynamically
+
+        Returns
+        -------
+        dict
+            A dict with the feature's attributes and current value
+        """        
+        return
+    
+    def is_feature_updated(self, state_dict: dict) -> bool:
+        """Returns if the passed ``state_dict`` is up to date
+
+        ``state_dict`` does not have to be a complete dict of the feature state,
+        but it should only contain keys actually present in the feature state.
+
+        Parameters
+        ----------
+        state_dict : dict
+            dict with the currently known states
+
+        Returns
+        -------
+        bool
+        """
+
+        ##may need to check if this works like this, or if the comparison tests the object itself
+        current_state = self.get_feature_state()
+        for key, val in state_dict.items():
+            if current_state[key] != val:
+                return True
+        return False
+
+
+
+class Network(BaseDeviceFeature):
     '''Base class to get information on a device's network.
 
     Gets IP Adress, network SSID etc.
@@ -427,11 +474,33 @@ class Network(ABC):
         return self._SSID
 
     @property
-    def macAddr(self) -> str:
+    def macAddress(self) -> str:
         """Returns the mac adress of the device"""
         return self._macAddr
 
     #endregion
+
+    def get_feature_state(self) -> dict:
+        """Returns the currently known state of the network feature
+
+        This is a dict with the properties that can change during runtime.
+
+        Returns
+        -------
+        dict
+            The state dict
+        """
+
+        state = {
+            "state": self.state,
+            "IP": self.IP,
+            "wifiOn": self.wifiOn,
+            "connected": self.connected,
+            "signal": self.signal,
+            "SSID": self.SSID
+        }
+        ##Not including the mac address as it does not change anyways
+        return state
 
     @abstractmethod
     async def async_update_network_properties(self):
