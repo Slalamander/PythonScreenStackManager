@@ -703,7 +703,7 @@ class PSSMScreen:
         return checks_passed
 
     @elementactionwrapper.method
-    def save_settings(self, *args):
+    def save_settings(self):
         "Saves settings for next runs."
 
         #Settings should be kept up to date when setting the appropriate variables, but just in case.
@@ -728,7 +728,7 @@ class PSSMScreen:
         return
 
     @elementactionwrapper.method
-    def reload(self, full: bool = False, *args):
+    def reload(self, full: bool = False):
         "Saves settings and sets the _eStop to reload. Reloading must be explicitly implemented in the main script."
         ##Add reload via inkBoard?
         if self.mainLoop.is_running():
@@ -739,7 +739,7 @@ class PSSMScreen:
             self.quit(exce=exce)
 
     @elementactionwrapper.method
-    def quit(self, exce: Exception = None, *args):
+    def quit(self, exce: Exception = None):
         "Quits inkBoard by setting the eStop future to SystemExit."
         if not isinstance(exce, Exception) and not (isinstance(exce,type) and issubclass(exce, Exception)):
             exce = SystemExit("Quit called")
