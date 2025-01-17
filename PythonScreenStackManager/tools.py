@@ -6,6 +6,7 @@ Provides some helper functions for PIL and coloring, asyncio  and some general f
 import logging
 import asyncio
 import re as regex
+import inspect
 
 from typing import *
 from math import cos, sin, floor
@@ -124,6 +125,39 @@ def function_checker(func: Union[Callable[...,None], bool, None], default: Calla
         if func:
             _LOGGER.warning(f"interaction booleans can only be False, setting to False")
     return False
+
+def validate_action_call(func: Union[Callable, Coroutine], keyword_arguments: dict, validate_required: bool = True, positional_args: list = []):
+    """Validates that an action can be called with the provided keyword arguments
+
+    Does not check for positional parameters.
+
+    Parameters
+    ----------
+    func : Callable
+        The function or coroutine function to validate
+    keyword_arguments : dict, optional
+        The keyword arguments that will be passed, by default {}
+    validate_required : bool, optional
+        If true, required arguments will also be checked to be present, by default True
+    positional_args : list, optional
+        Any positional arguments that may be passed, by default []
+        Mainly here in case the positional arguments are passed when the function is called, and do not have to be set by the user.
+
+
+    Raises
+    ----------
+    TypeError
+        Indicates the function would not be able to be called correctly
+    """
+    if validate_required:
+        inspect.signature(func).bind(*positional_args, **keyword_arguments)
+    else:
+        inspect.signature(func).bind_partial(*positional_args, **keyword_arguments)
+
+    
+    ##verify: all required keywords present
+    ##Only allowed keywords present
+    return True
 
 def update_nested_dict(update_dict: dict, old_dict: dict) -> dict:
     """Updates the old dict in a nested manner.
