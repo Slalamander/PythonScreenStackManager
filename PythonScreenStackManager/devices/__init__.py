@@ -517,7 +517,7 @@ class Backlight(BaseDeviceFeature):
     Depending on how the device handles, either ``turn_on`` or ``turn_on_async`` should be defined, and the other can simple call the defined function. But be careful with blocking the event loop.
     To keep connected elements in synch with the backlight's state, whenever it is updated the ``notify_condition`` function can be awaited, which will ensure all elements are notified of the new state.    
     '''
-    def __init__(self, device: "PSSMdevice", default_brightness : int = 50, defaultTransition : float = 0):
+    def __init__(self, device: "PSSMdevice", default_brightness : int = 50, default_transition : float = 0):
         ##Ensuring the backlight is off when the dashboard starts, so the brightness and state are correct
         _LOGGER.verbose("Setting up base device backlight class")
         self._updateCondition = asyncio.Condition()
@@ -535,7 +535,7 @@ class Backlight(BaseDeviceFeature):
         self._behaviour = SETTINGS["device"]["backlight_behaviour"]
         self.default_time_on = SETTINGS["device"]["backlight_time_on"]
 
-        self.defaultTransition = defaultTransition
+        self.default_transition = default_transition
         self.default_brightness = default_brightness
 
         self._lightLock = asyncio.Lock()
@@ -578,14 +578,14 @@ class Backlight(BaseDeviceFeature):
         return 0
 
     @property
-    def defaultTransition(self) -> float:
+    def default_transition(self) -> float:
         """The default transition time (in seconds)"""
-        return self.__defaultTransition
+        return self.__default_transition
 
-    @defaultTransition.setter
-    def defaultTransition(self, value : float):
+    @default_transition.setter
+    def default_transition(self, value : float):
         if value >= 0:
-            self.__defaultTransition = value
+            self.__default_transition = value
             SETTINGS["device"]["backlight_default_transition"] = value
             asyncio.create_task(self.notify_condition())
         else:
@@ -639,7 +639,7 @@ class Backlight(BaseDeviceFeature):
             
             "default_time_on": self.default_time_on,
             "default_brightness": self.default_brightness,
-            "defaultTransition": self.defaultTransition
+            "default_transition": self.default_transition
         }
 
     async def notify_condition(self):

@@ -481,7 +481,7 @@ class ScreenMenu(UniquePopupMenu):
 
             layout.append([f"{h}*2",(sliderLayout, "?"), (behvLayout,"w*0.35")])
 
-            trSetter = comps.Counter("default", self.device.backlight.defaultTransition,step=0.1, minimum=0, on_count=self._set_transition, **countkwargs)
+            trSetter = comps.Counter("default", self.device.backlight.default_transition,step=0.1, minimum=0, on_count=self._set_transition, **countkwargs)
             timeSetter = comps.Counter("default",self.parentPSSMScreen.backlight_time_on,step=1, minimum=0, roundDigits=0, on_count=self._set_on_time, **countkwargs)
 
             countW = "w*0.2"
@@ -516,7 +516,7 @@ class ScreenMenu(UniquePopupMenu):
         return self.menu_layout
     
     def _set_transition(self, elt, value : float):
-        self.device.backlight.defaultTransition = value
+        self.device.backlight.default_transition = value
         return
 
     async def _set_on_time(self,elt, value : float):

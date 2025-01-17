@@ -32,7 +32,7 @@ _sett_map = {'screen': {"rotation" : 'rotation',
                                 },
             'device' : {'backlight_behaviour': 'backlight.behaviour',
                         'backlight_time_on': 'backlight.default_time_on',
-                        'backlight_default_transition': 'backlight.defaultTransition',
+                        'backlight_default_transition': 'backlight.default_transition',
                         'backlight_default_brightness': 'backlight.default_brightness'}
                     }
 

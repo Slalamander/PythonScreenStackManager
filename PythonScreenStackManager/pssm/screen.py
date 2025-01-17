@@ -711,7 +711,7 @@ class PSSMScreen:
                                 },
                     'device' : {'backlight_behaviour': 'backlight.behaviour',
                                 'backlight_time_on': 'backlight.default_time_on',
-                                'backlight_default_transition': 'backlight.defaultTransition',
+                                'backlight_default_transition': 'backlight.default_transition',
                                 'backlight_default_brightness': 'backlight.default_brightness',
                                 }
                     }
@@ -1953,7 +1953,7 @@ class PSSMScreen:
         brightness : int, optional
             The brightness to set the backlight to, by default None (Translates to `backlight.default_brightness`)
         transition : float, optional
-            The time it will take (approximately) to transition to `brightness`, by default None (Translates to `backlight.defaultTransition`)
+            The time it will take (approximately) to transition to `brightness`, by default None (Translates to `backlight.default_transition`)
         """
         asyncio.create_task(self.temporary_backlight(time_on, reset, brightness, transition))
 
@@ -1970,7 +1970,7 @@ class PSSMScreen:
         brightness : int, optional
             The brightness to set the backlight to, by default None (Translates to `backlight.default_brightness`)
         transition : float, optional
-            The time it will take (approximately) to transition to `brightness`, by default None (Translates to `backlight.defaultTransition`)
+            The time it will take (approximately) to transition to `brightness`, by default None (Translates to `backlight.default_transition`)
         """
         if not self.lightupTask.done():
             if reset:
