@@ -6,7 +6,7 @@ from math import floor, ceil
 import logging
 import re
 from itertools import cycle
-from functools import partial
+from functools import partial, cached_property
 from typing import TYPE_CHECKING, Callable, Union, Optional, Literal, \
                     TypeVar, Any, TypedDict, Coroutine
 from types import MappingProxyType
@@ -34,7 +34,7 @@ from .. import tools
 from ..tools import DummyTask, DrawShapes
 
 from ..pssm.styles import Style
-from ..pssm.util import colorproperty, elementaction, elementactionwrapper
+from ..pssm.decorators import colorproperty, elementaction, elementactionwrapper, trigger_condition
 
 if TYPE_CHECKING:
     from ..pssm.screen import PSSMScreen as Screen
@@ -290,6 +290,14 @@ class Element(ABC):
     def mainLoop(self) -> Optional[asyncio.BaseEventLoop]:
         "The mainloop of the screen"
         return Screen.get_screen().mainLoop
+
+    @cached_property
+    def triggerCondition(self) -> asyncio.Condition:
+        """Condition that is notified upon calls to certain functions
+
+        Handy to track certain element states, for example.
+        """
+        return asyncio.Condition()
 
     @property
     def isGenerating(self) -> bool:
@@ -2610,6 +2618,7 @@ class Popup(Layout):
         loop = self.parentPSSMScreen.mainLoop
         loop.create_task(self.async_show())
 
+    @trigger_condition
     @elementactionwrapper.method
     async def async_show(self):
         "Shows the popup on screen"
@@ -2637,6 +2646,7 @@ class Popup(Layout):
         loop = self.parentPSSMScreen.mainLoop
         loop.create_task(self.async_close(*args, **kwargs))
 
+    @trigger_condition
     @elementactionwrapper.method
     async def async_close(self, *args, **kwargs):
         "Removes the popup from the screen"
@@ -5236,6 +5246,7 @@ class _BaseSlider(Element):
 
         await self.async_set_position(rel_touch)
 
+    @trigger_condition
     async def async_set_position(self, new_position, *args):
         if new_position == self.position:
             return
@@ -5386,6 +5397,7 @@ class _BoolElement(Element):
         "Set the boolean state to `new_state`"
         asyncio.create_task(self.set_state_async(new_state))
 
+    @trigger_condition
     async def set_state_async(self, new_state : Optional[bool] = None, *args):
         """Set the new state of the element.
         
@@ -5774,6 +5786,7 @@ class _ElementSelect(Element):
         "Function that can be used as a tap_action, to select the element"
         await self.async_select(option)
 
+    @trigger_condition
     async def async_select(self, option : str, call_on_select : bool = True):
         """Select or deselect the provided option
 
