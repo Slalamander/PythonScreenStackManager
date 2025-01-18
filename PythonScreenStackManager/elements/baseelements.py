@@ -2632,6 +2632,8 @@ class Popup(Layout):
         if self not in self.parentPSSMScreen.popupsOnTop:
             self.parentPSSMScreen.add_element(self)
             self.parentPSSMScreen.popupsOnTop.append(self)
+            async with self.screen.triggerCondition:
+                self.screen.triggerCondition.notify_all()
         else:
             _LOGGER.warning(f"Popup {self.id} is already on screen. Close it first.")
         
@@ -2664,6 +2666,9 @@ class Popup(Layout):
         if self.screen.device.screenType == "E-Ink":
             await asyncio.to_thread(
                 self.screen.device.refresh_screen)
+            
+        async with self.screen.triggerCondition:
+            self.screen.triggerCondition.notify_all()
 
     async def _auto_close_timer(self):
         if self.auto_close == True:
