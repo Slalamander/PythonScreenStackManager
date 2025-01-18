@@ -17,6 +17,7 @@ from ..tools import DummyTask, parse_duration_string
 
 from ..pssm_settings import SETTINGS
 from ..pssm_types  import *
+from ..pssm.decorators import trigger_condition
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.debug("Importing Base device")
@@ -386,7 +387,11 @@ class BaseDeviceFeature(ABC):
     @abstractmethod
     def __init__(self):
         return
-    
+
+    @cached_property
+    def triggerCondition(self) -> asyncio.Condition:
+        return asyncio.Condition()
+
     @abstractmethod
     def get_feature_state(self) -> dict:
         """Creates a state dict for the feature
@@ -660,8 +665,8 @@ class Backlight(BaseDeviceFeature):
     async def notify_condition(self):
         """Acquires the lock and notifies all awaiting on _updateCondition
         """           
-        async with self._updateCondition:
-            self._updateCondition.notify_all()
+        async with self.triggerCondition:
+            self.triggerCondition.notify_all()
 
     @abstractmethod
     def turn_on(self, brightness : int = None, transition : float = None):
@@ -797,8 +802,9 @@ class Battery(BaseDeviceFeature):
         """
         pass
 
+    @trigger_condition
     def _update_properties(self, battery_state: tuple[int,str]):
-        "Use this to update the battery properties (charge and state) after updating updating the state"
+        "Use this to update the battery properties (charge and state) after updating the state"
         self._batteryCharge = battery_state[0]
         if battery_state[1] in allowedBatteryStates:
             self._batteryState = battery_state[1]

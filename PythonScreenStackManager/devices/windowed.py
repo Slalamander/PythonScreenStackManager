@@ -25,6 +25,8 @@ from ..tools import DummyTask, TouchEvent
 from .. import tools, constants as const
 from ..pssm_types import ColorType
 
+from ..pssm.decorators import trigger_condition
+
 logger = logging.getLogger(__name__)
 
 t = tk
@@ -257,6 +259,12 @@ class Device(PSSMdevice):
         self._call_in_main_thread(
                 self.window.resizable, v, v
             )
+        
+    @property
+    def triggerCondition(self) -> asyncio.Condition:
+        """asyncio condition that is notified when any triggers are called
+        """
+        return self._updateCondition
     #endregion
     
     async def async_pol_features(self):
@@ -291,6 +299,7 @@ class Device(PSSMdevice):
         ##inkBoard designer uses tkthread for this.
         func(*args, **kwargs)
 
+    @trigger_condition
     def print_pil(self, img : Image.Image,x:int,y:int,isInverted=False):
         """
         Prints a pillow image onto the screen at the provided coordinates. Ensure the mode of the pillow image matches that of the screen.
@@ -470,6 +479,7 @@ class Device(PSSMdevice):
                 self._resizeTask = self.Screen.mainLoop.create_task(self._resize_window(resize_event))
         return
     
+    @trigger_condition
     async def _resize_window(self, event : Union[tk.Event,asyncio.Event]):
         ##Called when the window has been resized
 
@@ -518,6 +528,8 @@ class Device(PSSMdevice):
         for idx in self.canvas.find_all():
             self.canvas.delete(idx)
 
+
+
 class Network(BaseNetwork):
     '''
     Handles Network stuff. Gets IP Adress, network SSID etc, and can turn on and off wifi.
@@ -540,6 +552,7 @@ class Network(BaseNetwork):
         self._wifiOn = False ##Assuming it is off when booting up, but if the ip checks pass it should be connected
         await self.async_update_network_properties()
         
+    @trigger_condition
     def __update_network_properties(self):
         "Get the current network values and update the object attributes."
         netw = self.__get_network()
@@ -636,7 +649,8 @@ class Backlight(BaseBacklight):
         self.bgRect = self.screenCanvas.create_image(0,0, anchor=tk.NW, image=self.blTk)
         self.__level = level
 
-    async def __transition(self,brightness : int, transition: float):
+    @trigger_condition
+    async def __transition(self, brightness : int, transition: float):
         if not self.transitionTask.done():
             self.transitionTask.cancel("New transition received")
 
