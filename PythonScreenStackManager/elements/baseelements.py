@@ -2497,9 +2497,9 @@ class Popup(Layout):
     def __init__(self, layout=[], width: PSSMdimension = "W*0.8", height: PSSMdimension = "H*0.5",
                 horizontal_position: PSSMdimension = "(W-w)/2", vertical_position: PSSMdimension = "(H-h)/2", 
                 background_color : Optional[ColorType] = DEFAULT_BACKGROUND_COLOR, blur_background : bool = DEFAULT_BLUR_POPUP_BACKGROUND, outline_color : Optional[ColorType] = None, outline_width=5, radius="H*0.05",
-                auto_close=True, popupID : str = None, **kwargs):
+                auto_close=True, popupID : str = None, id : str = None, **kwargs):
 
-        super().__init__(layout=layout, background_color=background_color, 
+        super().__init__(layout=layout, background_color=background_color, id=id,
                          outline_color=outline_color, outline_width=outline_width, radius=radius, **kwargs)
 
         self._width = width
@@ -2516,10 +2516,12 @@ class Popup(Layout):
         self._tapEvent : asyncio.Event
         "Event that is set when the popup is tapped. Used to track when to automatically close it."
 
-        if popupID == None:
-            self.__popupID = None
-        else:
+        if popupID:
             self.__popupID = popupID
+        elif id:
+            self.__popupID = id
+        else:
+            self.__popupID = None
 
     #region
     # ----------------------------- popup properties ----------------------------- #
