@@ -16,7 +16,7 @@ from .const import *
 from ..tools import DummyTask, parse_duration_string
 
 from ..pssm_settings import SETTINGS
-from ..pssm_types  import RotationValues
+from ..pssm_types  import *
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.debug("Importing Base device")
@@ -578,21 +578,24 @@ class Backlight(BaseDeviceFeature):
         return 0
 
     @property
-    def default_transition(self) -> float:
+    def default_transition(self) -> DurationType:
         """The default transition time (in seconds)"""
         return self.__default_transition
 
     @default_transition.setter
     def default_transition(self, value : float):
-        if value >= 0:
-            self.__default_transition = value
+        
+        value_secs = parse_duration_string(value)
+
+        if value_secs >= 0:
+            self.__default_transition = value_secs
             SETTINGS["device"]["backlight_default_transition"] = value
             asyncio.create_task(self.notify_condition())
         else:
             _LOGGER.error("Default transition time must be 0 or larger")
 
     @property
-    def behaviour(self) -> Literal["Manual", "On Interact", "Always"]:
+    def behaviour(self) -> backlightbehaviours: #Literal["Manual", "On Interact", "Always"]:
         """Backlight behaviour. 
         Since it affects screen interaction, you can set this via the parent screen (set_backlight_behaviour).
         """
