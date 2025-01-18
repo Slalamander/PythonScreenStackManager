@@ -440,7 +440,7 @@ class Network(BaseDeviceFeature):
 
     #region Network properties            
     @property
-    def state(self) -> Literal["connected", "disconnected", "off"]:
+    def state(self) -> networkconnectionstates:
         "State of the wifi radio. Shorthand to combine connected and wifiOn"
         if self.wifiOn:
             state = "connected" if self.connected else "disconnected"
@@ -469,8 +469,9 @@ class Network(BaseDeviceFeature):
         return self._signal
 
     @property
-    def SSID(self) -> str:
-        """Returns the SSID of the connected network"""
+    def SSID(self) -> Union[str,None]:
+        """Returns the SSID of the connected network.
+        None if not connected"""
         return self._SSID
 
     @property
@@ -480,7 +481,7 @@ class Network(BaseDeviceFeature):
 
     #endregion
 
-    def get_feature_state(self) -> dict:
+    def get_feature_state(self) -> networkstate:
         """Returns the currently known state of the network feature
 
         This is a dict with the properties that can change during runtime.
@@ -633,7 +634,7 @@ class Backlight(BaseDeviceFeature):
                 self.notify_condition())
     #endregion
 
-    def get_feature_state(self) -> dict:
+    def get_feature_state(self) -> backlightstate:
         """Returns the currently known state of the backlight feature
 
         This is a dict with the properties that can change or be set.
@@ -741,7 +742,7 @@ class Battery(BaseDeviceFeature):
 
     The battery of the device. Provides callbacks to get the battery state and charge level, as well as update it.
     '''
-    def __init__(self, device : "PSSMdevice", charge : int, state: Literal["full","charging","discharging"]):
+    def __init__(self, device : "PSSMdevice", charge : int, state: batterychargingstates):
         """
         Parameters
         ----------
@@ -761,12 +762,12 @@ class Battery(BaseDeviceFeature):
         return self._batteryCharge
     
     @property
-    def state(self) -> Literal["full","charging","discharging"]:
+    def state(self) -> batterychargingstates:
         """The state of the battery
         """
         return self._batteryState
 
-    def get_feature_state(self):
+    def get_feature_state(self) -> batterystate:
         """Returns the currently known state of the battery feature
 
         This is a dict with the battery's state and charge level
@@ -799,7 +800,7 @@ class Battery(BaseDeviceFeature):
     def _update_properties(self, battery_state: tuple[int,str]):
         "Use this to update the battery properties (charge and state) after updating updating the state"
         self._batteryCharge = battery_state[0]
-        if battery_state[1] in {"full","charging","discharging"}:
+        if battery_state[1] in allowedBatteryStates:
             self._batteryState = battery_state[1]
         else:
             _LOGGER.warning(f"{battery_state[1]} is not a valid value for the batteryState")

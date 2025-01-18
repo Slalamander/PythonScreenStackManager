@@ -3,7 +3,7 @@ Various type hints for use with pssm.
 """
 from typing import TYPE_CHECKING, \
                 Union, TypeVar, Literal, Optional, TypedDict, Callable, Any, Generic, NamedTuple,\
-                Protocol
+                Protocol, get_args
 import functools
 
 from mdi_pil import mdiType
@@ -184,6 +184,62 @@ BadgeLocationType = Literal["UR", "LR", "UL", "LL"]
 #     UL: Upper Left\n
 #     LL: Lower Left\n
 # """
+
+networkconnectionstates = Literal["connected", "disconnected", "off"]
+
+class networkstate(TypedDict):
+
+    state: networkconnectionstates
+    "Current state of the network's connection"
+
+    IP: str
+    "The IP address of the device on the network"
+
+    wifiOn: bool
+    "Whether wifi is currently on"
+
+    connected: bool
+    "Whether the network is currently connected"
+
+    signal: Union[int, None]
+    "Strength of the wifi signal (0-100), None if it is not available"
+
+    SSID: str
+    "The SSID of the connected network, None if not connected"
+
+backlightbehaviours = Literal["Manual", "On Interact", "Always"]
+allowedBacklightBehaviours = get_args(backlightbehaviours)
+
+class backlightstate(TypedDict):
+
+    state: bool
+    "The current state of the backlight"
+
+    brightness: int
+    "The current brightness of the backlight (0-100)"
+
+    behaviour: backlightbehaviours
+    "The way the backlight behaves"
+
+    default_time_on: DurationType
+    "The default time the backlight stays on, if turned on via temporary-backlight"
+
+    default_brightness: int
+    "The default brightness the backlight turns on with"
+
+    default_transition: DurationType
+    "The default transition to turn the backlight on with"
+
+batterychargingstates = Literal["full","charging","discharging"]
+allowedBatteryStates = get_args(batterychargingstates)
+
+class batterystate(TypedDict):
+
+    state: batterychargingstates
+    "Current charging state of the battery"
+
+    charge: int
+    "Current battery charge (0-100)"
 
 class BatteryIconSettings(TypedDict):
     fillIcon: Optional[mdiType]
