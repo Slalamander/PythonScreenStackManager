@@ -24,7 +24,8 @@ from .. import tools
 from ..tools import DrawShapes, DummyTask
 
 from . import baseelements as base
-from .baseelements import _LOGGER, IMPLEMENTED_ICON_SHAPES, colorproperty, elementaction, elementactionwrapper, Style
+from .baseelements import _LOGGER, IMPLEMENTED_ICON_SHAPES, Style,\
+        colorproperty, elementaction, elementactionwrapper, trigger_condition
 
 BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
 
@@ -2197,22 +2198,6 @@ class TimerSlider(Slider):
                     _LOGGER.debug(f"Timer {self.id} stopped before being done")
                     return False
 
-    @elementactionwrapper.method
-    def start_timer(self, reset=False):
-        " Starts the timer. If the timer previously reached its end, it will be restarted."
-
-        ##Second condition ensures the timer can be restart if it is paused
-        d = self._timerTask.done()
-        c = self._timerTask.cancelled()
-        if (self._timerTask.done() and not self._timerTask.cancelled()) or reset:
-            if self.count == "up":
-                self.position = self.minimum
-            elif self.count == "down":
-                self.position = self.maximum
-
-        loop = self.parentPSSMScreen.mainLoop
-        self._timerTask = loop.create_task(self._timed_update())
-
     async def await_timer(self, reset=True, *args) -> bool:
         """
         Starts the timer, and returns when it finishes
@@ -2247,12 +2232,31 @@ class TimerSlider(Slider):
         else:
             return True
 
+    @trigger_condition
+    @elementactionwrapper.method
+    def start_timer(self, reset=False):
+        " Starts the timer. If the timer previously reached its end, it will be restarted."
+
+        ##Second condition ensures the timer can be restart if it is paused
+        d = self._timerTask.done()
+        c = self._timerTask.cancelled()
+        if (self._timerTask.done() and not self._timerTask.cancelled()) or reset:
+            if self.count == "up":
+                self.position = self.minimum
+            elif self.count == "down":
+                self.position = self.maximum
+
+        loop = self.parentPSSMScreen.mainLoop
+        self._timerTask = loop.create_task(self._timed_update())
+
+    @trigger_condition
     @elementactionwrapper.method
     def pause_timer(self, *args):
         "Pauses the timer without resetting its position."
         self._timerTask.cancel()
         _LOGGER.debug(f"Timer {self.id} paused")
 
+    @trigger_condition
     @elementactionwrapper.method
     def cancel_timer(self, *args):
         "Stops the timer from running, and resets the position to its minimum/maximum (for count up/down respectively)"
@@ -2631,6 +2635,7 @@ class DropDown(base.Button):
         """
         self.parentPSSMScreen.mainLoop.create_task(self._async_select(select, update))
         
+    @trigger_condition
     async def _async_select(self, select : Union[int,str], update : bool =True):    
         """
         Async function that handles selecting an option in the menu item. 
@@ -3000,6 +3005,7 @@ class Counter(base.TileElement):
         loop = self.parentPSSMScreen.mainLoop
         loop.create_task(self._async_set_counter(value))
     
+    @trigger_condition
     async def _async_set_counter(self, value : Union[float,int]):
         """
         set the counter value directly. Values are rounded down according to step

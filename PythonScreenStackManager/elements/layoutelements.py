@@ -12,7 +12,7 @@ from types import MappingProxyType
 from ..exceptions import *
 from . import baseelements as base
 from . import compoundelements as comps     ##May need restructuring here if I want to use compounds with grid elements -> Nope probably? Since that would kinda take away some configuration
-from .baseelements import Element, elementactionwrapper, elementaction, colorproperty
+from .baseelements import Element, elementactionwrapper, elementaction, colorproperty, trigger_condition
 from .constants import DEFAULT_ACCENT_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR
 from ..pssm_types import *
 from .. import tools
@@ -889,7 +889,7 @@ class TabPages(base.TileElement):
             self.__tabs[tab_name] = tabConf
             return
 
-
+    @trigger_condition
     async def async_show_page(self, index : int):
         """
         Shows the tab at page index index
