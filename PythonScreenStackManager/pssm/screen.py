@@ -1403,7 +1403,6 @@ class PSSMScreen:
         if popup in self.popupsOnTop:
             self.popupsOnTop.remove(popup)
 
-    @trigger_condition
     @elementactionwrapper.method
     def show_popup(self, popup_id: str):
         """
@@ -1417,8 +1416,6 @@ class PSSMScreen:
         if isinstance(popup_id, str):
             if popup_id in self.popupRegister:
                 popup = self.popupRegister[popup_id]
-            elif popup_id in self.elementRegister and isinstance(self.elementRegister[popup_id], elements.Popup):
-                popup = self.elementRegister[popup_id]
             else:
                 _LOGGER.warning(f"No popup with popupId {popup_id} is registered")
                 return
