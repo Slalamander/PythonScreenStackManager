@@ -167,6 +167,8 @@ class PSSMScreen:
 
         self.set_background_image(background, fit_method=background_fit, fit_arguments=background_fit_arguments)
 
+        self._background_fit_params = {"fit_method": background_fit, "fit_arguments": background_fit_arguments}
+
         self._stack = []
         self._isInverted = False
         self._isInputThreadStarted = False
@@ -464,25 +466,9 @@ class PSSMScreen:
     
     @background.setter
     def background(self, value : Union[str, ColorType]):
-        if Style.is_valid_color(value):
-            self.__background = value
-            self.__baseBackgroundImage = Image.new(self.imgMode, self.size, color = Style.get_color(value,self.imgMode))
-        elif isinstance(value,(str,Path)):
-            try:
-                img = Image.open(value)
-                img = ImageOps.fit(img,self.size)
-                if img.mode != self.imgMode:
-                    self.__baseBackgroundImage = img.convert(self.imgMode)
-                else:
-                    self.__baseBackgroundImage = img
-            except FileNotFoundError:
-                raise FileNotFoundError(f"Could not find an image file {value}")
-        else:
-            raise ValueError(f"{value} could not be used as a valid background color or image.")
-        
+        self.set_background_image(value, **self._background_fit_params)
         self.__background = value
-        self.__backgroundImage = self.__baseBackgroundImage.copy()
-    
+
     @property
     def backgroundImage(self) -> Image.Image:
         """
@@ -1855,10 +1841,11 @@ class PSSMScreen:
         return
 
     async def _screen_resized(self):
-        """
-        Use this function when the device's screen size has changed (i.e. resizing in windowed mode, for example)
+        """Use this function when the device's screen size has changed (i.e. resizing in windowed mode, for example)
+
         It will regenerate the main element, and take care of updating any dimensional strings.
         After calling this, screen.print_stack() (or something else) will still need to be called in order to fully print the new configuration.
+        You may also want to notify the device's updateCondition
         """
 
         self.background = self.__background     
