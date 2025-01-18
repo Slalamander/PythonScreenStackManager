@@ -3,6 +3,7 @@ import logging
 from typing import TYPE_CHECKING
 from types import MappingProxyType
 import inspect
+import asyncio
 
 from functools import wraps
 
@@ -389,13 +390,14 @@ class elementactionwrapper:
 
         if inspect.iscoroutinefunction(func):
             @wraps(func)
-            async def method_wrapper(self, *args, **kwargs):
+            async def wrapper(self, *args, **kwargs):
                 if len(args) == 2 and isinstance(args[0], Element) and isinstance(args[1], InteractEvent):
                     return await func(self, **kwargs)
                 elif args and isinstance(args[0], Element):
                     return await func(self, *args[1:], **kwargs)
                 return await func(self, *args, **kwargs)
-            return method_wrapper
+            wrapper.__signature__ = inspect.signature(func)
+            return wrapper
 
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -405,6 +407,7 @@ class elementactionwrapper:
                 ##May revert this later on. Not sure if it is a smart wrapper
                 return func(*args[1:], **kwargs)
             return func(*args, **kwargs)
+        wrapper.__signature__ = inspect.signature(func)
         return wrapper
 
 
@@ -422,6 +425,7 @@ class elementactionwrapper:
                 elif args and isinstance(args[0], Element):
                     return await func(self, *args[1:], **kwargs)
                 return await func(self, *args, **kwargs)
+            method_wrapper.__signature__ = inspect.signature(func)
             return method_wrapper
 
         @wraps(func)
@@ -432,6 +436,8 @@ class elementactionwrapper:
                 return func(self, *args[1:], **kwargs)
             return func(self, *args, **kwargs)
 
-
+        method_wrapper.__signature__ = inspect.signature(func)
         return method_wrapper
 
+
+# class PSSMEventLoop(asyncio.AbstractEventLoopPolicy)
