@@ -16,7 +16,7 @@ from contextlib import suppress
 from PIL import Image, ImageOps, ImageFile, ImageFilter
 
 from .styles import Style
-from .util import elementactionwrapper
+from .decorators import elementactionwrapper, trigger_condition
 
 from ..tools import DummyTask, get_Color, is_valid_Color
 from .. import tools
@@ -122,6 +122,8 @@ class PSSMScreen:
                                     }
 
         self.__shorthandFunctionGroups = {"element": self.parse_element_function}
+
+        self._triggerCondition = asyncio.Condition()
 
         self._printLock = asyncio.Lock()
         "Lock to ensure only one print loop can run"
@@ -307,6 +309,10 @@ class PSSMScreen:
         "The main running loop. Can be useful to access when dealing with functions running in threads."
         return self.__mainLoop
     
+    @property
+    def triggerCondition(self) -> asyncio.Condition:
+        return self._triggerCondition
+
     @property
     def printing(self) -> bool:
         "Whether printing to the screen has started. False during setup phase, true after starting the print handler"
@@ -975,6 +981,7 @@ class PSSMScreen:
             )
         return
 
+    @trigger_condition
     def start_batch_writing(self):
         """
         Toggle batch writing: nothing will be updated on the screen until
@@ -983,6 +990,7 @@ class PSSMScreen:
         _LOGGER.debug("Started screen batch")
         self._isBatch = True
 
+    @trigger_condition
     def stop_batch_writing(self, loop=None):
         """
         Updates the screen after batch writing and generates all elements in the stack.
@@ -1018,7 +1026,6 @@ class PSSMScreen:
         _LOGGER.debug("Screen batch is done and everything was generated")
         await self.print_stack(self.area,False)
         _LOGGER.debug("Screen batch is done and should be printed")
-
 
     def add_element(self, element, skipPrint=False, skipRegistration=False):
         "Add an element to the screen."
@@ -1381,6 +1388,7 @@ class PSSMScreen:
         ##Using UpdateLoop also doesn't seem to work. I assume it has to do with threading
         asyncio.run_coroutine_threadsafe(self.async_remove_popup(popup), self.mainLoop)
 
+    @trigger_condition
     async def async_remove_popup(self,popup: "elements.Popup" = None):
         "Awaitable to remove a popup. If None, will default to popup currently on top"
         if popup == None and self.popupsOnTop:
@@ -1395,6 +1403,7 @@ class PSSMScreen:
         if popup in self.popupsOnTop:
             self.popupsOnTop.remove(popup)
 
+    @trigger_condition
     @elementactionwrapper.method
     def show_popup(self, popup_id: str):
         """
@@ -1710,6 +1719,7 @@ class PSSMScreen:
             except asyncio.CancelledError:
                 break
 
+    @trigger_condition
     @elementactionwrapper.method
     def set_background_image(self, background : Union[str, Path, ColorType, Image.Image], fit_method : Literal["contain", "cover", "crop", "resize"] = "cover", fit_arguments : dict = {}) -> bool:
         """
@@ -1810,6 +1820,7 @@ class PSSMScreen:
             self.mainLoop.create_task(self.print_stack())
         return True
 
+    @trigger_condition
     @elementactionwrapper.method
     async def rotate(self, rotation : Optional[RotationValues] = None):
         """
