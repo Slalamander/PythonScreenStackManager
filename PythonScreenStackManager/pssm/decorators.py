@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+mainloop: asyncio.AbstractEventLoop = None
+
 class trigger_condition:
     """A decorator that automatically notifies an instances triggerCondition when the function is called
 
@@ -61,9 +63,13 @@ class trigger_condition:
             @functools.wraps(func)
             def trigger_interceptor(self, *args, **kwargs):
                 res = func(self, *args, **kwargs)
-                with suppress(RuntimeError):
-                    loop = asyncio.get_running_loop()
-                    loop.create_task(cls._notify_condition(self))
+
+                ##Hopefully this comment does not end up lost but:
+                ##Create custom event loop policy that always returns the screen's mainloop
+                ##That way, asyncio.get_event_loop() will always return the screen loop
+                ##however, does maybe provide some issues with functions being called outside of the eventloop
+                if mainloop:
+                    mainloop.create_task(cls._notify_condition(self))
                 return res
         trigger_interceptor.__signature__ = inspect.signature(func)
         return trigger_interceptor

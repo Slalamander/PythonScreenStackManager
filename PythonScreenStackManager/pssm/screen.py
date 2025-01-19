@@ -15,6 +15,7 @@ from contextlib import suppress
 
 from PIL import Image, ImageOps, ImageFile, ImageFilter
 
+from . import decorators
 from .styles import Style
 from .decorators import elementactionwrapper, trigger_condition
 
@@ -111,6 +112,9 @@ class PSSMScreen:
             self.__mainLoop = asyncio.new_event_loop()
         self.__eStop : asyncio.Future = self.__mainLoop.create_future()
         self.__mainLoop.set_default_executor(self.generatorPool)
+
+        if decorators.mainloop == None:
+            decorators.mainloop = self.__mainLoop
 
         self.__shorthandFunctions = {
                                     "save-settings" : self.save_settings,
