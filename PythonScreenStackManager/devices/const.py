@@ -1,8 +1,8 @@
 
 from collections import namedtuple
-from ..constants import FEATURES
+from ..constants import FEATURES, FEATURE_PREFIX, FEATURE_STATE_ATTRIBUTES
 
-_attr_list = [y for x, y in FEATURES.__dict__.items() if isinstance(y,str) and not x.startswith("_")]
+_attr_list = [y for x, y in FEATURES.__dict__.items() if isinstance(y,str) and x.startswith(FEATURE_PREFIX)]
 
 _DeviceTuple = namedtuple("__DeviceTuple", _attr_list, defaults=(False,)* len(_attr_list))
 
