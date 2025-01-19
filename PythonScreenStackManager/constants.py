@@ -118,7 +118,26 @@ class FEATURES:
     """
 
     @classmethod
-    def get_feature_string(cls, feature: str):
+    def get_feature_string(cls, feature: str) -> str:
+        """Convenience method to convert strings into the correct string for features
+
+        This also converts shorthands, i.e. any returned string will start with ``"FEATURE_"``.
+
+        Parameters
+        ----------
+        feature : str
+            The string to convert
+
+        Returns
+        -------
+        str
+            The converted feature string
+
+        Raises
+        ------
+        AttributeError
+            Raised if feature could not be converted to a valid string
+        """        
         if hasattr(cls, feature):
             return getattr(cls, feature)
         
@@ -126,7 +145,7 @@ class FEATURES:
             feature_str = FEATURE_PREFIX + feature.upper()
             return cls.get_feature_string(feature_str)
         
-        raise AttributeError(f"Feature {feature} is not a valid value or shorthand")
+        raise AttributeError(f"Feature {feature} is not a known feature or shorthand")
 
 FEATURE_STATE_ATTRIBUTES = {
     FEATURES.FEATURE_BACKLIGHT: "backlight",
