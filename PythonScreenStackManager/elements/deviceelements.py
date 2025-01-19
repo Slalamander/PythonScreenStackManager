@@ -14,7 +14,7 @@ from mdi_pil import mdiType
 
 from .. import tools
 from ..tools import DummyTask
-from ..constants import FEATURES, FEATURE_ATTRIBUTES
+from ..constants import FEATURES, FEATURE_STATE_ATTRIBUTES
 
 from . import baseelements as base, compoundelements as comps
 from .baseelements import _LOGGER, CoordType, classproperty, colorproperty, Style
@@ -47,7 +47,7 @@ class _DeviceMonitor(base.Element):
         "The task that awaits for a device attribute to update. Started when the element is added to the screen."
 
         if monitor_feature != None: 
-            self.monitor_feature = FEATURE_ATTRIBUTES.get(monitor_feature,monitor_feature)
+            self.monitor_feature = FEATURE_STATE_ATTRIBUTES.get(monitor_feature,monitor_feature)
             self.__monitor = getattr(self.parentPSSMScreen.device, self.monitor_feature)
 
             val = getattr(self.monitor, monitor_attribute) ##throws an error if it doesn't have the attribute         
@@ -70,7 +70,7 @@ class _DeviceMonitor(base.Element):
             _LOGGER.error(f"The linked device does not have the {value} feature")
             return
         
-        value = FEATURE_ATTRIBUTES.get(value,value)
+        value = FEATURE_STATE_ATTRIBUTES.get(value,value)
             
         self.__monitor = getattr(self.parentPSSMScreen.device, value)
         self.__monitor_feature = value
