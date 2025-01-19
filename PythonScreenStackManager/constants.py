@@ -47,6 +47,8 @@ class CancelledExceptions(CancelledError):
     "Exceptions that should be able to catch cancelled futures where needed."
     pass
 
+FEATURE_PREFIX = "FEATURE_"
+
 class FEATURES:
     "Names for device features. Use them as constants when checking for features."
 
@@ -77,14 +79,26 @@ class FEATURES:
     - ``backlight-set-behaviour`` to set the behaviour of the backlight when interacting with the screen
     """
 
+    BACKLIGHT = FEATURE_BACKLIGHT
+    "Shorthand for the backlight feature"
+
     FEATURE_NETWORK = "FEATURE_NETWORK"
     "Network feature to indicate the device has internet connectivity and is able to retrieve information on it"
+
+    NETWORK = FEATURE_NETWORK
+    "Shorthand for the network feature"
 
     FEATURE_BATTERY = "FEATURE_BATTERY"
     "Battery feature to indicate the device has a battery and is able to report the charge level and state"
 
+    BATTERY = FEATURE_BATTERY
+    "Shorthand for the battery feature"
+
     FEATURE_RESIZE = "FEATURE_RESIZE"
     "Resize feature to indicate the device's screen size can change and this functionality is implemented"
+
+    RESIZE = FEATURE_RESIZE
+    "Shorthand for the resize feature to easily access the screen's size"
 
     FEATURE_ROTATION = "FEATURE_ROTATION"
     """Rotation feature to indicate the device can rotate during runtime.
@@ -92,6 +106,10 @@ class FEATURES:
     Adds the following shorthand functions:
     - ``rotate`` to rotate the screen
     """
+
+    ROTATION = FEATURE_ROTATION
+    "Shorthand for the rotation feature"
+
 
     FEATURE_PRESS_RELEASE = "FEATURE_PRESS_RELEASE"
     """Feature to indicate the device is interactive and can report the coordinates of a press and the coordinates of a release
@@ -104,18 +122,20 @@ class FEATURES:
         if hasattr(cls, feature):
             return getattr(cls, feature)
         
-        if not feature.startswith("FEATURE_"):
-            feature_str = "FEATURE_" + feature.upper()
+        if not feature.startswith(FEATURE_PREFIX):
+            feature_str = FEATURE_PREFIX + feature.upper()
             return cls.get_feature_string(feature_str)
         
         raise AttributeError(f"Feature {feature} is not a valid value or shorthand")
 
-FEATURE_ATTRIBUTES = {
+FEATURE_STATE_ATTRIBUTES = {
     FEATURES.FEATURE_BACKLIGHT: "backlight",
     FEATURES.FEATURE_BATTERY: "battery",
-    FEATURES.FEATURE_NETWORK: "network"
+    FEATURES.FEATURE_NETWORK: "network",
+    FEATURES.FEATURE_RESIZE: "screenSize",
+    FEATURES.FEATURE_ROTATION: "rotation"
 }
-"Features and associated device attributes for them, if any."
+"Features with a state, and the associated device attribute"
 
 TOUCH_PRESS = "TOUCH-PRESSED"
 "Inidicates the touch event is an object pressing on the screen"
