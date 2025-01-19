@@ -11,7 +11,7 @@ from PIL import Image
 from abc import ABC, abstractmethod
 from contextlib import suppress
 
-from .const import *
+from .const import FEATURES, DeviceFeatures, FEATURE_STATE_ATTRIBUTES, FEATURE_PREFIX
 
 from ..tools import DummyTask, parse_duration_string
 
@@ -29,8 +29,6 @@ foreground_color = "black"
 if TYPE_CHECKING:
     from PythonScreenStackManager.pssm.screen import PSSMScreen
     import asyncio
-    from ..pssm_types import ColorType
-
 
 NetworkDict = TypedDict("NetworkDict",
                         {"connected": bool, "wifiOn":bool, "signal": str, "MAC": Optional[str], "SSID": Optional[str]})
@@ -149,6 +147,11 @@ class PSSMdevice(ABC):
         return self._path_to_pssm_device
     
     @property
+    def screenSize(self) -> tuple[int,int]:
+        "The size of the device's screen, in pixels"
+        return (self.screenWidth, self.screenHeight)
+
+    @property
     def screenWidth(self)-> int:
         "Width of the screen"
         return self._screen_width
@@ -184,7 +187,7 @@ class PSSMdevice(ABC):
         return self._rotation
 
     @property
-    def defaultColor(self) -> "ColorType":
+    def defaultColor(self) -> ColorType:
         "Default background color of the screen (i.e. pixels that are turned off.)."
         return self._defaultColor
 
@@ -275,6 +278,29 @@ class PSSMdevice(ABC):
 
         return bool(getattr(self._features,feature,False))
     
+    def get_feature_state(self, feature: str) -> dict:
+        try:
+            feature_str = FEATURES.get_feature_string(feature)
+        except AttributeError:
+            _LOGGER.error(f"{feature} is not a known inkBoard feature")
+            return {}
+        
+        if not self.has_feature(feature):
+            _LOGGER.error(f"Device does not have feature {feature}")
+            return {}
+        
+        if feature_str not in FEATURE_STATE_ATTRIBUTES:
+            _LOGGER.error(f"Feature {feature} does not have an associated state")
+        
+        feature_attr = FEATURE_STATE_ATTRIBUTES[feature_str]
+        feature_val = getattr(self, feature_attr)
+
+        if isinstance(feature_val, BaseDeviceFeature):
+            return feature_val.get_feature_state()
+        else:
+            return {feature_attr: feature_val}
+
+
     @abstractmethod
     async def async_pol_features(self):
         """This method takes care of polling and updating all necessary features.
