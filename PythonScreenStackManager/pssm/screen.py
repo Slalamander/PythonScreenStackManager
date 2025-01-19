@@ -145,7 +145,7 @@ class PSSMScreen:
 
         self._device = device
         self._device._Screen = self
-        self._device._updateCondition = asyncio.Condition()
+        self._device._triggerCondition = asyncio.Condition()
         if self._device.has_feature(FEATURES.FEATURE_BACKLIGHT):
             self._device.backlight._updateCondition = asyncio.Condition()
         
@@ -450,7 +450,7 @@ class PSSMScreen:
         Asyncio condition that is notified when the device states updates have been called (so every config.device["update_interval"]), or when the backlight changed.
         For usage see: https://superfastpython.com/asyncio-condition-variable/#Wait_to_be_Notified
         """
-        return self.device.updateCondition
+        return self.device.triggerCondition
 
     @property
     def lightupTask(self) -> Union[asyncio.Task,DummyTask]:

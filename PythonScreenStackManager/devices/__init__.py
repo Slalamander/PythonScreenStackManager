@@ -18,6 +18,7 @@ from ..tools import DummyTask, parse_duration_string
 from ..pssm_settings import SETTINGS
 from ..pssm_types  import *
 from ..pssm.decorators import trigger_condition
+from ..exceptions import FeatureError, MissingFeature
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.debug("Importing Base device")
@@ -60,6 +61,9 @@ class PSSMdevice(ABC):
     name : str, optional
         Optional name for the device, by default "PSSM Device"
     """ 
+
+    _triggerCondition: asyncio.Condition
+
     def __init__(self, features: DeviceFeatures, 
                 screenWidth: int, screenHeight: int, viewWidth: int, viewHeight: int,
                 screenMode: str, imgMode: str, defaultColor : "ColorType",
@@ -135,11 +139,20 @@ class PSSMdevice(ABC):
 
     @property
     def updateCondition(self) -> asyncio.Condition:
+        """DEPRECATED
+
+        Use triggerCondition instead
+        """
+
+        return self._triggerCondition
+    
+    @property
+    def triggerCondition(self) -> asyncio.Condition:
         """Asyncio condition that is notified when the device states updates have been called (so every config.device["update_interval"]), or when the backlight changed.
         
         For usage see: https://superfastpython.com/asyncio-condition-variable/#Wait_to_be_Notified
         """
-        return self._updateCondition
+        return self._triggerCondition
 
     @property
     def path_to_pssm_device(self)-> int:
@@ -278,28 +291,75 @@ class PSSMdevice(ABC):
 
         return bool(getattr(self._features,feature,False))
     
-    def get_feature_state(self, feature: str) -> dict:
+    def _get_feature_value(self, feature: str) -> tuple[str, Union[Any, "BaseDeviceFeature"]]:
+        """Shorthand to get the value of the attribute associated with a feature
+
+        Returns
+        -------
+        tuple[str, Any]
+            Tuple with the associated attribute and the corresponding value
+
+        Raises
+        ------
+        FeatureError
+            Raised for invalid feature strings or if the device does not have the feature
+        """
+
         try:
             feature_str = FEATURES.get_feature_string(feature)
         except AttributeError:
-            _LOGGER.error(f"{feature} is not a known inkBoard feature")
-            return {}
+            msg = f"{feature} is not a known inkBoard feature"
+            _LOGGER.error(msg)
+            raise FeatureError(msg)
         
         if not self.has_feature(feature):
-            _LOGGER.error(f"Device does not have feature {feature}")
-            return {}
+            msg = f"Device does not have feature {feature}"
+            _LOGGER.error(msg)
+            raise MissingFeature(msg)
         
         if feature_str not in FEATURE_STATE_ATTRIBUTES:
-            _LOGGER.error(f"Feature {feature} does not have an associated state")
-        
+            msg = f"Feature {feature} does not have an associated state"
+            _LOGGER.error(msg)
+            raise FeatureError(msg)
+
         feature_attr = FEATURE_STATE_ATTRIBUTES[feature_str]
         feature_val = getattr(self, feature_attr)
+        return feature_attr, feature_val
 
-        if isinstance(feature_val, BaseDeviceFeature):
-            return feature_val.get_feature_state()
-        else:
-            return {feature_attr: feature_val}
+    def get_feature_state(self, feature: str) -> dict:
+        """Gets the state of a feature
 
+        Returns an empty dict for invalid features
+
+        Parameters
+        ----------
+        feature : str
+            The feature to gather
+
+        Returns
+        -------
+        dict
+            The featurestate dict
+        """        
+        try:
+            feature_attr, feature_val = self._get_feature_value(feature)
+            if isinstance(feature_val, BaseDeviceFeature):
+                return feature_val.get_feature_state()
+            else:
+                return {feature_attr: feature_val}
+        except FeatureError:
+            return {}
+        
+    def get_feature_trigger(self, feature: str):
+
+        try:
+            feature_attr, feature_val = self._get_feature_value(feature)
+            if isinstance(feature_val, BaseDeviceFeature):
+                return feature_val.triggerCondition
+            else:
+                return self.triggerCondition
+        except FeatureError:
+            return None
 
     @abstractmethod
     async def async_pol_features(self):

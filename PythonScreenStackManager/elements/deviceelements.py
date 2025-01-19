@@ -433,7 +433,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         return new_color
 
     async def _monitor_device(self):
-        condition = self.monitor.updateCondition
+        condition = self.monitor.triggerCondition
         ##Should rewrite these to use features.
         battery = getattr(self.monitor,"battery",None)
         network = getattr(self.monitor,"network",None)

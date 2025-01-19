@@ -260,11 +260,7 @@ class Device(PSSMdevice):
                 self.window.resizable, v, v
             )
         
-    @property
-    def triggerCondition(self) -> asyncio.Condition:
-        """asyncio condition that is notified when any triggers are called
-        """
-        return self._updateCondition
+
     #endregion
     
     async def async_pol_features(self):
