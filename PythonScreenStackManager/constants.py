@@ -100,6 +100,9 @@ class FEATURES:
     RESIZE = FEATURE_RESIZE
     "Shorthand for the resize feature to easily access the screen's size"
 
+    SIZE = FEATURE_RESIZE
+    "Shorthand for the resize feature"    
+
     FEATURE_ROTATION = "FEATURE_ROTATION"
     """Rotation feature to indicate the device can rotate during runtime.
 
@@ -137,15 +140,16 @@ class FEATURES:
         ------
         AttributeError
             Raised if feature could not be converted to a valid string
-        """        
-        if hasattr(cls, feature):
-            return getattr(cls, feature)
+        """
+        feature_str = feature.upper()      
+        if hasattr(cls, feature_str):
+            return getattr(cls, feature_str)
         
-        if not feature.startswith(FEATURE_PREFIX):
-            feature_str = FEATURE_PREFIX + feature.upper()
+        if not feature_str.startswith(FEATURE_PREFIX):
+            feature_str = FEATURE_PREFIX + feature_str.upper()
             return cls.get_feature_string(feature_str)
         
-        raise AttributeError(f"Feature {feature} is not a known feature or shorthand")
+        raise AttributeError(f"Feature {feature_str} is not a known feature or shorthand")
 
 FEATURE_STATE_ATTRIBUTES = {
     FEATURES.FEATURE_BACKLIGHT: "backlight",
