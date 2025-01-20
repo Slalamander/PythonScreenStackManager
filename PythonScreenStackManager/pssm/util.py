@@ -2,7 +2,7 @@
 import logging
 from typing import TYPE_CHECKING
 from types import MappingProxyType
-import inspect
+import json
 import asyncio
 
 from functools import wraps
@@ -70,3 +70,16 @@ class TriggerCondition(asyncio.Condition):
         async with self:
             res = await self.wait_for(predicate)
         return res
+    
+class ElementJSONEncoder(json.JSONEncoder):
+    """Specific encoder class that encodes elements as their string representation
+
+    Also handles sets, by turning them into a tuple
+    """    
+    def default(self, o):
+        if isinstance(o, Element):
+            return o.id
+        
+        if isinstance(o, set):
+            return tuple(o)
+        return super().default(o)
