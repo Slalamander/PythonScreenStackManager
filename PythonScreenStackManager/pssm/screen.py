@@ -15,10 +15,9 @@ from contextlib import suppress
 
 from PIL import Image, ImageOps, ImageFile, ImageFilter
 
-from . import decorators
 from .styles import Style
 from .decorators import elementactionwrapper, trigger_condition
-from .util import PSSMEventLoopPolicy
+from .util import PSSMEventLoopPolicy, TriggerCondition
 
 from ..tools import DummyTask, get_Color, is_valid_Color
 from .. import tools
@@ -117,9 +116,6 @@ class PSSMScreen:
         if isinstance(asyncio.get_event_loop_policy(), asyncio.DefaultEventLoopPolicy):
             asyncio.set_event_loop_policy(PSSMEventLoopPolicy(self))
 
-        if decorators.mainloop == None:
-            decorators.mainloop = self.__mainLoop
-
         self.__shorthandFunctions = {
                                     "save-settings" : self.save_settings,
                                     "quit" : self.quit,
@@ -131,7 +127,8 @@ class PSSMScreen:
 
         self.__shorthandFunctionGroups = {"element": self.parse_element_function}
 
-        self._triggerCondition = asyncio.Condition()
+        self._triggerCondition = TriggerCondition()
+        self._touchCondition = TriggerCondition()
 
         self._printLock = asyncio.Lock()
         "Lock to ensure only one print loop can run"
@@ -183,7 +180,8 @@ class PSSMScreen:
         self._isInverted = False
         self._isInputThreadStarted = False
 
-        self._lastCoords = (-1,-1)
+        # self._lastCoords = (-1,-1)
+        self._lastTouch = InteractEvent(-1,-1, None)
         self._interactEvent = asyncio.Event()
         self.__touchDebounceTime = tools.parse_duration_string(touch_debounce_time)
         self.__minimumHoldTime = tools.parse_duration_string(minimum_hold_time)
@@ -322,6 +320,14 @@ class PSSMScreen:
         return self._triggerCondition
 
     @property
+    def touchTrigger(self) -> TriggerCondition:
+        """Asyncio condition that is notified upon each interaction with the screen
+        
+        Accesss ``lastTouch`` to get the event asociated with the touch
+        """
+        return self._touchCondition
+
+    @property
     def printing(self) -> bool:
         "Whether printing to the screen has started. False during setup phase, true after starting the print handler"
         return self._printLock.locked()
@@ -404,9 +410,14 @@ class PSSMScreen:
         return self._isInputListenerStarted
 
     @property
+    def lastTouch(self) -> InteractEvent:
+        "The last touch registered by the screen"
+        return self._lastTouch
+
+    @property
     def lastCoords(self) -> CoordType:
         """The last pressed coordinates"""
-        return self._lastCoords
+        return (self.lastTouch.x, self.lastTouch.y)
     
     @property
     def shorthandFunctions(self) -> MappingProxyType[str,Callable[["elements.Element", CoordType],Any],Any]:
@@ -1566,7 +1577,10 @@ class PSSMScreen:
         _LOGGER.verbose("Handling a click")
         n = len(self.stack)
         coro_list = []
-        self._lastCoords = (x,y)
+        touch_event = InteractEvent(x,y, action)
+        self._lastTouch = touch_event
+        
+        coro_list.append(self.touchTrigger.trigger_all())
 
         if self.backlight_behaviour == "On Interact":
             coro_list.append(self.temporary_backlight_async())
@@ -1574,9 +1588,9 @@ class PSSMScreen:
         if self.on_interact:        
             try:
                 if asyncio.iscoroutinefunction(self.on_interact):
-                    coro_list.append(self.on_interact(**self.on_interact_data, screen = self, coords = InteractEvent(x,y, action)))
+                    coro_list.append(self.on_interact(**self.on_interact_data, screen = self, coords = touch_event))
                 else:                    
-                    coro_list.append(asyncio.to_thread(self.on_interact, **self.on_interact_data, **{"screen": self, "coords":  InteractEvent(x,y, action)}))
+                    coro_list.append(asyncio.to_thread(self.on_interact, **self.on_interact_data, **{"screen": self, "coords":  touch_event}))
                 _LOGGER.verbose("Added screen interact function to click coro list")
             except (TypeError, KeyError, IndexError, OSError) as exce:
                 _LOGGER.error(f"adding on_interact function {self.on_interact} raised exception: {exce}")
@@ -1593,7 +1607,7 @@ class PSSMScreen:
                     p._tapEvent.set()
 
                 coro_list.extend(
-                    await self._dispatch_click_to_element(InteractEvent(x,y, action), popup))
+                    await self._dispatch_click_to_element(touch_event, popup))
             elif x == -1 and y == -1:
                 for p in self.popupsOnTop:
                     p._tapEvent.set()
@@ -1619,7 +1633,7 @@ class PSSMScreen:
                     if hasattr(elt,"tap_action") and elt != None:
                         _LOGGER.verbose("Got element with tap_action")
                         coro_list.extend(
-                            await self._dispatch_click_to_element(InteractEvent(x,y, action), elt) )
+                            await self._dispatch_click_to_element(touch_event, elt) )
                         _LOGGER.debug("tap_action added to coro list")
                         break
 

@@ -20,9 +20,6 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-mainloop: asyncio.AbstractEventLoop = None
-
-
 class colorproperty(customproperty):
     """Decorator to indicate a property is defines the color of an element.
     
