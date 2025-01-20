@@ -18,6 +18,7 @@ from PIL import Image, ImageOps, ImageFile, ImageFilter
 from . import decorators
 from .styles import Style
 from .decorators import elementactionwrapper, trigger_condition
+from .util import PSSMEventLoopPolicy
 
 from ..tools import DummyTask, get_Color, is_valid_Color
 from .. import tools
@@ -112,6 +113,9 @@ class PSSMScreen:
             self.__mainLoop = asyncio.new_event_loop()
         self.__eStop : asyncio.Future = self.__mainLoop.create_future()
         self.__mainLoop.set_default_executor(self.generatorPool)
+
+        if isinstance(asyncio.get_event_loop_policy(), asyncio.DefaultEventLoopPolicy):
+            asyncio.set_event_loop_policy(PSSMEventLoopPolicy(self))
 
         if decorators.mainloop == None:
             decorators.mainloop = self.__mainLoop
