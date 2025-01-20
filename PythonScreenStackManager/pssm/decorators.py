@@ -22,66 +22,6 @@ _LOGGER = logging.getLogger(__name__)
 
 mainloop: asyncio.AbstractEventLoop = None
 
-class trigger_condition:
-    """A decorator that automatically notifies an instances triggerCondition when the function is called
-
-    Requires the class of said method to have a triggerCondition property or attribute.
-    """    
-
-    def __init__(self, func):
-        
-        self._func = self._wrap_trigger(func)
-        return
-
-    def __new__(cls, func):
-        ##Other option: use the second option only when running tests
-        ##which are not yet implemented anyways so eh
-        if TYPE_CHECKING:
-            return cls._wrap_trigger(func)
-        else:
-            return super().__new__(cls)
-
-    def __set_name__(self, owner, name):
-        _LOGGER.log(5,f"decorating {self} and using {owner}")
-        if not hasattr(owner,"triggerCondition"):
-            raise AttributeError("Using the @triggercondition decorator requires a class with a triggerCondition property")
-    
-    if not TYPE_CHECKING:
-        ##Using this to ensure it stays decorated as is
-        ##Otherwise type checkers think it is a property
-        def __get__(self, obj, objtype=None):
-            if obj:
-                return functools.partial(self._func, obj)
-            return self._func
-
-    @classmethod
-    def _wrap_trigger(cls, func):
-        if asyncio.iscoroutinefunction(func):
-            @functools.wraps(func)
-            async def trigger_interceptor(self: "Device", *args, **kwargs):
-                res = await func(self, *args, **kwargs)
-                await cls._notify_condition(self)
-                return res
-        else:
-            @functools.wraps(func)
-            def trigger_interceptor(self, *args, **kwargs):
-                res = func(self, *args, **kwargs)
-
-                ##Hopefully this comment does not end up lost but:
-                ##Create custom event loop policy that always returns the screen's mainloop
-                ##That way, asyncio.get_event_loop() will always return the screen loop
-                ##however, does maybe provide some issues with functions being called outside of the eventloop
-                if mainloop:
-                    mainloop.create_task(cls._notify_condition(self))
-                return res
-        trigger_interceptor.__signature__ = inspect.signature(func)
-        return trigger_interceptor
-    
-    @classmethod
-    async def _notify_condition(cls, obj: "Device"):
-        async with obj.triggerCondition:
-            obj.triggerCondition.notify_all()
-
 
 class colorproperty(customproperty):
     """Decorator to indicate a property is defines the color of an element.
@@ -243,6 +183,70 @@ class styleproperty(customproperty):
     Most important is to use the decorator after the `@property` decorator.
     Also, it is best to make any colorProperty return a private variable, i.e. use a single `_` and append the name of the property. Using double `__` causes problems when parsing parent colors.
     """    
+
+
+class trigger_condition:
+    """A decorator that automatically notifies an instances triggerCondition when the function is called
+
+    Requires the class of said method to have a triggerCondition property or attribute.
+    """    
+
+    def __init__(self, func):
+        
+        self._func = self._wrap_trigger(func)
+        return
+
+    def __new__(cls, func):
+        ##Other option: use the second option only when running tests
+        ##which are not yet implemented anyways so eh
+        if TYPE_CHECKING:
+            return cls._wrap_trigger(func)
+        else:
+            return super().__new__(cls)
+
+    def __set_name__(self, owner, name):
+        _LOGGER.log(5,f"decorating {self} and using {owner}")
+        if not hasattr(owner,"triggerCondition"):
+            raise AttributeError("Using the @triggercondition decorator requires a class with a triggerCondition property")
+    
+    if not TYPE_CHECKING:
+        ##Using this to ensure it stays decorated as is
+        ##Otherwise type checkers think it is a property
+        def __get__(self, obj, objtype=None):
+            if obj:
+                return functools.partial(self._func, obj)
+            return self._func
+
+    @classmethod
+    def _wrap_trigger(cls, func):
+        if asyncio.iscoroutinefunction(func):
+            @functools.wraps(func)
+            async def trigger_interceptor(self: "Device", *args, **kwargs):
+                res = await func(self, *args, **kwargs)
+                await cls._notify_condition(self)
+                return res
+        else:
+            @functools.wraps(func)
+            def trigger_interceptor(self, *args, **kwargs):
+                res = func(self, *args, **kwargs)
+
+                ##Hopefully this comment does not end up lost but:
+                ##Create custom event loop policy that always returns the screen's mainloop
+                ##That way, asyncio.get_event_loop() will always return the screen loop
+                ##however, does maybe provide some issues with functions being called outside of the eventloop
+                # if mainloop:
+                    # mainloop.create_task(cls._notify_condition(self))
+                loop = asyncio.get_event_loop()
+                loop.create_task(cls._notify_condition(self))
+                return res
+        trigger_interceptor.__signature__ = inspect.signature(func)
+        return trigger_interceptor
+    
+    @classmethod
+    async def _notify_condition(cls, obj: "Device"):
+        async with obj.triggerCondition:
+            obj.triggerCondition.notify_all()
+
 
 
 class elementaction(customproperty):
