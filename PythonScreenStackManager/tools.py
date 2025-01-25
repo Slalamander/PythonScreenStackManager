@@ -236,8 +236,10 @@ def wrap_to_coroutine(func: Callable, *args, **kwargs) -> Awaitable:
     """
     
     if not callable(func):
-        _LOGGER.warning(f"{func} is not a callable value. It's better to filter these cases out.")
-        return asyncio.sleep(0)
+        msg = f"{func} is not a callable value. It's better to filter these cases out."
+        _LOGGER.warning(msg)
+        raise TypeError(msg)
+        # return asyncio.sleep(0)
     
     if asyncio.iscoroutinefunction(func):
         return func(*args,**kwargs)
