@@ -35,6 +35,7 @@ from ..tools import DummyTask, DrawShapes
 
 from ..pssm.styles import Style
 from ..pssm.decorators import colorproperty, elementaction, elementactionwrapper, trigger_condition
+from ..pssm.util import isclassproperty, TriggerCondition
 
 if TYPE_CHECKING:
     from ..pssm.screen import PSSMScreen as Screen
@@ -144,7 +145,13 @@ class Element(ABC):
         instance = super().__new__(cls)
         id = kwargs.get("id",None)
         (instance.__id, instance.__unique_id) =  instance.__set_id(id)
+        instance._triggerCondition = TriggerCondition()
         return instance
+
+    def __setattr__(self, name, value):
+        if isclassproperty(self,name):
+            raise AttributeError(f"{self}: Cannot set classproperties on elements")
+        return super().__setattr__(name, value)
 
     def __init__(self,  id: str =None, area: PSSMarea=None, imgData: Image.Image = None, 
                 tap_action: InteractionFunctionType = None,
@@ -291,13 +298,13 @@ class Element(ABC):
         "The mainloop of the screen"
         return Screen.get_screen().mainLoop
 
-    @cached_property
+    @property
     def triggerCondition(self) -> asyncio.Condition:
         """Condition that is notified upon calls to certain functions
 
         Handy to track certain element states, for example.
         """
-        return asyncio.Condition()
+        return self._triggerCondition
 
     @property
     def isGenerating(self) -> bool:

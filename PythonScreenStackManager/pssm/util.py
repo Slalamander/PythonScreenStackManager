@@ -83,3 +83,34 @@ class ElementJSONEncoder(json.JSONEncoder):
         if isinstance(o, set):
             return tuple(o)
         return super().default(o)
+    
+
+def isclassproperty(obj: Any, attr: str) -> bool:
+    """Checks if the object's attribute is a classproperty
+
+    Parameters
+    ----------
+    obj : Any
+        The object the attribute belongs to. Can be a class or an instance of one
+    attr : str
+        The attribute to check
+
+    Returns
+    -------
+    bool
+        True if the attribute is a classproperty
+    """
+
+    if hasattr(obj, attr):
+        if not inspect.isclass(obj):
+            cls = type(obj)
+        else:
+            cls = obj
+        
+        if attr in cls.__dict__:
+            obj = cls.__dict__.get(attr)
+            if isinstance(obj, classproperty):
+                return True
+        return False
+    
+    return False
