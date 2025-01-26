@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, \
                 Union, TypeVar, Literal, Optional, TypedDict, Callable, Any, Generic, NamedTuple,\
                 Protocol, get_args
 import functools
+import inspect
 
 from mdi_pil import mdiType
 
@@ -265,16 +266,20 @@ class BatteryIconMapping(TypedDict):
     "Icon settings for when the battery is discharging"
 
 T = TypeVar('T', bound=property)
+R = TypeVar("R")
 
-class classproperty(Generic[T]):
-    "Used to avoid the deprecation warning (and the extra writing) needed to set class properties"
+class classproperty(Generic[T, R]):
+    """Used to avoid the deprecation warning (and the extra writing) needed to set class properties
+    Currently does not prevent values from being set!
+    """
     
-    def __init__(self, method: Callable[..., "T"]):
+    def __init__(self, method: Callable[[type[T]], R]):
         self.method = method
         functools.update_wrapper(self, wrapped=method) # type: ignore
 
-    def __get__(self, obj, cls=None) -> "T":
+    def __get__(self, obj, cls= type[T]) -> R:
         if cls is None:
             cls = type(obj)
         return self.method(cls)
+    
 
