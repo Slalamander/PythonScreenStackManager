@@ -101,11 +101,13 @@ def isclassproperty(obj: Any, attr: str) -> bool:
         True if the attribute is a classproperty
     """
 
-    if hasattr(obj, attr):
-        if not inspect.isclass(obj):
-            cls = type(obj)
-        else:
-            cls = obj
+    
+    if not inspect.isclass(obj):
+        if not hasattr(obj, attr):
+            return False
+        cls = type(obj)
+    else:
+        cls = obj
         
         if attr in cls.__dict__:
             obj = cls.__dict__.get(attr)
