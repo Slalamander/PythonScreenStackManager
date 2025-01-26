@@ -431,7 +431,7 @@ class Element(ABC):
     #endregion
 
     @classmethod
-    def __set_id(cls, id):
+    def __set_id(cls, id) -> tuple[str,str]:
         ##Automatically determines the last used ID for a given element classes, and increases it by 1
         ##That way, any element's unique id should be, in fact, unique, but also still readable
         c = cls.__name__
