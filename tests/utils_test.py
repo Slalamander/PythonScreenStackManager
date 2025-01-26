@@ -6,7 +6,7 @@ import pytest
 
 from PythonScreenStackManager.pssm import PSSMScreen
 from PythonScreenStackManager.pssm.decorators import classproperty
-from PythonScreenStackManager.pssm.util import ClassPropertyMetaClass
+from PythonScreenStackManager.pssm.util import ClassPropertyMetaClass, isclassproperty
 from PythonScreenStackManager.elements import Button
 from PythonScreenStackManager.devices.dummy import DummyDevice
 
@@ -33,7 +33,7 @@ class AClass(metaclass=ClassPropertyMetaClass):
     _set_me = SETME
 
     @classproperty
-    def dontset(cls) -> str:
+    def dont_set_me(cls) -> str:
         return "I can't be set"
     
     @classproperty
@@ -44,6 +44,7 @@ class AClass(metaclass=ClassPropertyMetaClass):
     def set_me(cls, value):
         cls._set_me = value
 
+    dont_set_me: str
     set_me: SETME
 
 @pytest.fixture
@@ -64,13 +65,15 @@ class TestUtils:
 
     def test_unsettable_classproperty(self, util_cls: type[AClass]):
 
+        assert isclassproperty(util_cls, "dont_set_me"), "Attribute does not evaluate as classproperty"
         with pytest.raises(AttributeError):
-            util_cls.dontset = "I'm set"
+            util_cls.dont_set_me = "I'm set"
 
-        assert util_cls.dontset == "I can't be set"
+        assert util_cls.dont_set_me == "I can't be set"
     
     def test_settable_classproperty(self, util_cls: type[AClass]):
 
+        assert isclassproperty(util_cls, "set_me"), "Attribute does not evaluate as classproperty"
         assert util_cls.set_me == SETME, "Initial value should be SETME"
 
         util_cls.set_me = "All set!"
@@ -81,6 +84,6 @@ class TestUtils:
 if __name__ == "__main__":
 
     # TestUtils().test_element_classproperty(UtilButton("I'm a test element"))
-    AClass.dontset = "setting"
+    AClass.dont_set_me = "setting"
 
 
