@@ -265,21 +265,41 @@ class BatteryIconMapping(TypedDict):
     discharging : BatteryIconSettings
     "Icon settings for when the battery is discharging"
 
-T = TypeVar('T', bound=property)
+# T = TypeVar('T', bound=property)
+T = TypeVar("T")
 R = TypeVar("R")
 
 class classproperty(Generic[T, R]):
     """Used to avoid the deprecation warning (and the extra writing) needed to set class properties
-    Currently does not prevent values from being set!
+    
+    To make them behave like property but on a class level, the class itself needs to have the metaclass ``ClassPropertyMetaClass`` from util.
+    For elements this is not required, as it is handled in the base Element class, however in that case it does not prevent the attribute from being set via the class itself.
     """
     
-    def __init__(self, method: Callable[[type[T]], R]):
-        self.method = method
-        functools.update_wrapper(self, wrapped=method) # type: ignore
+    def __init__(self, fget: Callable[[type[T]], R], fset = None) -> R:
+        self.fget = fget
+        self.fset = fset
+        functools.update_wrapper(self, wrapped=fget) # type: ignore
 
     def __get__(self, obj, cls= type[T]) -> R:
         if cls is None:
             cls = type(obj)
-        return self.method(cls)
+        return self.fget(cls)
+    
+    def __set__(self, obj, value):
+        if not self.fset:
+            raise AttributeError("can't set attribute")
+        if inspect.isclass(obj):
+            type_ = obj
+            obj = None
+        else:
+            type_ = type(obj)
+        return self.fset.__get__(obj, type_)(value)
+
+    def setter(self, func):
+        if not isinstance(func, (classmethod, staticmethod)):
+            func = classmethod(func)
+        self.fset = func
+        return self
     
 

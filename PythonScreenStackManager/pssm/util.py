@@ -114,3 +114,14 @@ def isclassproperty(obj: Any, attr: str) -> bool:
         return False
     
     return False
+
+
+class ClassPropertyMetaClass(type):
+    
+    def __setattr__(self, attr, value):
+
+        if isclassproperty(self, attr):
+            obj = self.__dict__.get(attr)
+            return obj.__set__(self, value)
+
+        return super(ClassPropertyMetaClass, self).__setattr__(attr, value)
