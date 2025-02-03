@@ -151,8 +151,7 @@ class Device(PSSMdevice):
         if fullscreen:
             root.wm_attributes("-fullscreen", True)
         else:
-            root["width"] = screenWidth
-            root["height"] = screenHeight
+            root.geometry(f"{screenWidth}x{screenHeight}")
 
         self._resizeable = bool(resizeable)
         if not self.resizeable:
