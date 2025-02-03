@@ -44,7 +44,7 @@ def get_windows_network() -> NetworkDict:
     "Gets info on the currently connected network on windows machines"
     network_dict : NetworkDict = {}
     win_network = {}
-    network_if = subprocess.check_output(['netsh','wlan','show','interfaces']) 
+    network_if = subprocess.check_output(['netsh','wlan','show','interfaces'], creationflags=subprocess.CREATE_NO_WINDOW) 
     network = network_if.decode('ascii') 
     network = network.replace("\n","") 
     network = network.strip()
