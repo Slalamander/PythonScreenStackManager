@@ -15,6 +15,14 @@ logger = logging.getLogger(__name__)
 
 SHORTHAND_COLORS = PSSM_COLORS.copy()
 
+##linking to a style: any string starting and ending with a ':' (think about using that one, yaml does start complaining about nested mappings with it unless explicitly setting it to a string)
+##i.e. ':style:' would apply the default style value said property
+##Maybe also allow style identifiers like ':success:' etc like ttkbootstrap does
+## ':style:[ELEMENTCLASS]:[STYLEPROPERTY]' and use mro's to cascade down
+##Could even intercept the default values from the __init__'s to automatically create the defaults?
+##Maybe; also give elements a styleDefaults property e.g. that can be used to set up the defaults.
+##Also add an export function to create style.json/style.yaml
+
 class Style:
     """Handles styling and theming of Elements
     _summary_
