@@ -151,6 +151,8 @@ class Device(PSSMdevice):
         if fullscreen:
             root.wm_attributes("-fullscreen", True)
         else:
+            ##Maybe handle a third case: simply using a default size or not changing the size.
+            ##Would have to see when values can be gathered then tho
             root.geometry(f"{screenWidth}x{screenHeight}")
 
         self._resizeable = bool(resizeable)
