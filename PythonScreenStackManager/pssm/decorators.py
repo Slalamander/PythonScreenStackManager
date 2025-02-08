@@ -456,12 +456,12 @@ class elementactionwrapper:
 
         if inspect.iscoroutinefunction(func):
             @functools.wraps(func)
-            async def wrapper(self, *args, **kwargs):
+            async def wrapper(*args, **kwargs):
                 if len(args) == 2 and isinstance(args[0], Element) and isinstance(args[1], InteractEvent):
-                    return await func(self, **kwargs)
+                    return await func(**kwargs)
                 elif args and isinstance(args[0], Element):
-                    return await func(self, *args[1:], **kwargs)
-                return await func(self, *args, **kwargs)
+                    return await func(*args[1:], **kwargs)
+                return await func(*args, **kwargs)
             wrapper.__signature__ = inspect.signature(func)
             return wrapper
 
