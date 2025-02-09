@@ -331,7 +331,7 @@ class elementaction(customproperty):
         if callable(value) or value == None:
             func = value
         elif isinstance(value, str):
-            func = element.screen.parse_shorthand_function(value,attribute)
+            func = element.screen.parse_shorthand_function(value)
         
         elif not isinstance(value, (dict,MappingProxyType)):
             msg = f"{element} {attribute} is of incorrect type. Must be a callable, string, dict or None. Is {type(value)}"
@@ -359,14 +359,14 @@ class elementaction(customproperty):
                     ##Probably gather all element-shorthands and ensure those cannot be set as shorthand
                 else:
                     try:
-                        func = element.screen.parse_shorthand_function(value["action"], attribute, value)
+                        func = element.screen.parse_shorthand_function(value["action"], value)
                     except (ElementNotRegistered, ShorthandNotFound, ShorthandGroupNotFound) as exce:
                         if element.screen.printing:
                             msg = exce.args[0] +  f" Cannot set {attribute} for {element}"
                             _LOGGER.error(msg, exc_info=True)
                             func = None
                         else:
-                            element.parentPSSMScreen._add_element_attribute_check(element,attribute, value.copy())
+                            element.parentPSSMScreen._add_element_attribute_check(element, attribute, value.copy())
                             _LOGGER
                             func = None
         
