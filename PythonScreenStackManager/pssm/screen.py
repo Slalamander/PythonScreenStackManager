@@ -619,7 +619,7 @@ class PSSMScreen:
         self.__shorthandFunctionGroups[identifier] = parser
 
 
-    def parse_shorthand_function(self, shorthand: str, attribute: str = None, options: dict = {}) -> Callable:
+    def parse_shorthand_function(self, shorthand: str, options: dict = {}) -> Callable:
         "Parses a shorthand function string to the actual function."
 
         if ":" in shorthand:
@@ -632,14 +632,14 @@ class PSSMScreen:
                 raise ShorthandNotFound from exce
             except ShorthandNotFound:
                 raise
-            return parser(func_str, attribute, options)
+            return parser(func_str, options)
 
         elif shorthand in self.__shorthandFunctions:
             return self.__shorthandFunctions[shorthand]
         
         raise ShorthandNotFound(shorthand)
 
-    def parse_element_function(self, shorthand: str, attribute: str, options: dict = {}):
+    def parse_element_function(self, shorthand: str, options: dict = {}):
         if "element_id" not in options:
             raise KeyError("Parsing an element function shorthand requires element_id to be defined")
         
