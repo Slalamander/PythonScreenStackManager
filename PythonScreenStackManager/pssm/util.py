@@ -18,6 +18,14 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+def iscoroutinefunction(func) -> bool:
+    if not callable(func):
+        return False
+    
+    if asyncio.iscoroutinefunction(func):
+        return True
+    else:
+        return asyncio.iscoroutinefunction(getattr(func,"__call__",None))
 
 class PSSMEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
 

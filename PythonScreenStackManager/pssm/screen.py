@@ -17,7 +17,7 @@ from PIL import Image, ImageOps, ImageFile, ImageFilter
 
 from .styles import Style
 from .decorators import elementactionwrapper, trigger_condition
-from .util import PSSMEventLoopPolicy, TriggerCondition
+from .util import PSSMEventLoopPolicy, TriggerCondition, iscoroutinefunction
 
 from ..tools import DummyTask, get_Color, is_valid_Color
 from .. import tools
@@ -582,7 +582,7 @@ class PSSMScreen:
         if not isinstance(func,Callable):
             _LOGGER.error(f"Callback functions must be a Callable type. {func} is not valid.")
             return
-        if asyncio.iscoroutinefunction(func):
+        if iscoroutinefunction(func):
             _LOGGER.error("Callback functions cannot be a coroutine.")
             return
 
@@ -1587,7 +1587,7 @@ class PSSMScreen:
 
         if self.on_interact:        
             try:
-                if asyncio.iscoroutinefunction(self.on_interact):
+                if iscoroutinefunction(self.on_interact):
                     coro_list.append(self.on_interact(**self.on_interact_data, screen = self, coords = touch_event))
                 else:                    
                     coro_list.append(asyncio.to_thread(self.on_interact, **self.on_interact_data, **{"screen": self, "coords":  touch_event}))
@@ -1669,7 +1669,7 @@ class PSSMScreen:
         if isinstance(elt,elements.Layout):
             if elt_action:
                 func, kwargs = elt_action
-                if asyncio.iscoroutinefunction(func):
+                if iscoroutinefunction(func):
                     coro_list.append(
                         func(elt, interaction, **kwargs))
                 else:                    
@@ -1691,7 +1691,7 @@ class PSSMScreen:
             
             if elt_action:
                 func, kwargs = elt_action
-                if asyncio.iscoroutinefunction(func):
+                if iscoroutinefunction(func):
                     coro_list.append(
                         func(elt, interaction, **kwargs))
                 else:
