@@ -1125,7 +1125,7 @@ class Element(ABC):
         async with self._generatorLock:
             await asyncio.sleep(0)
         
-        return
+        return self.imgData
     
     async def _await_update(self):
         "Helper coroutine that can be used to wait for an element's update to finish."
