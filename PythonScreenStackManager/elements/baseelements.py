@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Callable, Union, Optional, Literal, \
 from types import MappingProxyType
 from abc import ABC, abstractmethod
 from pathlib import Path
+from contextlib import suppress
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps,\
                 ImageFile
@@ -1651,40 +1652,70 @@ class Layout(Element):
                 img = None
         return img
 
+    @staticmethod
+    def __matrix_row_callback(f):
+        ##callback for adding a row to the matrix
+        f._matrix[f._rowidx] = f._row
+
+    @staticmethod
+    def __elt_gen_callback(f):
+        ##callback for adding an element's imgdata to a row
+        f._row[f._colidx] = f.result()
+
     async def async_create_img_matrix(self, skipNonLayoutGen=False):
-        matrix = []
+        matrix = [None] * len(self.areaMatrix)
+
         if not self.areaMatrix:
             _LOGGER.warning("Layout Error, areaMatrix has to be defined first")
             return None
+
+        matrix_coros = set()
         for i, _ in enumerate(self.areaMatrix):
-            row = []
+
+            row = [None] * len(self.areaMatrix[i])
+            row_coros = set()
             for j, elt_area in enumerate(self.areaMatrix[i]):
+
                 elt, _ = self.layout[i][j+1]
                 elt : Element
                 if elt is None:
-                    elt_img = None
+                    continue
                 else:                    
                     if not elt.isLayout and skipNonLayoutGen:
                         if elt.imgData == None or elt._requestGenerate:
                             if elt.isGenerating:
-                                _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
-                                await elt._await_generator()
-                                _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
-                                elt_img = elt.imgData
+                                _LOGGER.verbose(f"{self.id}: {elt.id} is generating, waiting for result")
+                                t = asyncio.create_task(elt._await_generator())
                             else:
-                                elt_img = await elt.async_generate(elt_area)
+                                _LOGGER.verbose(f"{self.id}: {elt.id} will be generated")
+                                t = asyncio.create_task(elt.async_generate(elt_area))
                         else:
                             if elt.isGenerating:
-                                _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
-                                await elt._await_generator()
-                                _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
-                                elt_img = elt.imgData
-                            elt_img = elt.imgData
+                                _LOGGER.verbose(f"{self.id}: {elt.id} is generating, waiting for result")
+                                t = asyncio.create_task(elt._await_generator())
+                            else:
+                                row[j] = elt.imgData
+                                continue
                     else:
-                        elt_img = await elt.async_generate(elt_area, skipNonLayoutGen=skipNonLayoutGen)
-                row.append(elt_img)
-            matrix.append(row)
+                        t = asyncio.create_task(elt.async_generate(elt_area, skipNonLayoutGen=skipNonLayoutGen))
+                    t._colidx = j
+                    t._row = row
+                    t.add_done_callback(self.__elt_gen_callback)
+                    row_coros.add(t)
+
+            if row_coros:
+                r_gather = asyncio.gather(*row_coros)
+                r_gather._row = row
+                r_gather._matrix = matrix
+                r_gather._rowidx = i
+                r_gather.add_done_callback(self.__matrix_row_callback)
+                matrix_coros.add(r_gather)
+            else:
+                matrix[i] = row
+
+        await asyncio.gather(*matrix_coros)
         self._imgMatrix = matrix
+        return
 
     def create_area_matrix(self):
         # TODO : must honor min and max
@@ -3682,7 +3713,7 @@ class Button(Element):
                     font_size = self._convert_dimension(DEFAULT_FONT_SIZE)
             
             self._current_font_size = font_size
-            loaded_font = ImageFont.truetype(self.font, font_size)
+            loaded_font = self.get_font(self.font, font_size)
         self._loadedFont = loaded_font
 
         if self.multiline:
@@ -3798,7 +3829,8 @@ class Button(Element):
         min_size = max(min_size, 1)
         text_height = max(start_size,1)
 
-        loaded_font = ImageFont.truetype(font, text_height)
+        # loaded_font = ImageFont.truetype(font, text_height)
+        loaded_font = self.get_font(font, text_height)
         text_length = loaded_font.getlength(text)
         
         if text_length > w*0.95:
@@ -3815,6 +3847,18 @@ class Button(Element):
             self.font_size = text_height
         
         return loaded_font
+
+    def get_font(self, font, font_size):
+        try:
+            f = ImageFont.truetype(font, font_size)
+            return f
+        except OSError:
+            font_file = Path(font)
+            if not font_file.exists():
+                _LOGGER.warning(f"{self}: fontfile {font} does not exist.")
+            else:
+                _LOGGER.error(f"{self}: unable to open fontfile {font}")
+            return ImageFont.truetype(DEFAULT_FONT, font_size)
 
 
 class ImageElement(Element):
@@ -3966,7 +4010,7 @@ class Picture(ImageElement):
                 
             if not p.exists():
                 msg = f"Picture file {p} does not exist."
-                _LOGGER.error(msg)            
+                _LOGGER.warning(msg)            
             self.__picturePath = p
 
         else:
@@ -4318,16 +4362,26 @@ class Icon(ImageElement):
         if value == None and allow_none:
             pass
         
-        elif isinstance(value,(Path,Image.Image)):
-            pass
+        # elif isinstance(value,(Path,Image.Image)):
+        
+        elif isinstance(value, Path):
+            if not value.exists():
+                msg = f"{self}: image file {value} does not exist, cannot be used as icon"
+                _LOGGER.warning(msg)
+                return
 
         elif mdi.is_mdi(value):
             pass
         else:
             if only_mdi:
-                msg = f"{value} is not recognised as a valid mdi icon type"
-                _LOGGER.error(ValueError(msg))
-                return
+                msg = f"{self}: {value} is not recognised as a valid mdi icon type"
+                # _LOGGER.error(ValueError(msg))
+                raise ValueError(msg)
+            elif isinstance(value, Path):
+                if not value.exists():
+                    msg = f"{self}: image file {value} does not exist, cannot be used as icon"
+                    _LOGGER.warning(msg)
+                    return
             else:
                 ##Test if the icon file exists here. Check the generator maybe?
                 pass
@@ -5848,10 +5902,15 @@ class _ElementSelect(Element):
         if self.on_select != None and call_on_select:
             coros.append(tools.wrap_to_coroutine(self.on_select, self, self.selected, **self.on_select_kwargs))
 
-        L = await asyncio.gather(*coros, return_exceptions=True)
+        # L = await asyncio.gather(*coros, return_exceptions=True)
+        L, _ = await asyncio.wait(coros)
         for res in L:
-            if isinstance(res,Exception):
-                _LOGGER.warning(f"Counter error: {res}")        
+            res: asyncio.Task
+            with suppress(asyncio.CancelledError):
+                if e := res.exception():
+                    _LOGGER.error(f"{self}: Error handling select in function {res.get_coro()}", exc_info=e)
+            # if isinstance(res,Exception):
+            #     _LOGGER.warning(f"Counter error: {res}")        
 
     def add_option(self, option, element : Element, overwrite = False):
         """Adds a new element to the options to be selected and sets the tap_action appropriately
