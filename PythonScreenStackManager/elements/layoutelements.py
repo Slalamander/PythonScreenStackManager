@@ -665,13 +665,13 @@ class TabPages(base.TileElement):
         self.__NavBar : Union[base._ElementSelect, GridLayout] = GridLayout(rows=1,columns=None, elements=[], column_sizes="w*0.2",
                                                                             outer_margins=[0,"?",0,"w*0.025"])
 
-        self.__NavBar : base._ElementSelect
-
         base._ElementSelect(self.__NavBar, {}, allow_deselect=False, active_color="foreground", inactive_color=None,
                             active_properties={"accent_color": "active","element_properties": {"line": {"line_color": "active"}, "icon": {"background_color": "active"}}}, 
                             inactive_properties={"accent_color": "inactive", "element_properties": {"line": {"line_color": "inactive"}, "icon": {"background_color":  "inactive", "icon_color": "gray"}}})
 
+        self.__NavBar : base._ElementSelect
         self.__NavBar.on_select = self._navigation_show_tab
+        self.__NavBar._skip_select_update = True
 
         self.__elements = {"handle-previous": BackHandle, "handle-next": NextHandle, "navigation": self.__NavBar}
 
@@ -1117,6 +1117,6 @@ class TabPages(base.TileElement):
             self._rebuild_area_matrix = True
         return await super().pre_generate(area, skipNonLayoutGen)
 
-    async def async_update(self, updateAttributes={}, skipGen=False, forceGen: bool = False, skipPrint=False, reprintOnTop=False, updated: bool = False) -> bool:
-        return await super().async_update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
+    # async def async_update(self, updateAttributes={}, skipGen=False, forceGen: bool = False, skipPrint=False, reprintOnTop=False, updated: bool = False) -> bool:
+    #     return await super().async_update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
 

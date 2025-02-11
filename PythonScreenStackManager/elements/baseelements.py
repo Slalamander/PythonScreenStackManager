@@ -132,25 +132,24 @@ class Element(ABC):
         cls.__elt_init__ = init
         cls.__init__ = new_init
 
-        generatorClass = cls.generator.__qualname__.split(".")[0]
-        if cls.__name__ == "Layout" or issubclass(cls,Layout):
-            generateClass = cls.async_generate.__qualname__.split(".")[0]
+        # generatorClass = cls.generator.__qualname__.split(".")[0]
+        # if cls.__name__ == "Layout" or issubclass(cls,Layout):
+        #     generateClass = cls.async_generate.__qualname__.split(".")[0]
 
-            # if cls.__name__ in generatorClass and generateClass != generatorClass:
-            if generatorClass != "Layout":
-                msg = f"{cls.__name__}: custom layout generators need to also have async_generate defined. Generator class is {generatorClass}, async_generate is from {generateClass}"
-                _LOGGER.warning(msg)
+        #     # if cls.__name__ in generatorClass and generateClass != generatorClass:
+        #     if generatorClass != "Layout":
+        #         msg = f"{cls.__name__}: custom layout generators need to also have async_generate defined. Generator class is {generatorClass}, async_generate is from {generateClass}"
+        #         # _LOGGER.warning(msg)
         
-        generator = cls.generator
-        def generator_debug_wrapper(self, *args, **kwargs):
-            img = generator(self,*args,**kwargs)
-            if cls is type(self):
-                self._generatedno += 1
-                msg = f"{self} has generated {self._generatedno} times"
-                print(msg)
-                _LOGGER.verbose(msg)
-            return img
-        cls.generator = generator_debug_wrapper
+        # generator = cls.generator
+        # def generator_debug_wrapper(self, *args, **kwargs):
+        #     img = generator(self,*args,**kwargs)
+        #     if cls is type(self) and not self.isLayout:
+        #         self._generatedno += 1
+        #         msg = f"{self} has generated {self._generatedno} times"
+        #         _LOGGER.verbose(msg)
+        #     return img
+        # cls.generator = generator_debug_wrapper
 
     def __post_init__(self, id, _register):
 
@@ -163,12 +162,14 @@ class Element(ABC):
             self.parentPSSMScreen._register_element(self)
         return
 
+    _updatequeue: asyncio.Queue
     def __new__(cls, *args, **kwargs):
         ##Ensure that the id and unique id are set immediately, which allows for things like __repr__ and __hash__ to work when __init__ starts.
         instance = super().__new__(cls)
         id = kwargs.get("id",None)
         (instance.__id, instance.__unique_id) =  instance.__set_id(id)
         instance._generatedno = 0
+        instance._updatequeue = asyncio.Queue()
         instance._triggerCondition = TriggerCondition()
         return instance
 
@@ -509,8 +510,12 @@ class Element(ABC):
             whether any attributes have been updated
         """        
         async with self._generatorLock:
+            q_upd = False
+            while not self._updatequeue.empty():
+                upd = self.__update_attributes(self._updatequeue.get_nowait())
+                q_upd = q_upd or upd
             updated = self.__update_attributes(updateAttributes)
-            return updated
+            return updated or q_upd
 
     @elementactionwrapper.method
     def update(self, updateAttributes={}, skipGen=False, forceGen:bool = False,  skipPrint=False,
@@ -559,8 +564,16 @@ class Element(ABC):
                     if getattr(self,param) != updateAttributes[param]:
                         attr_updated = True
                         break
-            asyncio.run_coroutine_threadsafe(self.async_update(updateAttributes, skipGen, forceGen, skipPrint,
-                    reprintOnTop, updated), self.mainLoop)
+            if self._updatequeue.empty() and not self.isUpdating:
+                self._updatequeue.put_nowait(updateAttributes)
+                asyncio.run_coroutine_threadsafe(self.async_update({}, skipGen, forceGen, skipPrint,
+                        reprintOnTop, updated), self.mainLoop)
+            else:
+                self._updatequeue.put_nowait(updateAttributes)
+        
+            if updated or attr_updated:
+                self._requestGenerate = True
+
         return (updated or attr_updated)
 
     @elementactionwrapper.method
@@ -602,6 +615,8 @@ class Element(ABC):
         self._updateLock._waiters
 
         async with self._updateLock:
+            if not updateAttributes and not self._updatequeue.empty():
+                updateAttributes = self._updatequeue.get_nowait()
             upd_attr = await self._async_update_attributes(updateAttributes)        
             updated = (upd_attr or updated)
 
@@ -614,9 +629,10 @@ class Element(ABC):
             await asyncio.sleep(0)
 
             if skipGen:
-                if updated:
-                    ##Mark for regenerate
-                    self._requestGenerate = True
+                pass
+                # if updated:
+                #     ##Mark for regenerate
+                #     self._requestGenerate = True
             elif not updated and not forceGen:
                 pass
             else:
@@ -636,9 +652,10 @@ class Element(ABC):
                     # We don't want unncesseray generation when printing batch
                     if self.isLayout or isinstance(self,Layout):
                         self : Layout
-                        c = [elt._await_update() for elt in self.create_element_list()]
+                        c = [elt._await_update() for elt in self.create_element_list() if elt.isUpdating]
                         await asyncio.gather(*c, return_exceptions=True)
                         _LOGGER.debug(f"{self}: Child elements finished updating")
+                        c = [elt for elt in self.create_element_list() if elt.isUpdating]
 
                     if self.parentLayouts:
                         # We recreate the pillow image of the oldest parent
@@ -648,13 +665,14 @@ class Element(ABC):
                         
                         parentupdate = False
                         for parent in self.parentLayouts:
-                            if parent != None and parent.isUpdating: 
+                            if parent != None and parent.isUpdating and not parent.isGenerating: 
                                 parentupdate = True
                                 break
 
                         if parentupdate: ##The parent element will take care of printing later or (unless it has skipprint on but that's usually your own responsibillity)
                             skipPrint = True
-                            await self.async_generate()
+                            self._requestGenerate = True
+                            # await self.async_generate()
                         else:
                             #Request the parentLayout to regenerate this element. Safety measure is in place to regenerate the parent if the element was not generated.
                             self._requestGenerate = True
@@ -664,7 +682,7 @@ class Element(ABC):
                                 await oldest_parent._await_generator()
 
                             if self._requestGenerate:
-                                ##This will ensure the parent is up to date
+                                ##Will have to generate again if the element itself was not generated yet
                                 await oldest_parent.async_generate(skipNonLayoutGen=True)
 
                     else:
@@ -1120,6 +1138,8 @@ class Element(ABC):
             _LOGGER.debug(f"{self} waiting for generator to unlock")
 
         try:
+            if not self._updatequeue.empty():
+                await self.__update_attributes()
             async with self._generatorLock:
                 self._requestGenerate = False
                 if self.area == area == None:
@@ -1151,6 +1171,9 @@ class Element(ABC):
     async def _await_update(self):
         "Helper coroutine that can be used to wait for an element's update to finish."
         _LOGGER.verbose(f"Waiting for {self.id} to finish updating")
+        if not self._updatequeue.empty():
+            upd = await self._async_update_attributes({})
+            if upd: self._requestGenerate = True
         async with self._updateLock:
             await asyncio.sleep(0)
         return
@@ -1655,13 +1678,8 @@ class Layout(Element):
                 _LOGGER.error(f"{self}: Cannot generate before an area is assigned")
                 return
 
-            if "Nav" in self.id: 
-                print(f"Generating navtile {self}")
             await self.pre_generate(area, skipNonLayoutGen)
 
-            # if asyncio._get_running_loop() == self.mainLoop:
-            #     _LOGGER.debug(f"{self}: switching async_generate to printLoop")
-            
             if self.area == None or self._rebuild_area_matrix:
                 self.create_area_matrix()
                 if self._call_on_add:
@@ -5663,6 +5681,7 @@ class _ElementSelect(Element):
         ##Seems not to.
 
         self = layout_element
+        self._skip_select_update = False    ##Used to skip updates when running the select function
 
         self.__generator = layout_element.generator
         "The generator of the original function"
@@ -6016,15 +6035,13 @@ class _ElementSelect(Element):
         await asyncio.sleep(0)
         # await asyncio.gather(*[elt._await_update() for elt in self.option_elements.values()])
 
-        _LOGGER.warning(f"{self}: active color is {self.active_color}, inactive color is {self.inactive_color}")
+        # _LOGGER.warning(f"{self}: active color is {self.active_color}, inactive color is {self.inactive_color}")
 
-        if self_upd and not skip_update:
+        if self_upd and not (skip_update or self._skip_select_update):
             await asyncio.sleep(0)
-            await asyncio.sleep(0)
-            
+
             # self._requestGenerate = True
-            # await self.async_update(updated=True)
-            await self.async_update(updated=True, skipGen=True, skipPrint=True)
+            await self.async_update(updated=True)
 
         if self.on_select != None and call_on_select:
             coros.append(tools.wrap_to_coroutine(self.on_select, self, self.selected, **self.on_select_kwargs))
