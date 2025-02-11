@@ -300,8 +300,10 @@ def _block_run_coroutine(coro : Coroutine, loop : asyncio.BaseEventLoop) -> Any:
         The result of the awaited coroutine.
     """
 
-    if loop == None:
-        loop = asyncio.get_running_loop()
+    try:
+        assert asyncio.get_running_loop() != asyncio.get_event_loop(), "Cannot block the same loop"
+    except RuntimeError:
+        pass
 
     _LOGGER.verbose(f"Blocking till coroutine {coro} finishes")
 

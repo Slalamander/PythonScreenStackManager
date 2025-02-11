@@ -1,6 +1,7 @@
 "Base elements for PSSM. Not all of these are usable as it, but are supposed to be used as parent classes."
 
 import asyncio
+import threading
 from datetime import datetime as dt, timedelta
 from math import floor, ceil
 import logging
@@ -127,8 +128,29 @@ class Element(ABC):
             init(self, *args, **kwargs)
             if cls is type(self):
                 self.__post_init__(id, _register)
+
         cls.__elt_init__ = init
         cls.__init__ = new_init
+
+        generatorClass = cls.generator.__qualname__.split(".")[0]
+        if cls.__name__ == "Layout" or issubclass(cls,Layout):
+            generateClass = cls.async_generate.__qualname__.split(".")[0]
+
+            # if cls.__name__ in generatorClass and generateClass != generatorClass:
+            if generatorClass != "Layout":
+                msg = f"{cls.__name__}: custom layout generators need to also have async_generate defined. Generator class is {generatorClass}, async_generate is from {generateClass}"
+                _LOGGER.warning(msg)
+        
+        generator = cls.generator
+        def generator_debug_wrapper(self, *args, **kwargs):
+            img = generator(self,*args,**kwargs)
+            if cls is type(self):
+                self._generatedno += 1
+                msg = f"{self} has generated {self._generatedno} times"
+                print(msg)
+                _LOGGER.verbose(msg)
+            return img
+        cls.generator = generator_debug_wrapper
 
     def __post_init__(self, id, _register):
 
@@ -146,6 +168,7 @@ class Element(ABC):
         instance = super().__new__(cls)
         id = kwargs.get("id",None)
         (instance.__id, instance.__unique_id) =  instance.__set_id(id)
+        instance._generatedno = 0
         instance._triggerCondition = TriggerCondition()
         return instance
 
@@ -214,14 +237,6 @@ class Element(ABC):
 
         for param in kwargs:
                 if not hasattr(self, param): setattr(self, param, kwargs[param])
-
-        if self.isLayout:
-            generatorClass = self.generator.__qualname__.split(".")[0]
-            generateClass = self.async_generate.__qualname__.split(".")[0]
-
-            if self.__class__.__name__ in generatorClass and generateClass != generatorClass:
-                msg = f"{self}: custom layout generators need to also have async_generate defined"
-                _LOGGER.warning(msg)
 
     #region Element Properties
     @property
@@ -584,6 +599,8 @@ class Element(ABC):
                     update_list.append(elt)
             _LOGGER.debug(f"{self.id} waiting to acquire update lock. {len(update_list)} elements are waiting")
 
+        self._updateLock._waiters
+
         async with self._updateLock:
             upd_attr = await self._async_update_attributes(updateAttributes)        
             updated = (upd_attr or updated)
@@ -597,7 +614,9 @@ class Element(ABC):
             await asyncio.sleep(0)
 
             if skipGen:
-                pass
+                if updated:
+                    ##Mark for regenerate
+                    self._requestGenerate = True
             elif not updated and not forceGen:
                 pass
             else:
@@ -608,6 +627,7 @@ class Element(ABC):
                         await self.async_generate()
                     await asyncio.to_thread(self.parentPSSMScreen.simple_print_element,element=self, skipGen=skipGen, apply_background=True)
                     return updated
+                
                 elif not isBatch and updated and self.onScreen:
 
                     ##Commented out the stuff below since print_stack already calls all the generators
@@ -1101,6 +1121,7 @@ class Element(ABC):
 
         try:
             async with self._generatorLock:
+                self._requestGenerate = False
                 if self.area == area == None:
                         return
                 
@@ -1114,7 +1135,6 @@ class Element(ABC):
                     img = await coro
                 else:
                     img = self.generator(**saved_args)
-            self._requestGenerate = False
             self._imgData = img
             return img
         except asyncio.CancelledError:
@@ -1577,6 +1597,7 @@ class Layout(Element):
         return self.imgData
 
     def createImgMatrix(self, skipNonLayoutGen=False, background_color=DEFAULT_BACKGROUND_COLOR):
+        
         matrix = []
         if not self.areaMatrix:
             _LOGGER.warning("Layout Error, areaMatrix has to be defined first")
@@ -1594,7 +1615,7 @@ class Layout(Element):
                             if elt.imgData == None:
                                 if elt.isGenerating:
                                     _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
-                                    tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
+                                    # tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
                                     _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
                                 elt_img = elt.generator(elt_area)
                             else:
@@ -1605,7 +1626,10 @@ class Layout(Element):
                                 ##From what I found, this could be fixed using dummy event loop that simply run until the generating is finished.
                                 ##See the tool for  the solution
                                 _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
-                                tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
+                                ##Maybe do allow this, but simply only do it if not in the main event loop
+                                # tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
+
+                                ##fix thingy: any layout can have a pre/post generate which is callad before generating
                                 _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
 
                             ##Don't need a new thread for generating since it should not ever be called in the mainloop
@@ -1625,15 +1649,18 @@ class Layout(Element):
         async with self._generatorLock:
             ##Deal with what?
             ##Check if the current loop is the mainloop -> done -> but test if needed. Cause no new threads are needed to be made when generating a layout
-
             if area is not None:
                 self._area = area
             elif self.area == None:
-                _LOGGER.warning(f"{self}: Cannot generate before an area is assigned")
+                _LOGGER.error(f"{self}: Cannot generate before an area is assigned")
                 return
 
-            if asyncio._get_running_loop() == self.mainLoop:
-                _LOGGER.debug(f"{self}: switching async_generate to printLoop")
+            if "Nav" in self.id: 
+                print(f"Generating navtile {self}")
+            await self.pre_generate(area, skipNonLayoutGen)
+
+            # if asyncio._get_running_loop() == self.mainLoop:
+            #     _LOGGER.debug(f"{self}: switching async_generate to printLoop")
             
             if self.area == None or self._rebuild_area_matrix:
                 self.create_area_matrix()
@@ -1642,15 +1669,30 @@ class Layout(Element):
                 await self.async_create_img_matrix(skipNonLayoutGen=False)
             else:
                 await self.async_create_img_matrix(skipNonLayoutGen=skipNonLayoutGen)
-
-                [(x, y), (w, h)] = self.area
             
             try:
-                img = self.generator()
+                img = self.generator(skipNonLayoutGen=skipNonLayoutGen)
+                # self._requestGenerate = False
             except FuncExceptions:
                 _LOGGER.exception(f"{self}: could not make image")
                 img = None
         return img
+
+    async def pre_generate(self, area : PSSMarea = None, skipNonLayoutGen: bool = False) -> bool:
+        """Coroutine that is ran before generating starts
+
+        
+        Can be overwritten, such that checks can be performed before generating starts.
+        Passed paramaters are the same as for the generator
+        
+        Parameters
+        ----------
+        area : PSSMarea, optional
+            Passed area, if any, by default None
+        skipNonLayoutGen : bool, optional
+            If non layout elements will be generated, by default False
+        """        
+        return
 
     @staticmethod
     def __matrix_row_callback(f):
@@ -1669,6 +1711,7 @@ class Layout(Element):
             _LOGGER.warning("Layout Error, areaMatrix has to be defined first")
             return None
 
+        await asyncio.sleep(0)
         matrix_coros = set()
         for i, _ in enumerate(self.areaMatrix):
 
@@ -1698,6 +1741,7 @@ class Layout(Element):
                                 continue
                     else:
                         t = asyncio.create_task(elt.async_generate(elt_area, skipNonLayoutGen=skipNonLayoutGen))
+
                     t._colidx = j
                     t._row = row
                     t.add_done_callback(self.__elt_gen_callback)
@@ -2243,7 +2287,7 @@ class TileElement(Layout):
     @element_properties.setter
     def element_properties(self, value : dict[str, dict]):
         if not isinstance(value, dict):
-            _LOGGER.exception(TypeError("Element properties must be a dict"))
+            _LOGGER.error(f"{self} Element properties must be a dict")
             return
         
         for elt, props_or in value.items():
@@ -2299,17 +2343,19 @@ class TileElement(Layout):
         ##Can't really remove this yet as it seems to cause issues with ~stuff~ (i.e. person element does not show the person picture anymore) 
 
         ##Idk if this works fill figure it out later when actually using this.
+        
         if elt_name == None:
             prop_loop = self.element_properties.items()
         else:
             if elt_name not in self._element_properties:
-                return
+                return []
             elif elt_name not in self.elements:
                 _LOGGER.warning(f"{self} does not have an element {elt} in its defined elements")
-                return
+                return []
             else:
                 prop_loop = [(elt_name, self._element_properties[elt_name])]
         
+        updating = set()
         color_setters = self.__class__._color_shorthands
         for elt_str, props in prop_loop:
             set_props = props.copy()
@@ -2326,12 +2372,36 @@ class TileElement(Layout):
                 elif set_props[prop] in color_setters: ##Check if the value of the element's color attribute to be set corresponds to a known shorthand color of _this_ (i.e. the parentlayout) element
                     color_attr = color_setters[set_props[prop]] ##Grab the parent layout's corresponding attribute
                     set_props[prop] = getattr(self,color_attr) ##Grab the value of said attribute, and set that as the actual color value
-            elt.update(set_props, skipPrint=self.isUpdating)
+            elt.update(set_props, skipPrint=self.isUpdating, skipGen=self.isGenerating)
+            updating.add(elt)
 
         if not elt_name:
             self._reparse_colors = False
+        
+        return updating
 
     def generator(self, area=None, skipNonLayoutGen=False):
+        
+        # if self.tile_layout != None and self._reparse_layout:
+        #     old_layout = self.layout.copy()
+        #     new_layout = parse_layout_string(self.tile_layout, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
+        #     if new_layout != old_layout: ##This doesn't quite work since sublayouts are a thing
+        #         self.set_parent_layouts(old_layout,new_layout)
+        #         self._layout = new_layout
+        #         skipNonLayoutGen=False
+        #         self._rebuild_area_matrix = True
+
+        #     self._reparse_layout = False
+
+        # if self._reparse_colors:
+        #     skipNonLayoutGen = False
+        #     self._reparse_element_colors()
+
+        ##Check what to do with regenerating layouts, mainly for when colors change.
+        ##May be doable by overwriting async update and checking if a color property is in it.
+        return super().generator(area, skipNonLayoutGen)
+
+    async def pre_generate(self, area = None, skipNonLayoutGen = False):
         
         if self.tile_layout != None and self._reparse_layout:
             old_layout = self.layout.copy()
@@ -2339,20 +2409,20 @@ class TileElement(Layout):
             if new_layout != old_layout: ##This doesn't quite work since sublayouts are a thing
                 self.set_parent_layouts(old_layout,new_layout)
                 self._layout = new_layout
-                skipNonLayoutGen=False
+                # skipNonLayoutGen=False
                 self._rebuild_area_matrix = True
 
             self._reparse_layout = False
-
+        
         if self._reparse_colors:
-            skipNonLayoutGen = False
-            self._reparse_element_colors()
+            elts = self._reparse_element_colors()
+            # await asyncio.gather(*[elt._await_update() for elt in elts])
+            await asyncio.sleep(0)
 
-        ##Check what to do with regenerating layouts, mainly for when colors change.
-        ##May be doable by overwriting async update and checking if a color property is in it.
-        return super().generator(area, skipNonLayoutGen)
+        
+        return skipNonLayoutGen
 
-    async def async_generate(self, area=None, skipNonLayoutGen=False):
+    async def __async_generate(self, area=None, skipNonLayoutGen=False):
         
         async with self._generatorLock:
             if self.tile_layout != None and self._reparse_layout:
@@ -5016,7 +5086,7 @@ class Line(Element):
     @property
     def _emulator_icon(cls): return "mdi:ruler"
 
-    def __init__(self, line_color: ColorType =DEFAULT_FOREGROUND_COLOR, width: PSSMdimension = 1, orientation : Literal["horizontal","vertical","diagonal1", "diagonal2"]="horizontal", 
+    def __init__(self, line_color: ColorType = DEFAULT_FOREGROUND_COLOR, width: PSSMdimension = 1, orientation : Literal["horizontal","vertical","diagonal1", "diagonal2"]="horizontal", 
                  alignment : Union[Literal["center","top","bottom", "left", "right"], PSSMdimension]="center", **kwargs):
 
         super().__init__(**kwargs)
@@ -5024,12 +5094,26 @@ class Line(Element):
         self.width = width
         self.orientation = orientation
         self.alignment = alignment
+        
+        self._preprint_gens = 0
 
     #region
     @colorproperty
     def line_color(self) -> ColorType:
         "The color of the line"
         return self._line_color
+    
+    # @line_color.setter
+    # def line_color(self, value):
+    #     print(f"{self}: Line color is set to {value}. SEE COMMENTS IN THIS PART (line_color.setter)")
+    #     ##Okay think its better to turn the awaiters into tasks?
+    #     ##Since I'm quite sure the lock is not immediately locked, since the task needs to be started first
+    #     ##And it may also return sooner actually with the lock?
+        
+    #     ##things to check: task should not be still running before a new one is made (I think)
+    #     ##How to handle updating parents
+    #     ##The main goal here is to prevent the multiple generators running when they shouldn't
+    #     self._line_color = value
 
     @property
     def width(self) -> PSSMdimension:
@@ -5086,14 +5170,19 @@ class Line(Element):
     #endregion
 
     def generator(self, area, skipNonLayoutGen=False):
+
+        # print(f"{self}: generating for time {self._generatedno}")
+        # _LOGGER.warning(f"-------", stack_info=True, stacklevel=15)
+
         if area != None:
-            area = self._area
+            self._area = area
+        
+        area = self._area
 
         if area == None:
             return
         
         (x, y), (w, h) = area
-        self._area = area
         colorMode = self.parentPSSMScreen.imgMode
 
         line_w = self._convert_dimension(self.width)
@@ -5143,6 +5232,20 @@ class Line(Element):
     
     def update(self, updateAttributes={}, skipGen=False, forceGen = False, skipPrint=False, reprintOnTop=False, updated = False):
         upd = super().update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
+        if "line_color" in updateAttributes:
+            ##Something is going wrong here: the attribute is not changed (I suspect because it does not detect a different value?)
+            ##May have to do with a normal update returning too soon
+            ##may be fixable by handling an await generate for all elements in the selector?
+            ##Idk first see what happens in here when this is put through the async version
+            t = threading.current_thread()
+            # _LOGGER.info(f"{self}: new line color should be {updateAttributes['line_color']}: {self._line_color} ({self.line_color})")
+        return upd
+    
+    async def async_update(self, updateAttributes={}, skipGen=False, forceGen = False, skipPrint=False, reprintOnTop=False, updated = False):
+        upd= await super().async_update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
+        if "line_color" in updateAttributes:
+            t = threading.current_thread()
+            # _LOGGER.warning(f"{self}: new line color should be {updateAttributes['line_color']}: {self._line_color} ({self.line_color})")
         return upd
 
 
@@ -5770,6 +5873,8 @@ class _ElementSelect(Element):
         Hence it also takes care of updating the attributes when an element is selected/deselected
         """
 
+        skipGen=True
+
         active_elts = set(self.selected_elements)
 
         updated = False
@@ -5811,7 +5916,7 @@ class _ElementSelect(Element):
                 # ##At least for now: no updatelock or generator lock are returned, so all elements think the selector is always updating and generating
                 ##Should be able to fix that when copying stuff over from the parentlayout
 
-                elt_upd = elt.update(set_props, skipPrint=self.isUpdating)
+                elt_upd = elt.update(set_props, skipPrint=self.isUpdating, skipGen=skipGen)
                 if elt_upd: updated = True
 
         if inactive_elts:
@@ -5825,9 +5930,10 @@ class _ElementSelect(Element):
                     color_attr = color_setters[set_props[prop]]
                     set_props[prop] = getattr(self,color_attr)
             for elt in inactive_elts:
-                elt_upd = elt.update(set_props, skipPrint=self.isUpdating)
+                elt_upd = elt.update(set_props, skipPrint=self.isUpdating, skipGen=skipGen)
                 if elt_upd: updated = True
         
+        self._reparse_colors = False
         return updated
     #endregion
 
@@ -5837,13 +5943,22 @@ class _ElementSelect(Element):
                 skipNonLayoutGen = False
         return self.__generator(area, skipNonLayoutGen)
 
-    async def async_generate(self, area: PSSMarea = None, skipNonLayoutGen: bool = False) -> Coroutine[Any, Any, Image.Image]:
-        async with self._generatorLock:
-            if self._reparse_colors:
-                if self._reparse_element_colors():
-                    skipNonLayoutGen = False
+    # async def async_generate(self, area: PSSMarea = None, skipNonLayoutGen: bool = False) -> Coroutine[Any, Any, Image.Image]:
+    #     async with self._generatorLock:
+    #         if self._reparse_colors:
+    #             if self._reparse_element_colors():
+    #                 skipNonLayoutGen = False
+    #     await asyncio.sleep(0)
+    #     return await super().async_generate(area, skipNonLayoutGen)
+
+    async def pre_generate(self, area: PSSMarea = None, skipNonLayoutGen: bool = False) -> Coroutine[Any, Any, Image.Image]:
+
+        if self._reparse_colors:
+            if self._reparse_element_colors():
+                skipNonLayoutGen = False
         await asyncio.sleep(0)
-        return await super().async_generate(area, skipNonLayoutGen)
+        return skipNonLayoutGen
+        # return await super().async_generate(area, skipNonLayoutGen)
 
     def select(self, option : str):
         "Select or deselect the given option"
@@ -5857,7 +5972,7 @@ class _ElementSelect(Element):
         await self.async_select(option)
 
     @trigger_condition
-    async def async_select(self, option : str, call_on_select : bool = True):
+    async def async_select(self, option : str, call_on_select : bool = True, skip_update : bool = False):
         """Select or deselect the provided option
 
         Parameters
@@ -5889,20 +6004,35 @@ class _ElementSelect(Element):
             else:
                 self.__selected = option
 
-        if not self.isUpdating:
-            async with self._updateLock:
-                self_upd = self._reparse_element_colors()
-        else:
-            self_upd = self._reparse_element_colors()
+        # if not self.isUpdating:
+        #     async with self._updateLock:
+        #         self_upd = self._reparse_element_colors()
+        # else:
+        #     self_upd = self._reparse_element_colors()
 
-        if self_upd:
+        self._reparse_colors = True
+        self_upd = True
+        
+        await asyncio.sleep(0)
+        # await asyncio.gather(*[elt._await_update() for elt in self.option_elements.values()])
+
+        _LOGGER.warning(f"{self}: active color is {self.active_color}, inactive color is {self.inactive_color}")
+
+        if self_upd and not skip_update:
             await asyncio.sleep(0)
-            await self.async_update(updated=True)
+            await asyncio.sleep(0)
+            
+            # self._requestGenerate = True
+            # await self.async_update(updated=True)
+            await self.async_update(updated=True, skipGen=True, skipPrint=True)
 
         if self.on_select != None and call_on_select:
             coros.append(tools.wrap_to_coroutine(self.on_select, self, self.selected, **self.on_select_kwargs))
 
         # L = await asyncio.gather(*coros, return_exceptions=True)
+        if not coros:
+            return
+        
         L, _ = await asyncio.wait(coros)
         for res in L:
             res: asyncio.Task

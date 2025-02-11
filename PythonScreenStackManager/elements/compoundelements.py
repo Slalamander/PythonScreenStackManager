@@ -32,6 +32,7 @@ BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
 _LOGGER = logging.getLogger(__package__)
 
 class Tile(base.TileElement):
+    
     """Element that combines an icon, text and optional title into a versatile element.
     
     A lot of defaults are present, such that making custom layout elements combining icons and text is generally not needed.
@@ -232,6 +233,7 @@ class Tile(base.TileElement):
         self._layoutstr: str
         "The string representing the layout to parse, also the default values for horizontal/vertical, accounting for title being present or not"
         return
+    
     #region
     @colorproperty
     def background_color(self) -> Union[ColorType,None]:
@@ -620,32 +622,51 @@ class Tile(base.TileElement):
 
         return self.imgData
 
-    async def async_generate(self, area = None, skipNonLayoutGen=False):
+    # async def async_generate(self, area = None, skipNonLayoutGen=False):
 
-        async with self._generatorLock:
-            if area==None:
-                area = self.area
+    #     async with self._generatorLock:
+    #         if area==None:
+    #             area = self.area
             
-            if area == None:
-                return
+    #         if area == None:
+    #             return
 
-            if self.__tile_layout in {"horizontal", "vertical"}:
-                if (l := self._build_tile_layout_str(self.__tile_layout)) != self._layoutstr:
-                    self._layoutstr = l
-                    self._reparse_layout = True
+    #         if self.__tile_layout in {"horizontal", "vertical"}:
+    #             if (l := self._build_tile_layout_str(self.__tile_layout)) != self._layoutstr:
+    #                 self._layoutstr = l
+    #                 self._reparse_layout = True
 
-            if self._layoutstr != None and self._reparse_layout:
-                old_layout = self.layout
-                new_layout = base.parse_layout_string(self._layoutstr, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
-                if new_layout != old_layout:
-                    self._layout = new_layout
-                    skipNonLayoutGen=False
-                    self.set_parent_layouts(old_layout,self._layout)
-                    self._rebuild_area_matrix = True
+    #         if self._layoutstr != None and self._reparse_layout:
+    #             old_layout = self.layout
+    #             new_layout = base.parse_layout_string(self._layoutstr, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
+    #             if new_layout != old_layout:
+    #                 self._layout = new_layout
+    #                 skipNonLayoutGen=False
+    #                 self.set_parent_layouts(old_layout,self._layout)
+    #                 self._rebuild_area_matrix = True
 
-                self._reparse_layout = False
+    #             self._reparse_layout = False
 
-        return await super().async_generate(area, skipNonLayoutGen)
+    #     return await super().async_generate(area, skipNonLayoutGen)
+
+    async def pre_generate(self, area=None, skipNonLayoutGen=False):
+        
+        if self.__tile_layout in {"horizontal", "vertical"}:
+            if (l := self._build_tile_layout_str(self.__tile_layout)) != self._layoutstr:
+                self._layoutstr = l
+                self._reparse_layout = True
+
+        if self._layoutstr != None and self._reparse_layout:
+            old_layout = self.layout
+            new_layout = base.parse_layout_string(self._layoutstr, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
+            if new_layout != old_layout:
+                self._layout = new_layout
+                skipNonLayoutGen=False
+                self.set_parent_layouts(old_layout,self._layout)
+                self._rebuild_area_matrix = True
+
+            self._reparse_layout = False
+        return await super().pre_generate(area, skipNonLayoutGen)
 
     async def feedback_function(self) -> Coroutine[Any, Any, Callable[..., None]]:
         

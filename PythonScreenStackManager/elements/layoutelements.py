@@ -497,6 +497,9 @@ class NavigationTile(base.TileElement):
         The name of this Tile, shows as the text.
     """
 
+    def __repr__(self):
+        return super().__repr__() + f"({self._name})"
+
     @classproperty
     def tiles(cls):
         return ("icon","name","line")
@@ -505,15 +508,18 @@ class NavigationTile(base.TileElement):
     def _emulator_icon(cls): return "mdi:navigation-variant"
 
     def __init__(self, tile_layout : str, icon : mdiType, name : str, **kwargs): 
-        NavIcon = base.Icon(icon, background_shape="circle", _isNavElt=True, NavTile = self)
+        
+        self._name = name
+        NavIcon = base.Icon(icon, background_shape="circle", _isNavElt=True, NavTile = self, id = f"navtile-{name}-icon")
         if icon == None:
             NavIcon._icon = None
-        NavText = base.Button(name, text_x_position="left", fit_text=True, _isNavElt=True, NavTile = self)
-        NavLine = base.Line(line_color=None, width=4, alignment="top", _isNavElt=True, NavTile = self)
+        NavText = base.Button(name, text_x_position="left", fit_text=True, _isNavElt=True, NavTile = self, id = f"navtile-{name}-text")
+        NavLine = base.Line(width=4, alignment="top", _isNavElt=True, NavTile = self, id = f"navtile-{name}-line")
 
         self.__elements = {"icon": NavIcon, "name": NavText, "line": NavLine}
         super().__init__(tile_layout,**kwargs)
         self._reparse_layout = True
+        
     
     @property
     def elements(self) -> dict[Literal["icon","name","line"],Union[base.Icon,base.Button,base.Line]]:
@@ -550,22 +556,28 @@ class NavigationTile(base.TileElement):
         elif parent_layout == "right":
             return "icon,line"
 
-    def update(self, updateAttributes={}, skipGen=False, forceGen: bool = False, skipPrint=False, reprintOnTop=False, updated: bool = False):
-        return super().update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
+    # def update(self, updateAttributes={}, skipGen=False, forceGen: bool = False, skipPrint=False, reprintOnTop=False, updated: bool = False):
+    #     return super().update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
     
-    async def async_update(self, updateAttributes=..., skipGen=False, forceGen = False, skipPrint=False, reprintOnTop=False, updated = False):
-        upd = await super().async_update(updateAttributes, skipGen=True)
-        await asyncio.sleep(0)
-        await super().async_update({}, skipGen, forceGen, skipPrint, reprintOnTop, updated=updated or upd)
+    async def async_update(self, updateAttributes={}, skipGen=False, forceGen = False, skipPrint=False, reprintOnTop=False, updated = False):
+        try:
+            # upd = await super().async_update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated=updated or upd)
+            upd = await super().async_update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated=updated)
+        except Exception as exce:
+            _LOGGER.exception(f"{self} could not update")
+        s = self
+        i = self.elements["icon"]
+        l = self.elements["line"]
         return upd
+        # return upd
 
-    async def async_generate(self, area=None, skipNonLayoutGen=False):
-        await asyncio.sleep(0)
-        return await super().async_generate(area, skipNonLayoutGen)
+    # async def async_generate(self, area=None, skipNonLayoutGen=False):
+    #     await asyncio.sleep(0)
+    #     return await super().async_generate(area, skipNonLayoutGen)
 
-    def generator(self, area=None, skipNonLayoutGen=False):
-        img = super().generator(area, skipNonLayoutGen)
-        return img
+    # def generator(self, area=None, skipNonLayoutGen=False):
+    #     img = super().generator(area, skipNonLayoutGen)
+    #     return img
 
 ##Kinda want to keep them called Pages cause of Ereader shenanigans
 ##In a way you'd page through things anyways
@@ -913,8 +925,10 @@ class TabPages(base.TileElement):
         self.__currentTab = self.__tabElements[index]
         self._reparse_layout = True
         if self.NavigationBar.selected != self.__tabNames[index]:
-            await self.NavigationBar.async_select(self.__tabNames[index])
+            await self.NavigationBar.async_select(self.__tabNames[index], call_on_select=False, skip_update=True)
+
         await self.async_update(updated=True)
+        return
 
     def show_page(self, index : int):
         """
@@ -970,6 +984,7 @@ class TabPages(base.TileElement):
 
         tab_idx = self.__tabNames.index(option)
         await self.async_show_page(tab_idx)
+        return
         
     @elementactionwrapper.method
     async def show_tab_shorthand(self, name : str):
@@ -1074,27 +1089,33 @@ class TabPages(base.TileElement):
         for tile in tiles:
             tile : NavigationTile
             if tile._tile_layout == "auto":
-                tile.update(upd_attr, skipGen=self.isGenerating, skipPrint=True)
+                tile.update(upd_attr, skipGen=self.isUpdating, skipPrint=True)
         
-        self.NavigationBar.update(nav_dict, skipGen=self.isGenerating, skipPrint=self.isUpdating, updated=True)
+        self.NavigationBar.update(nav_dict, skipGen=self.isUpdating, skipPrint=self.isUpdating, updated=True)
         self._resize_defaults = False
 
-    def generator(self, area=None, skipNonLayoutGen=False):
+    # def generator(self, area=None, skipNonLayoutGen=False):
 
+    #     if self._resize_defaults:
+    #         self._set_default_sizes()
+    #         self._rebuild_area_matrix = True
+
+    #     img = super().generator(area, skipNonLayoutGen)
+    #     return img
+    
+    # async def async_generate(self, area=None, skipNonLayoutGen=False):
+    #     async with self._generatorLock:
+    #         if self._resize_defaults:
+    #             self._set_default_sizes()
+    #             self._rebuild_area_matrix = True
+    #     img = await super().async_generate(area, skipNonLayoutGen)
+    #     return img
+
+    async def pre_generate(self, area=None, skipNonLayoutGen=False):
         if self._resize_defaults:
             self._set_default_sizes()
             self._rebuild_area_matrix = True
-
-        img = super().generator(area, skipNonLayoutGen)
-        return img
-    
-    async def async_generate(self, area=None, skipNonLayoutGen=False):
-        async with self._generatorLock:
-            if self._resize_defaults:
-                self._set_default_sizes()
-                self._rebuild_area_matrix = True
-        img = await super().async_generate(area, skipNonLayoutGen)
-        return img
+        return await super().pre_generate(area, skipNonLayoutGen)
 
     async def async_update(self, updateAttributes={}, skipGen=False, forceGen: bool = False, skipPrint=False, reprintOnTop=False, updated: bool = False) -> bool:
         return await super().async_update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
