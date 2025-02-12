@@ -2543,7 +2543,6 @@ class DropDown(base.Button):
         self.outline_width = outline_width
         self.radius = radius
 
-        self.tap_action = self.select
         self.show_feedback = True
         self._menuInvertTime = 0.3
         "Time to invert menu items for"
@@ -2568,6 +2567,10 @@ class DropDown(base.Button):
     @property
     def text(self) -> str:
         "The text shown on the main button. Cannot be changed, instead set selected to the right integer, or call the select method"
+        if not self.options or self.selected >= len(self.options):
+            if self.screen.printing:
+                _LOGGER.warning(f"{self} cannot display index {self.selected}")
+            return ""
         return self.options[self.selected]
 
     @property
