@@ -691,6 +691,7 @@ class Element(ABC):
                     if not skipPrint:
                         ##Gotta force the layout gen? --> yes to update, but not commenting out and regenerating the layouts without the elements is by far faster.
                         await self.parentPSSMScreen.print_stack(area=self.area)
+                        # self.screen.simple_print_element(self, skipGen=True, apply_background=True)
                 elif forceGen:
                     if self.isGenerating:
                         _LOGGER.info(f"Waiting for {self.id} to finish generating")
