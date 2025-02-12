@@ -14,7 +14,7 @@ from ..tools import customproperty
 if TYPE_CHECKING:
     from ..elements import Element
     from .styles import Style
-    from .screen import PSSMScreen
+    from .screen import PSSMScreen as Screen
 
 _LOGGER = logging.getLogger(__name__)
 

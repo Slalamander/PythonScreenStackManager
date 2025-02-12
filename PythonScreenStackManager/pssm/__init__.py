@@ -9,10 +9,14 @@ from ..elements import baseelements
 from ..tools import Singleton
 
 baseelements.Screen = PSSMScreen
+
 decorators.Element = baseelements.Element
 decorators.Style = Style
-util.Element = baseelements.Element
+decorators.Screen = PSSMScreen
 
+util.Element = baseelements.Element
+util.Style = Style
+util.Screen = PSSMScreen
 
 def get_screen():
     "Returns the screen instance"

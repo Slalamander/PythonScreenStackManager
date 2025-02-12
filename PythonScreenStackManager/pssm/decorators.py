@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from ..devices.windowed import Device
     from ..elements import Element
     from .styles import Style
+    from .screen import PSSMScreen as Screen
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -233,9 +234,13 @@ class trigger_condition:
                 ##however, does maybe provide some issues with functions being called outside of the eventloop
                 # if mainloop:
                     # mainloop.create_task(cls._notify_condition(self))
-                loop = asyncio.get_event_loop()
-                loop.create_task(cls._notify_condition(self))
+                try:
+                    loop = asyncio.get_event_loop()
+                    asyncio.run_coroutine_threadsafe(cls._notify_condition(self),loop)
+                except RuntimeError as exce:
+                    _LOGGER.warning(f"Cannot notify {self} from {func}, no event loop", exc_info=exce)
                 return res
+            
         trigger_interceptor.__signature__ = inspect.signature(func)
         return trigger_interceptor
     
