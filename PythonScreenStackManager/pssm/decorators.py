@@ -232,8 +232,7 @@ class trigger_condition:
                 ##Create custom event loop policy that always returns the screen's mainloop
                 ##That way, asyncio.get_event_loop() will always return the screen loop
                 ##however, does maybe provide some issues with functions being called outside of the eventloop
-                # if mainloop:
-                    # mainloop.create_task(cls._notify_condition(self))
+
                 try:
                     loop = asyncio.get_event_loop()
                     asyncio.run_coroutine_threadsafe(cls._notify_condition(self),loop)
