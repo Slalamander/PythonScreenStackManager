@@ -11,6 +11,8 @@ import sys
 if TYPE_CHECKING:
     from .pssm_types import *
 
+DEBUG = bool(sys.gettrace())
+
 logger = logging.getLogger(__name__)
 
 PATH_TO_PSSM = Path(__file__).parent
