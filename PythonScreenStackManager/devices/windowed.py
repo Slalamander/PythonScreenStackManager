@@ -27,7 +27,7 @@ from ..pssm_types import ColorType
 
 from ..pssm.decorators import trigger_condition
 
-logger = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 t = tk
 
@@ -77,7 +77,7 @@ def get_windows_network() -> NetworkDict:
 
 def get_linux_network() -> NetworkDict:
     "Gets info on the currently connected network on Linux machines. When it is implemented that is."
-    logger.warning("Linux network has not been implemented yet")
+    _LOGGER.warning("Linux network has not been implemented yet")
 
     network = (os.popen("iwgetid -r").read())
 
@@ -213,11 +213,11 @@ class Device(PSSMdevice):
     @last_printed_PIL.setter
     def last_printed_PIL(self, value : Image.Image):
         if not isinstance(value,Image.Image):
-            logger.error(f"last_printed_PIL must be a pillow image instance. {value} is not")
+            _LOGGER.error(f"last_printed_PIL must be a pillow image instance. {value} is not")
             raise ValueError
         if value.size != (self.screenWidth,self.screenHeight):
             msg = "Image size does not match screensize"
-            logger.warning(msg)
+            _LOGGER.warning(msg)
 
         self.__last_printed_PIL = value
 
@@ -370,7 +370,7 @@ class Device(PSSMdevice):
         PSSM puts non async functions in a seperate thread to allow running them async, but this means they are in a different thread from the Tkinter instance, so cannot interact with it then.
         """
         
-        logger.info("PSSM TKinter - Click handler starting")
+        _LOGGER.info("PSSM TKinter - Click handler starting")
         if self.has_feature(FEATURES.FEATURE_INTERACTIVE):
             self._eventQueue = eventQueue
             self.canvas.bind("<Button-1>", self.canvas_event)
@@ -384,14 +384,15 @@ class Device(PSSMdevice):
 
     def canvas_event(self,event : tk.Event):
         "Gets events from tkinter and passes them to PSSM."
-        logger.verbose(f"Got event {event} from tkinter, passing to PSSM")
+        _LOGGER.verbose(f"Got event {event} from tkinter, passing to PSSM")
         if event.type == tk.EventType.ButtonPress:
             touch_type = const.TOUCH_PRESS
         elif event.type == tk.EventType.ButtonRelease:
             touch_type = const.TOUCH_RELEASE
         
         touch_event = TouchEvent(event.x, event.y, touch_type)
-        self.eventQueue.put_nowait(touch_event)   
+        self.eventQueue.put_nowait(touch_event)
+        _LOGGER.debug(f"Send touch event {touch_event}")   
         return
     
     def close_interaction_handler(self):
@@ -452,7 +453,7 @@ class Device(PSSMdevice):
             filename = "inkBoard_Screenshot_" + date
         filename = f"{folder}{filename}.png"
         self.last_printed_PIL.save(filename)
-        logger.debug(f"Screenshot saved as {filename}")
+        _LOGGER.debug(f"Screenshot saved as {filename}")
 
     def _window_configure(self, event : tk.Event):
         ##Catches events that configure the window, but only used to call the resize function
@@ -535,7 +536,7 @@ class Network(BaseNetwork):
     Properties: IP, wifiOn, connected, SSID
     '''
     def __init__(self, device):
-        logger.info("Setting up emulator network class")
+        _LOGGER.info("Setting up emulator network class")
         super().__init__(device)
         self._wifiOn = True
         self._IP = None
@@ -578,7 +579,7 @@ class Network(BaseNetwork):
     def __get_ip(self) -> str:
         """Gets the devices IP adress. Returns None if none found and sets the connected attribute appropriately"""
         if not self.connected:
-            logger.warning("Not connected to a network, setting IP to None")
+            _LOGGER.warning("Not connected to a network, setting IP to None")
             self._IP = None
             return
         
@@ -640,7 +641,7 @@ class Backlight(BaseBacklight):
             return
         
         alpha = int(self.max_alpha - self.max_alpha*(level/100))
-        logger.verbose(f"Backlight brightness to {level}%; Alpha channel is {alpha}")
+        _LOGGER.verbose(f"Backlight brightness to {level}%; Alpha channel is {alpha}")
         blImg = self.backlightImage
         blImg.putalpha(alpha) 
         self.blTk = ImageTk.PhotoImage(blImg)
@@ -657,7 +658,7 @@ class Backlight(BaseBacklight):
         try:
             await self.transitionTask #@IgnoreException
         except asyncio.CancelledError as exce:
-            logger.debug(f"Transition task to {brightness}% in {transition} seconds was cancelled")
+            _LOGGER.debug(f"Transition task to {brightness}% in {transition} seconds was cancelled")
         
         if self._device.parentPSSMScreen.printing:
             async with self._updateCondition:
@@ -704,7 +705,7 @@ class Backlight(BaseBacklight):
     async def turn_on_async(self, brightness : int = None, transition: float = None):
         """Async function to provide support for transitions at turn on. Does NOT perform sanity checks"""
 
-        logger.verbose(f"Async turning on in {transition} seconds")
+        _LOGGER.verbose(f"Async turning on in {transition} seconds")
         
         if brightness == None:
             brightness = self.default_brightness
@@ -728,18 +729,18 @@ class Backlight(BaseBacklight):
             brightness = self.default_brightness
         
         if transition < 0:
-            logger.error("Transition time cannot be negative.")
+            _LOGGER.error("Transition time cannot be negative.")
             return
         
         if brightness < 0 or brightness > 100:
-            logger.error(f"Brightness must be between 0 and 100. {brightness} is an invalid value")
+            _LOGGER.error(f"Brightness must be between 0 and 100. {brightness} is an invalid value")
             return
         
         asyncio.create_task(self.turn_on_async(brightness, transition))
 
     async def turn_off_async(self, transition: float = None):
         """Async function to provide support for transitions at turn off. Does NOT perform sanity checks"""
-        logger.debug("Async turning off backlight")
+        _LOGGER.debug("Async turning off backlight")
         if not self.state:
             ##Do nothing if the light is already off
             return
@@ -759,7 +760,7 @@ class Backlight(BaseBacklight):
             transition = self.default_transition
 
         if transition < 0:
-            logger.error("Transition time cannot be negative.")
+            _LOGGER.error("Transition time cannot be negative.")
             return
 
         asyncio.create_task(self.turn_off_async(transition))
