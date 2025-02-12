@@ -117,9 +117,13 @@ class GridLayout(base.Layout):
     @property
     def _emulator_icon(cls): return "mdi:dots-grid"
     
-    def __init__(self, elements : Sequence[base.Element], rows : int = 4, columns : int = 4,
+    def __init__(self, elements : Sequence[base.Element], rows : int = None, columns : int = None,
                 row_sizes : list[PSSMdimension] = "?", column_sizes : list[PSSMdimension] = "?",
                 outer_margins : list[PSSMdimension] = 0, inner_margins : list[PSSMdimension] = 0, **kwargs):
+
+        if rows == columns == None:
+            rows = 4
+            columns = 4
 
         self.rows = rows
         self.row_sizes = row_sizes
