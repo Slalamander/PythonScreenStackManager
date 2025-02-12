@@ -129,6 +129,9 @@ class PSSMScreen:
 
         self._triggerCondition = TriggerCondition()
         self._touchCondition = TriggerCondition()
+        
+        self._batchEvent = asyncio.Event()
+        self._batchEvent.set()
 
         self._printLock = asyncio.Lock()
         "Lock to ensure only one print loop can run"
@@ -336,7 +339,8 @@ class PSSMScreen:
     @property
     def isBatch(self) -> bool:
         """Whether the screen is processing a batch of elements"""
-        return self._isBatch
+        return not self._batchEvent.is_set()
+        # return self._isBatch
 
     @property
     def stack(self) -> list['elements.Element']:
@@ -1008,13 +1012,14 @@ class PSSMScreen:
         """
         _LOGGER.debug("Started screen batch")
         self._isBatch = True
+        self._batchEvent.clear()
 
     @trigger_condition
     def stop_batch_writing(self, loop=None):
         """
         Updates the screen after batch writing and generates all elements in the stack.
         """
-        self._isBatch = False
+
         if not self.printing:
             return
 
@@ -1035,6 +1040,7 @@ class PSSMScreen:
     async def _end_batch_write(self):
         
         generators = set()
+
         for elt in self.stack:
             if isinstance(elt, elements.Layout):
                 generators.add(elt.async_generate(skipNonLayoutGen=False))
@@ -1045,6 +1051,8 @@ class PSSMScreen:
         _LOGGER.debug("Screen batch is done and everything was generated")
         await self.print_stack(self.area,False)
         _LOGGER.debug("Screen batch is done and should be printed")
+        self._isBatch = False
+        self._batchEvent.set()
 
     def add_element(self, element, skipPrint=False, skipRegistration=False):
         "Add an element to the screen."
@@ -1478,7 +1486,7 @@ class PSSMScreen:
 
         async with self._printLock:
             assert self._perform_element_attribute_check(), "Element pre-print checks failed"
-            self.stop_batch_writing()
+
             for element in self.stack:
                 _LOGGER.debug(f"Calling element {element} on_add")
                 if hasattr(element,"on_add"):
@@ -1486,6 +1494,8 @@ class PSSMScreen:
                         element.on_add(call_all = True)
                     else:
                         element.on_add()
+            await asyncio.sleep(0)
+            await self._end_batch_write()
             self._printGather = asyncio.gather(*coros, return_exceptions=True)
             try:
                 await self._printGather
@@ -1499,14 +1509,17 @@ class PSSMScreen:
                 raise InteractionError()
             
             self.interactQueue = asyncio.Queue()
-            asyncio.create_task(self.device.event_bindings(self.interactQueue))
-            _LOGGER.debug("Touch handles has started")
+            _LOGGER.debug("Touch handler has started")
             await asyncio.sleep(0)
 
             if self.device.has_feature(FEATURES.FEATURE_PRESS_RELEASE):
-                await self.__async_touch_handler(self.interactQueue)
+                touch_handler = self.__async_touch_handler(self.interactQueue)
             else:
-                await self.__async_simple_touch_handler(self.interactQueue)
+                touch_handler = self.__async_simple_touch_handler(self.interactQueue)
+            
+            await asyncio.gather(
+                self.device.event_bindings(self.interactQueue),
+                touch_handler) 
             
     async def __async_simple_touch_handler(self, queue: asyncio.Queue):
         "Handles devices that only support taps and optionally long presses."
@@ -1534,7 +1547,7 @@ class PSSMScreen:
                 if event.touch_type != const.TOUCH_PRESS:
                     continue
                 
-                release_task = asyncio.create_task(coro=queue.get())
+                release_task = asyncio.create_task(coro=queue.get())    ##This has to be a task, otherwise the result is removed from the queue somewhere else
                 done, _ = await asyncio.wait([release_task], timeout=debounce_time)
                 if done:
                     ##Should not have received a second touch before the debounce time elapsed
