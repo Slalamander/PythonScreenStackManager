@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 SHORTHAND_COLORS = PSSM_COLORS.copy()
 
+__invalidcolor = object()
+
 ##linking to a style: any string starting and ending with a ':' (think about using that one, yaml does start complaining about nested mappings with it unless explicitly setting it to a string)
 ##i.e. ':style:' would apply the default style value said property
 ##Maybe also allow style identifiers like ':success:' etc like ttkbootstrap does
@@ -39,6 +41,22 @@ class Style:
     @classproperty
     def shorthand_colors(cls):
         return SHORTHAND_COLORS | cls._color_shorthands
+    
+    @classproperty
+    def NOTACOLOR(cls):
+        """Unique value that can be used to test colors without relying on booleans
+        
+
+        Example
+        ---------
+
+        .. code-block::
+
+            is_valid_color(colors.get("my_color",NOTACOLOR))
+            
+        Will always return ``False``, whereas for example ``None`` is a valid color value.
+        """
+        return __invalidcolor
 
     @classmethod
     def get_color(cls, value: ColorType, colormode: str = "screen-image"):
