@@ -81,7 +81,7 @@ class Style:
         return tools.contrast_color(value, mode)
             
     @classmethod
-    def is_valid_color(cls, value: ColorType) -> bool:
+    def is_valid_color(cls, value: ColorType, element : "Element" = None) -> bool:
         """Returns whether the provided value is a valid value for a color property
 
         Tests if the supplied color is valid (i.e. can be processed by get_Color). 
@@ -97,7 +97,13 @@ class Style:
         -------
         bool
             Whether the color is valid
-        """        
+        """
+        if element and isinstance(value,str):
+            if element.parentLayout == None and not element in element.screen.stack:
+                return True
+            elif value in getattr(element.parentLayout,"_color_shorthands",{}):
+                return True
+
         if isinstance(value,str) and value.lower() in cls.shorthand_colors:
             return True
         else:
