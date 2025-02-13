@@ -5683,6 +5683,7 @@ class _ElementSelect(Element):
 
         self = layout_element
         self._skip_select_update = False    ##Used to skip updates when running the select function
+        self._hidden_options = {}
 
         self.__generator = layout_element.generator
         "The generator of the original function"
@@ -6079,14 +6080,22 @@ class _ElementSelect(Element):
         self.__option_elements[option] = element
         element.tap_action = {"action": self.async_select_by_element, "data": {"option": option}}
         self._reparse_element_colors(element)
+        self._hidden_options.pop(option,None)
 
-    def remove_option(self, option : str):
+    def remove_option(self, option : str, hide : bool = False) -> "Element":
         """Removes an option from the selectors, and resets the associated element's tap_action (styling is not reset)
 
         Parameters
         ----------
         option : str
             The option to remove
+        hide : bool
+            Hides the option, meaning it is removed from the option elements, but the element is saved in the _hidden_options dict
+
+        Returns
+        --------
+        Element
+            the remove element, if any
         """
 
         if option not in self.__option_elements:
@@ -6100,6 +6109,11 @@ class _ElementSelect(Element):
 
         element = self.__option_elements.pop(option)
         element.tap_action = None
+        
+        if hide:
+            self._hidden_options[option] = element
+        
+        return element
 
 
 class _IntervalUpdate(ABC):
