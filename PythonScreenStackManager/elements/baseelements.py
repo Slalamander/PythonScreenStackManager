@@ -1140,7 +1140,7 @@ class Element(ABC):
 
         try:
             if not self._updatequeue.empty():
-                await self.__update_attributes()
+                await self._async_update_attributes()
             async with self._generatorLock:
                 self._requestGenerate = False
                 if self.area == area == None:
@@ -5935,7 +5935,6 @@ class _ElementSelect(Element):
             for elt in active_elts:
                 # ##At least for now: no updatelock or generator lock are returned, so all elements think the selector is always updating and generating
                 ##Should be able to fix that when copying stuff over from the parentlayout
-
                 elt_upd = elt.update(set_props, skipPrint=self.isUpdating, skipGen=skipGen)
                 if elt_upd: updated = True
 
@@ -6001,6 +6000,8 @@ class _ElementSelect(Element):
             The option to select
         call_on_select : bool, optional
             If False, `on_select` will not be called when selecting
+        skip_update : bool, optional
+            If True, the element will not call update, meaning it won't generate or print yet
         """        
 
         if option not in self.option_elements:
@@ -6032,7 +6033,6 @@ class _ElementSelect(Element):
 
         self._reparse_colors = True
         self_upd = True
-        
         await asyncio.sleep(0)
         # await asyncio.gather(*[elt._await_update() for elt in self.option_elements.values()])
 
