@@ -458,6 +458,7 @@ class Device(PSSMdevice):
     def _window_configure(self, event : tk.Event):
         ##Catches events that configure the window, but only used to call the resize function
 
+        # asyncio.set_event_loop(self.Screen.mainLoop)
         if event.widget != self.window:
             return
 
@@ -476,7 +477,7 @@ class Device(PSSMdevice):
 
             with suppress(RuntimeError):
                 ##Would sometimes run into the error that the event loop is closed
-                self._resizeTask = self.Screen.mainLoop.create_task(self._resize_window(resize_event))
+                self._resizeTask = asyncio.create_task(self._resize_window(resize_event))
         return
     
     @trigger_condition
