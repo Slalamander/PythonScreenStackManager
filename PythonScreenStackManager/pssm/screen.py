@@ -133,6 +133,8 @@ class PSSMScreen:
         self._batchEvent = asyncio.Event()
         self._batchEvent.set()
 
+        self._stackPrintLock = asyncio.Lock()
+
         self._printLock = asyncio.Lock()
         "Lock to ensure only one print loop can run"
 
@@ -793,23 +795,24 @@ class PSSMScreen:
         forceLayoutGen : bool, optional
             Regenerates layouts, by default False
         """
-        if self.isBatch or not self.printing:
-            # Do not do anything during batch mode
-            return
+        async with self._stackPrintLock:
+            if self.isBatch or not self.printing:
+                # Do not do anything during batch mode
+                return
 
-        pil_image = await self.generate_stack(area=area, forceLayoutGen=forceLayoutGen)
-        
-        if area:
-            [(x, y), (w, h)] = area
-        else:
-            [(x, y), (w, h)] = self.area
+            pil_image = await self.generate_stack(area=area, forceLayoutGen=forceLayoutGen)
+            
+            if area:
+                [(x, y), (w, h)] = area
+            else:
+                [(x, y), (w, h)] = self.area
 
-        if pil_image == None:
-            _LOGGER.error("Something went wrong printing the Stack")
-            raise ValueError("pil_image for stack print cannot be None")
-        
-        await asyncio.to_thread(self.device.print_pil, pil_image, x,y, isInverted=self.isInverted)
-        _LOGGER.verbose("Printed stack")
+            if pil_image == None:
+                _LOGGER.error("Something went wrong printing the Stack")
+                raise ValueError("pil_image for stack print cannot be None")
+            
+            await asyncio.to_thread(self.device.print_pil, pil_image, x,y, isInverted=self.isInverted)
+            _LOGGER.verbose("Printed stack")
 
     async def generate_stack(self,area=None, forceLayoutGen=False) -> Image.Image:
         """
