@@ -758,9 +758,15 @@ class PSSMScreen:
     @elementactionwrapper.method
     def quit(self, exce: Exception = None):
         "Quits inkBoard by setting the eStop future to SystemExit."
+        
+        try:
+            assert asyncio.get_running_loop() is self.mainLoop
+        except (RuntimeError,RuntimeWarning, AssertionError):
+            self.mainLoop.call_soon_threadsafe(self.quit,exce)
+            return
+
         if not isinstance(exce, Exception) and not (isinstance(exce,type) and issubclass(exce, Exception)):
             exce = SystemExit("Quit called")
-
         try:
             self.save_settings()
             self.device._quit(exce)
@@ -1504,6 +1510,7 @@ class PSSMScreen:
                 await self._printGather
             except asyncio.CancelledError as exce:
                 _LOGGER.debug("PSSM printLoop has been cancelled")
+        return
 
     async def async_touch_handler(self):
             "Starts up the touch handler and waits for it."
