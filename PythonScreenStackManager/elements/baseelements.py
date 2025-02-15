@@ -1719,9 +1719,12 @@ class Layout(Element):
         f._matrix[f._rowidx] = f._row
 
     @staticmethod
-    def __elt_gen_callback(f):
+    def __elt_gen_callback(f: asyncio.Task):
         ##callback for adding an element's imgdata to a row
-        f._row[f._colidx] = f.result()
+        if f.cancelled() or f.exception():
+            f._row[f._colidx] = None
+        else:
+            f._row[f._colidx] = f.result()
 
     async def async_create_img_matrix(self, skipNonLayoutGen=False):
         matrix = [None] * len(self.areaMatrix)
@@ -1767,7 +1770,7 @@ class Layout(Element):
                     row_coros.add(t)
 
             if row_coros:
-                r_gather = asyncio.gather(*row_coros)
+                r_gather = asyncio.gather(*row_coros, return_exceptions=True)
                 r_gather._row = row
                 r_gather._matrix = matrix
                 r_gather._rowidx = i
@@ -5747,6 +5750,8 @@ class _ElementSelect(Element):
     @property
     def options(self) -> list:
         """All the registered options of the selector.
+
+        Does not include hidden options
         """        
         return list(self.__option_elements.keys())
 
@@ -5757,17 +5762,25 @@ class _ElementSelect(Element):
     
     @property
     def selected_elements(self) -> list[Element]:
-        "The element(s) that are selected"
-        if self.selected == None:
+        """The element(s) that are selected
+        Does not include hidden elements
+        """
+        if self.selected == None :
             return []
         elif not isinstance(self.selected,list):
+            if self.selected in self.hiddenOptions:
+                return []
             return [self.option_elements[self.selected]]
         else:
             elts = []
             elements = self.option_elements
-            for opt in self.selected:
+            for opt in filter(lambda s: s in self.option_elements, self.selected):
                 elts.append(elements[opt])
             return elts
+
+    @property
+    def hiddenOptions(self) -> dict[str,Element]:
+        return self._hidden_options
 
     @property
     def select_multiple(self) -> bool:
@@ -6005,7 +6018,7 @@ class _ElementSelect(Element):
             If True, the element will not call update, meaning it won't generate or print yet
         """        
 
-        if option not in self.option_elements:
+        if option not in self.option_elements | self.hiddenOptions:
             _LOGGER.warning(f"{self}: {option} is not a valid option")
             return
 
