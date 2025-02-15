@@ -4977,6 +4977,8 @@ class Icon(ImageElement):
             background_color_tuple = Style.get_color(None, colorMode)
 
         if icon_color == None: icon_color = self.icon_color          
+        icon_color = Style.get_color(icon_color,"RGBA")
+        
         relSize = floor(IMPLEMENTED_ICON_SHAPES["circle"][1]*DrawShapes.MINRESOLUTION)
         
         badgeImg = Image.new(img.mode,(DrawShapes.MINRESOLUTION, DrawShapes.MINRESOLUTION), None)
@@ -4987,13 +4989,12 @@ class Icon(ImageElement):
         if mdi.is_mdi(self.badge_icon):
             badgeImg = mdi.draw_mdi_icon(badgeImg,self.badge_icon, icon_size=relSize, icon_color=icon_color)
         else:
-            col = Style.get_color(icon_color,"RGBA")
             if isinstance(self.badge_icon, Image.Image):
                 badge = self.badge_icon.copy()
             else:
                 badge = tools.parse_known_image_file(self.badge_icon)
             
-            newImg = mdi.make_mdi_icon(badge, relSize, col)
+            newImg = mdi.make_mdi_icon(badge, relSize, icon_color)
             pasteCoords = (int((badgeImg.width-relSize)/2),)*2
             badgeImg.alpha_composite(newImg,pasteCoords)
 
