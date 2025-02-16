@@ -622,7 +622,7 @@ class Element(ABC):
 
             if not updateAttributes and not forceGen and not updated:
                 msg = f"Element {self.id} update was called, but no attributes were updated and not regenerated."
-                _LOGGER.debug(msg)
+                _LOGGER.verbose(msg)
                 return False
 
             ##Hoping this will allow tasks that update subElements to run first
@@ -638,7 +638,7 @@ class Element(ABC):
             else:
                 isBatch = self.parentPSSMScreen.isBatch
                 if reprintOnTop:
-                    _LOGGER.debug("Printing on Top")
+                    _LOGGER.log(5, f"{self}: Printing on Top")
                     if forceGen:
                         await self.async_generate()
                     await asyncio.to_thread(self.parentPSSMScreen.simple_print_element,element=self, skipGen=skipGen, apply_background=True)
@@ -694,9 +694,11 @@ class Element(ABC):
                         # self.screen.simple_print_element(self, skipGen=True, apply_background=True)
                 elif forceGen:
                     if self.isGenerating:
-                        _LOGGER.info(f"Waiting for {self.id} to finish generating")
+                        # _LOGGER.info(f"Waiting for {self.id} to finish generating")
                         await self._await_generator()
                     await self.async_generate()
+                elif isBatch and updated and self.onScreen:
+                    _LOGGER.debug(f"{self}: not updating since a batch is in progress")
             
             return updated
 
@@ -2760,7 +2762,7 @@ class Popup(Layout):
             self._area = a
 
         if self not in self.parentPSSMScreen.popupsOnTop:
-            self.parentPSSMScreen.add_element(self)
+            await self.parentPSSMScreen.add_element(self)
             self.parentPSSMScreen.popupsOnTop.append(self)
             if self.popupID in self.screen.popupRegister:
                 async with self.screen.triggerCondition:
