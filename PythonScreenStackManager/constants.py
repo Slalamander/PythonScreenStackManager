@@ -29,12 +29,13 @@ True if PSSM is being imported from inkBoard, to guide some constants and stylin
 """
 
 n1 = sys.argv[0]
-entry_point = Path(n1).parts[-1]
+entry_points = Path(n1).parts
 
 try:
     if ("inkBoard" in __package__   ##For internal imports
-        or "inkBoard" in getattr(__main__,"__file__","pssm") or "inkBoard" in entry_point   ##General usage
-        or (hasattr(__main__,"debugpy") and __main__.cli.options.target == "inkBoard")): ##Debugging (in VScode using debugpy at least)
+    or "inkBoard" in getattr(__main__,"__file__","pssm") or 
+    "inkBoard" in entry_points[-1] or entry_points[:-2] == ("inkBoard", "__init__.py")   ##General usage
+    or (hasattr(__main__,"debugpy") and __main__.cli.options.target == "inkBoard")): ##Debugging (in VScode using debugpy at least)
         INKBOARD = True
 except:
     pass
