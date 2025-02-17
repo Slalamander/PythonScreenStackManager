@@ -2750,7 +2750,14 @@ class Popup(Layout):
 
     def show(self):
         loop = self.parentPSSMScreen.mainLoop
-        loop.create_task(self.async_show())
+        try:
+            coro = self.async_show()
+            asyncio.create_task(coro)
+        except (RuntimeError, RuntimeWarning):
+            f = asyncio.run_coroutine_threadsafe(coro, loop)
+            return
+            # _LOGGER.exception("Cannot show popup")
+        return
 
     @trigger_condition
     @elementactionwrapper.method
