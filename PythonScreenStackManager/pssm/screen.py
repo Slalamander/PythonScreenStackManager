@@ -1072,7 +1072,7 @@ class PSSMScreen:
         if loop == None:
             asyncio.run(self.__async_add_element(element, skipPrint, skipRegistration))
         else:
-            asyncio.create_task(self.__async_add_element(element, skipPrint, skipRegistration))
+            return self.create_task(self.__async_add_element(element, skipPrint, skipRegistration))
 
     async def async_add_element(self, element, skipPrint=False, skipRegistration=False):
         await self.__async_add_element(element, skipPrint, skipRegistration)
@@ -2062,3 +2062,30 @@ class PSSMScreen:
 
         await self.device.backlight.toggle_async(brightness,transition)
 
+    def create_task(self, coro, *, name = None) -> asyncio.Task:
+        """Helps with task creation
+
+        Catches errors thrown if the default create_task cannot run (due to no running loop).
+        If so, handles task creation in a threadsafe manner.
+
+        Parameters
+        ----------
+        coro : _type_
+            _description_
+        name : _type_, optional
+            _description_, by default None
+
+        Returns
+        -------
+        asyncio.Task
+            _description_
+        """        
+        try:
+            return asyncio.create_task(coro, name=name)
+        except (RuntimeError,RuntimeWarning) as exce:
+            f = asyncio.run_coroutine_threadsafe(self._threadsafe_create_task(coro, name = name), self.mainLoop)
+            return f.result()
+        
+    async def _threadsafe_create_task(self, coro, name = None):
+
+        return asyncio.create_task(coro, name = name)
