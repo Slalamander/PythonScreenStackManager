@@ -1246,6 +1246,24 @@ class PSSMScreen:
 
         _LOGGER.verbose(f"Inverting element {element}")
         ##This calls screen refresh etc, so this will have to be handled.
+
+        elt_img = element.imgData
+        mask = Image.new("RGBA", elt_img.size, (0,0,0,100))
+        d = self.device.screenMode
+
+        # mask.putalpha(100)
+        fb_img = Image.new("RGBA", elt_img.size, None)
+        fb_img.paste(mask, mask=elt_img)
+
+        self.device.print_pil(fb_img, *element.area[0])
+
+        # sleep_time = tools.parse_duration_string(element.feedback_duration)
+        await asyncio.sleep(element.feedback_duration)
+
+        if not self.popupsOnTop:
+            self.device.print_pil(element.imgData, *element.area[0])
+
+        return
         if element is None:
             _LOGGER.warning("Cannot invert Element, No element given")
             return False
