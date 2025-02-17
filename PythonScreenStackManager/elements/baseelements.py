@@ -654,7 +654,7 @@ class Element(ABC):
                         self : Layout
                         c = [elt._await_update() for elt in self.create_element_list() if elt.isUpdating]
                         await asyncio.gather(*c, return_exceptions=True)
-                        _LOGGER.debug(f"{self}: Child elements finished updating")
+                        _LOGGER.verbose(f"{self}: Child elements finished updating")
                         c = [elt for elt in self.create_element_list() if elt.isUpdating]
 
                     if self.parentLayouts:
@@ -678,7 +678,7 @@ class Element(ABC):
                             self._requestGenerate = True
                             if oldest_parent.isGenerating:
                                 ##Wait for the oldest parent to finish generating. If 
-                                _LOGGER.debug(f"{self}: Waiting for {oldest_parent.id} to finish generating")
+                                _LOGGER.verbose(f"{self}: Waiting for {oldest_parent.id} to finish generating")
                                 await oldest_parent._await_generator()
 
                             if self._requestGenerate:
@@ -1138,7 +1138,7 @@ class Element(ABC):
         saved_args = {"area": area, "skipNonLayoutGen": skipNonLayoutGen}
 
         if self._generatorLock.locked():
-            _LOGGER.debug(f"{self} waiting for generator to unlock")
+            _LOGGER.verbose(f"{self} waiting for generator to unlock")
 
         try:
             if not self._updatequeue.empty():
@@ -1149,7 +1149,7 @@ class Element(ABC):
                         return
                 
                 if asyncio._get_running_loop() == self.parentPSSMScreen.mainLoop:
-                    _LOGGER.debug(f"{self}: switching async_generate to printLoop")
+                    _LOGGER.verbose(f"{self}: switching async_generate to printLoop")
                 
 
                     e = self.parentPSSMScreen.generatorPool
@@ -1653,7 +1653,7 @@ class Layout(Element):
                         if not elt.isLayout and skipNonLayoutGen:
                             if elt.imgData == None:
                                 if elt.isGenerating:
-                                    _LOGGER.debug(f"{self.id} Generator is waiting for {elt.id} to finish generating")
+                                    _LOGGER.verbose(f"{self.id} Generator is waiting for {elt.id} to finish generating")
                                     # tools._block_run_coroutine(elt._await_generator(),self.parentPSSMScreen.mainLoop)
                                     _LOGGER.verbose(f"{elt.id} finished generating: {elt.isGenerating}")
                                 elt_img = elt.generator(elt_area)
@@ -2058,7 +2058,7 @@ class Layout(Element):
         click_x, click_y = coords
         row_A = 0
         row_C = max(len(self.areaMatrix) - 1, 0)
-        _LOGGER.debug(self.areaMatrix[row_C])
+        # _LOGGER.debug(self.areaMatrix[row_C])
         while len(self.areaMatrix[row_A]) == 0:
             row_A += 1
         while len(self.areaMatrix[row_C]) == 0:
@@ -2836,7 +2836,7 @@ class Popup(Layout):
                 await asyncio.wait_for(self._tapEvent.wait(),time)
             except asyncio.TimeoutError:
                 self._tapEvent.clear()
-                _LOGGER.debug(f"Closing popup {self.id} automatically")
+                _LOGGER.debug(f"{self}: Closing automatically")
                 await self.async_close()
             else:
                 self._tapEvent.clear()
@@ -3493,7 +3493,7 @@ class Button(Element):
     @text.setter
     def text(self, value:str):
         if not isinstance(value,str):
-            _LOGGER.debug(f"Converting {type(value)} to a string")
+            _LOGGER.verbose(f"{self}: converting {type(value)} to a string")
             value = str(value)
         self.__text = value
 
@@ -3995,7 +3995,7 @@ class ImageElement(Element):
         if value == None or value.lower() == "none":
             self._background_shape = None
         elif value == "ADVANCED":
-            _LOGGER.debug("Advanced icon shape applied")
+            _LOGGER.debug(f"{self}: Advanced icon shape applied")
             self._background_shape = value
         elif value.strip().lower().replace(" ","_") in IMPLEMENTED_ICON_SHAPES:
             ##Maybe add some string stuff like lower in here to allower for minor changes in what people fill in.
@@ -4750,7 +4750,7 @@ class Icon(ImageElement):
             if self.background_shape == "ADVANCED":
                 method = self.shape_settings["method"]
                 icon_size = self.shape_settings.get("icon_size",1)
-                _LOGGER.debug(f"Drawing advanced shape {method}")
+                _LOGGER.verbose(f"Drawing advanced shape {method}")
                 try:
                     (loadedImg, drawImg) = DrawShapes.draw_advanced(loadedImg, method, 
                                                 drawArgs=self.shape_settings.get("drawArgs",{}), paste=False)
@@ -4785,7 +4785,6 @@ class Icon(ImageElement):
             img_background = Style.get_color(img_background,imgMode)
 
         self._fileError = False
-        _LOGGER.debug(f"Icon is {self.icon}, path is {self._iconData}")
 
         if self.icon != None and mdi.is_mdi(self.icon):
             icon = self.icon
@@ -4815,12 +4814,12 @@ class Icon(ImageElement):
                     loadedImg = loadedImg.resize(draw_size,Image.Resampling.LANCZOS)
                 else:
                     loadedImg = mdi.draw_mdi_icon(loadedImg, self._iconData, icon_color=icon_color_value)
-                _LOGGER.debug(f"Drew icon {self.icon}")
+                _LOGGER.log(5, f"Drew icon {self.icon}")
             else:
                 _LOGGER.error(f"Could not parse mdi file: {icon}")
                 self._fileError = True
         elif self.icon != None:
-            _LOGGER.debug(f"Getting image {self.icon} for icon element {self.id}")
+            _LOGGER.log(5, f"Getting image {self.icon} for icon element {self.id}")
             try:
                 if isinstance(self.icon, Image.Image):
                     iconImg = self.icon
@@ -6391,7 +6390,6 @@ def parse_layout_string(layout_string : str, sublayout : Optional[str] = None, h
                                                     vertical_sizes, horizontal_sizes, **elementParse)
         ##Figure out how to do this if there's only one thing in the sublayout?
         elementParse[sl] = Layout(sublayoutList, _isSubLayout = True, _register=False)
-        _LOGGER.debug(val)
 
     buildlayout = buildlayout.split(";")
     buildlayout = [row.split(",") for row in buildlayout]
