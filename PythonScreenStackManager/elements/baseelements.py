@@ -1183,7 +1183,8 @@ class Element(ABC):
 
     async def feedback_function(self) -> Callable[..., None]:
         "Function that makes visual feedback being shown when an element is interacted with. Defaults to invert_element as defined in pssm.PSSMscreen"
-        self._feedbackTask = asyncio.create_task(self.parentPSSMScreen.async_invert_element(self,self.feedback_duration))
+        
+        self._feedbackTask = self.screen.create_task(self.parentPSSMScreen.async_invert_element(self,self.feedback_duration))
         await self.feedbackTask
 
 colorproperty._base_element_class = Element
@@ -2762,14 +2763,7 @@ class Popup(Layout):
         return [(x, y), (w, h)]
 
     def show(self):
-        loop = self.parentPSSMScreen.mainLoop
-        try:
-            coro = self.async_show()
-            asyncio.create_task(coro)
-        except (RuntimeError, RuntimeWarning):
-            f = asyncio.run_coroutine_threadsafe(coro, loop)
-            return
-            # _LOGGER.exception("Cannot show popup")
+        self.screen.create_task(self.async_show())
         return
 
     @trigger_condition
@@ -2800,8 +2794,8 @@ class Popup(Layout):
         return
 
     def close(self, *args, **kwargs):
-        loop = self.parentPSSMScreen.mainLoop
-        loop.create_task(self.async_close(*args, **kwargs))
+        # loop = self.parentPSSMScreen.mainLoop
+        self.screen.create_task(self.async_close(*args, **kwargs))
 
     @trigger_condition
     @elementactionwrapper.method
@@ -4404,11 +4398,11 @@ class Icon(ImageElement):
     def _emulator_icon(cls): return "mdi:drawing-box"
 
     def __init__(self, icon: Optional[Union[mdiType,str]] = DEFAULT_ICON, icon_color:Union[ColorType,bool] = DEFAULT_FOREGROUND_COLOR, background_color : Optional[ColorType]=None, background_shape:IMPLEMENTED_ICON_SHAPES_HINT = None, shape_settings : dict = {},
-                isInverted : bool = False, invert_icon : bool = False,
+                isInverted : bool = False, invert_icon : bool = False, show_feedback : bool = True,
                 mirrored:bool=False, rotation_angle: Union[int,float] = 0, force_aspect = True, 
                 badge_icon : Optional[Union[mdiType,str]] = None, badge_settings : dict = {}, badge_location : Optional[BadgeLocationType] = None, badge_color = None, badge_size : Optional[float] = None, badge_offset : int = 0, **kwargs):
     
-        super().__init__(isInverted=isInverted, **kwargs)
+        super().__init__(isInverted=isInverted, show_feedback=show_feedback, **kwargs)
         
         if icon != None: ##This allows elements that have a seperate setter to not throw the error
             self.icon = icon
@@ -4931,7 +4925,7 @@ class Icon(ImageElement):
 
         self.__feedbackImg = None
 
-        if self.show_feedback:
+        if self.show_feedback == "press":
             self.__feedbackImg = self.generate_feedback_icon(loadedImg, img_background, (w,h))
 
         if self.background_color != None and self.background_shape == None:

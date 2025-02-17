@@ -3026,8 +3026,9 @@ class Counter(base.TileElement):
         value : Union[float,int]
             the new value to set
         """
-        loop = self.parentPSSMScreen.mainLoop
-        loop.create_task(self._async_set_counter(value))
+        # loop = self.parentPSSMScreen.mainLoop
+        self.screen.create_task(self._async_set_counter(value))
+        return
     
     @trigger_condition
     async def _async_set_counter(self, value : Union[float,int]):
