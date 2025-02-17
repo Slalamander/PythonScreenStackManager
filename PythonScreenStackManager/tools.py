@@ -168,7 +168,7 @@ def update_nested_dict(update_dict: dict, old_dict: dict) -> dict:
     Parameters
     ----------
     update_dict : dict
-        The dict with key, value pairs to update
+        The dict with key, value pairs to apply as update
     old_dict : dict
         The dict to update
     """
@@ -1210,7 +1210,7 @@ class DrawShapes:
                 value = get_Color(value,img.mode)
             args[key] = value
         
-        _LOGGER.debug(f"Drawing pieslice with arguments {args}")
+        _LOGGER.log(0,f"Drawing pieslice with arguments {args}")
         drawImg = ImageDraw.Draw(mask)
         drawImg.pieslice(**args)
         mask = mask.resize(img.size, Image.Resampling.LANCZOS)
@@ -1238,7 +1238,7 @@ class DrawShapes:
                 (floor(mid[0]-side), floor(mid[1]-side)),
                 (floor(mid[0]+side), floor(mid[1]+side))]
 
-        defaultArgs = {"xy":coords}
+        defaultArgs = {"xy": coords}
         args = defaultArgs
         for key,value in drawArgs.items():
             if key in rescale:
@@ -1247,7 +1247,7 @@ class DrawShapes:
                 value = get_Color(value,img.mode)
             args[key] = value
         
-        _LOGGER.debug(f"Drawing square with arguments {args}")
+        _LOGGER.log(0, f"Drawing square with arguments {args}")
 
         drawImg = ImageDraw.Draw(mask)
         drawImg.rectangle(**args)
@@ -1283,7 +1283,7 @@ class DrawShapes:
                 value = get_Color(value,img.mode)
             args[key] = value
         
-        _LOGGER.debug(f"Drawing rounded rectangle with arguments {args}")
+        _LOGGER.log(0,f"Drawing rounded rectangle with arguments {args}")
 
         drawImg = ImageDraw.Draw(mask)
         drawImg.rounded_rectangle(**args)
@@ -1322,7 +1322,7 @@ class DrawShapes:
                 value = get_Color(value,img.mode)
             args[key] = value
         
-        _LOGGER.debug(f"Drawing rounded square with arguments {args}")
+        _LOGGER.log(0,f"Drawing rounded square with arguments {args}")
         drawImg = ImageDraw.Draw(mask)
         drawImg.rounded_rectangle(**args)
 
@@ -1355,7 +1355,7 @@ class DrawShapes:
                 value = get_Color(value,img.mode)
             args[key] = value
         
-        _LOGGER.debug(f"Drawing octagon with arguments {args}")
+        _LOGGER.log(0,f"Drawing octagon with arguments {args}")
 
         drawImg = ImageDraw.Draw(mask)
         drawImg.regular_polygon(**args)
