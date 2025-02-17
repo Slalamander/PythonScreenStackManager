@@ -41,7 +41,24 @@ class PSSMEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
         # loop = super().get_event_loop()
         # Do something with loop ...
         return self._screen.mainLoop
-    
+
+
+class PSSMLoop(asyncio.BaseEventLoop):
+
+    def create_task(self, coro, *, name = None):
+        try:
+            assert asyncio.get_running_loop() == self
+        except (RuntimeError,RuntimeWarning,AssertionError):
+            if self.is_running():
+                f = asyncio.run_coroutine_threadsafe(self._threadsafe_create_task(coro, name = name), self)
+                return f.result()
+        else:
+            return super().create_task(coro, name=name)
+        
+    async def _threadsafe_create_task(self, coro, name = None):
+
+        return super().create_task(coro, name = name)
+
 class TriggerCondition(asyncio.Condition):
     """Subclass of asyncio.Condition with convenience methods
 
