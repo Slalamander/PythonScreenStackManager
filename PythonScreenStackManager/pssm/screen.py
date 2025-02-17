@@ -840,6 +840,9 @@ class PSSMScreen:
         img = self.backgroundImage
 
         if self.stack and self.stack[-1].isPopup and self.stack[-1].blur_background:
+
+            ##For this filter: find the last element that applies a blurred background and blur the stack from there
+            #any([getattr(popup,"blur_background",False) for popup in self.stack]):
             elt = self.stack[-1]
             img = self._stackImage.copy()
             blurfilter = ImageFilter.BoxBlur(3)
