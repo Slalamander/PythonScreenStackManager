@@ -1295,7 +1295,7 @@ class Layout(Element):
         self._rebuild_area_matrix = True
 
         if self.screen.printing:
-            self.set_parent_layouts(old_layout, self.layout)
+            self.set_parent_layouts(old_layout, value)
 
     @property
     def _area(self):
@@ -1474,12 +1474,12 @@ class Layout(Element):
                         callable(getattr(elt,"on_add",None)) and not elt.onScreen):
 
                     self._call_on_add.add(elt)
-                if elt.parentLayout != self: 
+                if elt._parentLayout != self: 
                     elt._parentLayout = self
                     elt._validate_color_properties()
 
             for elt in old_elts - new_elts: ##This returns every element that is in old_elts but not in new_elts
-                if elt.parentLayout == self: 
+                if elt._parentLayout == self: 
                     elt._parentLayout = None
                     if callable(getattr(elt,"on_remove",None)):
                         elt.on_remove()
