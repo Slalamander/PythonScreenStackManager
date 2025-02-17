@@ -1592,15 +1592,28 @@ class Layout(Element):
             outlineCol = Style.get_color(self.outline_color, colorMode)
             outW = self._convert_dimension(self.outline_width)
 
-            ##Draw the outline on top, to ensure nothing is sticking out over it
-            ##Style choice
-            (outline,_) = DrawShapes.draw_rounded_rectangle(placeholder,
+            if outW > 0:
+                ##Draw the outline on top, to ensure nothing is sticking out over it
+                ##Style choice
+                (outline,_) = DrawShapes.draw_rounded_rectangle(placeholder,
+                        {"xy":  [(0, 0), (w,h)],
+                        "fill": None,
+                        "radius": r,
+                        "width": outW,
+                        "outline": outlineCol}, 
+                    rescale=["xy","radius","width"], paste=False)
+
+                placeholder.alpha_composite(outline)
+
+        elif self.outline_width != 0 and self.outline_color != None:
+            outlineCol = Style.get_color(self.outline_color, colorMode)
+            outW = self._convert_dimension(self.outline_width)
+            (outline,_) = DrawShapes.draw_square(placeholder,
                     {"xy":  [(0, 0), (w,h)],
                     "fill": None,
-                    "radius": r,
                     "width": outW,
                     "outline": outlineCol}, 
-                rescale=["xy","radius","width"], paste=False)
+                rescale=["xy","width"], paste=False)
 
             placeholder.alpha_composite(outline)
 
