@@ -19,13 +19,13 @@ from .styles import Style
 from .decorators import elementactionwrapper, trigger_condition
 from .util import PSSMEventLoopPolicy, TriggerCondition, iscoroutinefunction
 
-from ..tools import DummyTask, get_Color, is_valid_Color
+from ..tools import DummyTask
 from .. import tools
 
 from ..pssm_types import *
 from ..exceptions import *
 
-from ..constants import CUSTOM_FOLDERS, DEFAULT_BACKGROUND
+from ..constants import DEFAULT_BACKGROUND
 from .. import constants as const
 
 from ..pssm_settings import SETTINGS, settings_type
@@ -96,7 +96,7 @@ class PSSMScreen:
         return PSSMScreen._instance
 
     def __init__(self, device : PSSMdevice,  
-                touch_debounce_time: DurationType = const.DEFAULT_DEBOUNCE_TIME, minimum_hold_time: DurationType = const.DEFAULT_HOLD_TIME, 
+                touch_debounce_time: DurationType = const.DEFAULT_DEBOUNCE_TIME, minimum_hold_time: DurationType = const.DEFAULT_HOLD_TIME,
                 on_interact: Union[Callable[[dict, 'PSSMScreen', CoordType], None], bool,None] = None, on_interact_data : dict = {}, #stack=[], 
                 background : Union[str,ColorType] = DEFAULT_BACKGROUND, background_fit : Literal["contain", "cover", "crop", "resize"] = "cover", background_fit_arguments : dict = {}, 
                 poll_interval : DurationType = SETTINGS["screen"]["poll_interval"],
@@ -685,10 +685,10 @@ class PSSMScreen:
         """
         
         if self.printing:
-            _LOGGER.debug(f"Screen is already printing, not adding attribute check for element {element}, attribute: {attribute}")
+            _LOGGER.verbose(f"Screen is already printing, not adding attribute check for element {element}, attribute: {attribute}")
             return
 
-        _LOGGER.debug(f"Adding attribute check for element {element}, attribute: {attribute}")
+        _LOGGER.verbose(f"Adding attribute check for element {element}, attribute: {attribute}")
         if element in self._element_checks:
             self._element_checks[element][attribute] = value
         else:
@@ -813,7 +813,7 @@ class PSSMScreen:
             else:
                 [(x, y), (w, h)] = self.area
 
-            if pil_image == None:
+            if pil_image is None:
                 _LOGGER.error("Something went wrong printing the Stack")
                 raise ValueError("pil_image for stack print cannot be None")
             
@@ -1022,7 +1022,7 @@ class PSSMScreen:
         Toggle batch writing: nothing will be updated on the screen until
         you use screen.stop_batch_writing(), or forcibly print something
         """
-        _LOGGER.debug("Started screen batch")
+        _LOGGER.debug("Starting screen batch")
         self._isBatch = True
         self._batchEvent.clear()
 
@@ -1039,7 +1039,7 @@ class PSSMScreen:
             if isinstance(elt, elements.Layout):
                 for element in elt.create_element_list():
                     if element.isGenerating:
-                        _LOGGER.debug("Element is still generating")
+                        _LOGGER.debug(f"Element {element} is still generating")
 
         if self.mainLoop.is_running():
             asyncio.run_coroutine_threadsafe(self._end_batch_write(),
@@ -1060,11 +1060,11 @@ class PSSMScreen:
                 generators.add(elt.async_generate())
         
         await asyncio.gather(*generators)
-        _LOGGER.debug("Screen batch is done and everything was generated")
-        await self.print_stack(self.area,False)
-        _LOGGER.debug("Screen batch is done and should be printed")
+        _LOGGER.debug("Screen batch is ending and everything was generated")
         self._isBatch = False
         self._batchEvent.set()
+        await self.print_stack(self.area,False)
+        _LOGGER.debug("Screen batch is done and should be printed")
 
     def add_element(self, element, skipPrint=False, skipRegistration=False):
         "Add an element to the screen."
@@ -1112,8 +1112,6 @@ class PSSMScreen:
                         await element.async_generate()
                             ##Should this be in a thread?
                         await self.print_stack(area=element.area)
-                        if hasattr(element,"is_popup"):
-                            _LOGGER.debug("Is this a popup?")
                     else:
                         await element.async_generate()
                         if element.isPopup:
@@ -1124,7 +1122,7 @@ class PSSMScreen:
         if self.printing: ##If added before printing, they will be called by the start_screen_printing
             add_func = getattr(element,"on_add", False)
             if add_func: 
-                _LOGGER.debug("Adding element with add_func")
+                _LOGGER.verbose(f"Adding element {element} with add_func")
                 if element.isLayout:
                     add_func(call_all = True)
                 else:
@@ -1518,7 +1516,7 @@ class PSSMScreen:
             assert self._perform_element_attribute_check(), "Element pre-print checks failed"
 
             for element in self.stack:
-                _LOGGER.debug(f"Calling element {element} on_add")
+                _LOGGER.verbose(f"Calling element {element} on_add")
                 if hasattr(element,"on_add"):
                     if element.isLayout:
                         element.on_add(call_all = True)
@@ -1529,8 +1527,8 @@ class PSSMScreen:
             self._printGather = asyncio.gather(*coros, return_exceptions=True)
             try:
                 await self._printGather
-            except asyncio.CancelledError as exce:
-                _LOGGER.debug("PSSM printLoop has been cancelled")
+            except asyncio.CancelledError:
+                _LOGGER.info("PSSM printLoop has been cancelled")
         return
 
     async def async_touch_handler(self):
@@ -1618,7 +1616,7 @@ class PSSMScreen:
         res
             _description_
         """
-        _LOGGER.verbose("Handling a click")
+        _LOGGER.verbose(f"Handling click {action}")
         n = len(self.stack)
         coro_list = []
         touch_event = InteractEvent(x,y, action)
@@ -1639,10 +1637,6 @@ class PSSMScreen:
             except (TypeError, KeyError, IndexError, OSError) as exce:
                 _LOGGER.error(f"adding on_interact function {self.on_interact} raised exception: {exce}")
             
-            _LOGGER.debug("Passed on_interact")
-        else:
-            _LOGGER.debug("on_interact is False")
-        
         if self.popupsOnTop:
             _LOGGER.verbose("Passing click to the popup on top")
             popup = self.popupsOnTop[-1]
@@ -1674,14 +1668,14 @@ class PSSMScreen:
                     continue
 
                 if tools.coords_in_area(x, y, elt.area):
-                    if hasattr(elt,"tap_action") and elt != None:
+                    if hasattr(elt,"tap_action") and elt is not None:
                         _LOGGER.verbose("Got element with tap_action")
                         coro_list.extend(
                             await self._dispatch_click_to_element(touch_event, elt) )
-                        _LOGGER.debug("tap_action added to coro list")
+                        _LOGGER.verbose(f"{elt} tap_action added to coro list")
                         break
 
-        _LOGGER.debug(f"There are {len(coro_list)} coros in the list")
+        _LOGGER.verbose(f"There are {len(coro_list)} coros in the list")
         if coro_list:
             _LOGGER.verbose("Going to await coro list")
             L = await asyncio.gather(*coro_list, return_exceptions=True)
@@ -2035,12 +2029,12 @@ class PSSMScreen:
         """
         if not self.lightupTask.done():
             if reset:
-                _LOGGER.debug("Cancelling previous light up task")
+                _LOGGER.verbose("Cancelling previous light up task")
                 self.lightupTask.cancel()
             else: 
                 return
         
-        if self.device.backlight.state and brightness == None:
+        if self.device.backlight.state and brightness is None:
             brightness = self.device.backlight.brightness
 
         _LOGGER.debug(f"Temporarily turning on backlight for {time_on} seconds") 
