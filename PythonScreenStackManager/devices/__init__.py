@@ -18,6 +18,7 @@ from ..tools import DummyTask, parse_duration_string
 from ..pssm_settings import SETTINGS
 from ..pssm_types  import *
 from ..pssm.decorators import trigger_condition
+from ..pssm.util import TriggerCondition
 from ..exceptions import FeatureError, MissingFeature
 
 _LOGGER = logging.getLogger(__name__)
@@ -94,7 +95,7 @@ class PSSMdevice(ABC):
         self._viewHeight = viewHeight
         self._screenMode = screenMode
         self._imgMode = imgMode
-        if defaultColor == None:
+        if defaultColor is None:
             defaultColor = "white"
         self._defaultColor = defaultColor
         
@@ -105,6 +106,8 @@ class PSSMdevice(ABC):
             ##This is here to ensure the rotation is set when initiating the device.
             self.rotation
         
+        if not hasattr(self, "_triggerCondition"):
+            self._triggerCondition = TriggerCondition()
         return
 
     #region Properties
@@ -475,8 +478,9 @@ class BaseDeviceFeature(ABC):
         return
 
     @cached_property
-    def triggerCondition(self) -> asyncio.Condition:
-        return asyncio.Condition()
+    def triggerCondition(self) -> TriggerCondition:
+        # return asyncio.Condition()
+        return TriggerCondition()
 
     @abstractmethod
     def get_feature_state(self) -> dict:
