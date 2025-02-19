@@ -90,7 +90,7 @@ class TriggerCondition(asyncio.Condition):
             await self.wait()
 
     async def await_for_trigger(self, predicate):
-        """Acquire the trigger's lock and wait to be notified AND for the predicate to evaluate to ``True``.
+        """wait to acquire the trigger's lock and to be notified AND for the predicate to evaluate to ``True``.
         """  
         async with self:
             res = await self.wait_for(predicate)
