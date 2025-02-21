@@ -220,7 +220,9 @@ class PSSMScreen:
 
         elements.StatusBar.add_statusbar_element("device", elements.DeviceIcon())
         screen_name = "inkboard" if const.INKBOARD else "screen"
-        dashboardIcon = elements.Icon("mdi:view-dashboard", tap_action={"action": "element:show-popup", "element_id": "screen-menu"})
+        dash_icon = "inkboard-droplet" if const.INKBOARD else "mdi:view-dashboard"
+        dashboardIcon = elements.Icon(dash_icon, 
+                                    tap_action={"action": "element:show-popup", "element_id": "screen-menu"})
         elements.StatusBar.add_statusbar_element(screen_name, dashboardIcon)
         
     #region Properties
