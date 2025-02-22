@@ -25,7 +25,7 @@ from ..tools import DrawShapes, DummyTask
 
 from . import baseelements as base
 from .baseelements import _LOGGER, IMPLEMENTED_ICON_SHAPES, Style,\
-        colorproperty, elementaction, elementactionwrapper, trigger_condition
+        colorproperty, elementaction, elementactionwrapper, trigger_condition, classproperty
 
 BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
 

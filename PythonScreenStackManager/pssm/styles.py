@@ -3,7 +3,8 @@ import logging
 from typing import TYPE_CHECKING
 
 from .. import tools
-from ..pssm_types import *
+from ..util import classproperty
+from ..pssm_types import ColorType
 from ..constants import PSSM_COLORS
 
 
@@ -99,7 +100,7 @@ class Style:
             Whether the color is valid
         """
         if element and isinstance(value,str):
-            if element.parentLayout == None and not element in element.screen.stack:
+            if element.parentLayout is None and element not in element.screen.stack:
                 return True
             elif value in getattr(element.parentLayout,"_color_shorthands",{}):
                 return True

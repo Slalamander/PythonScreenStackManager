@@ -37,7 +37,7 @@ from ..tools import DummyTask, DrawShapes
 
 from ..pssm.styles import Style
 from ..pssm.decorators import colorproperty, elementaction, elementactionwrapper, trigger_condition
-from ..pssm.util import isclassproperty, TriggerCondition
+from ..pssm.util import isclassproperty, TriggerCondition, classproperty
 
 if TYPE_CHECKING:
     from ..pssm.screen import PSSMScreen as Screen

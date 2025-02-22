@@ -10,6 +10,7 @@ from functools import wraps
 from ..pssm_types import *
 from ..exceptions import *
 from ..tools import customproperty
+from ..util import classproperty
 
 if TYPE_CHECKING:
     from ..elements import Element

@@ -22,7 +22,7 @@ from . import layoutelements as layouts
 from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_FONT_BOLD, DEFAULT_FONT_HEADER,\
     DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR, DEFAULT_FONT_SIZE
 
-from .baseelements import _LOGGER
+from .baseelements import _LOGGER, classproperty
 if TYPE_CHECKING:
     from ..devices import PSSMdevice
 
@@ -377,6 +377,7 @@ class ScreenMenu(UniquePopupMenu):
 
         ##The backlight menu (and presumably more?) Need to be declared here, otherwise they don't update.
         ##I suspect any function not used in the menu is garbage collected if I do.
+        
         backlightOps = ["Manual", "On Interact", "Always"]
 
         if self.device.has_feature(FEATURES.FEATURE_BACKLIGHT):

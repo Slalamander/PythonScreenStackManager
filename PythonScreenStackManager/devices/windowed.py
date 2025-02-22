@@ -21,9 +21,9 @@ from PIL import Image, ImageTk
 
 from . import PSSMdevice, DeviceFeatures, NetworkDict, Network as BaseNetwork, Backlight as BaseBacklight, FEATURES
 from .const import CANVASNAME
-from ..tools import DummyTask, TouchEvent
+from ..tools import DummyTask
 from .. import tools, constants as const
-from ..pssm_types import ColorType
+from ..pssm_types import ColorType, TouchEvent
 
 from ..pssm.decorators import trigger_condition
 

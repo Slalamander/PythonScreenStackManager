@@ -12,6 +12,7 @@ from contextlib import suppress
 from ..exceptions import *
 from ..pssm_types import *
 from ..tools import customproperty
+from ..util import classproperty
 
 if TYPE_CHECKING:
     from ..devices.windowed import Device
