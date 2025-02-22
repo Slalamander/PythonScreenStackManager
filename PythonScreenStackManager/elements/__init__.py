@@ -7,6 +7,8 @@ For the basics, see `Element`
 import inspect
 import sys 
 
+from PythonScreenStackManager import pssm
+
 from .baseelements import * 
 from .compoundelements import *
 from .menuelements import *
