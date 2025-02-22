@@ -4,20 +4,12 @@
     Rewritten to use asyncio by Slalamander, among other changes
 """
 
+import logging
+from functools import partial, partialmethod
+
 __version__ = "0.4.1.dev1"
 "PythonScreenStackManager version. For now the s is in front to indicate it is the version continued by Slalamander"
 
-import __main__
-import logging
-from functools import partial, partialmethod
-from typing import TYPE_CHECKING
-
-from . import pssm
-
-if TYPE_CHECKING:
-    from .pssm_types import *
-    from .pssm import screen
-    from .devices import PSSMdevice
 
 if not hasattr(logging,"VERBOSE"):
     logging.VERBOSE = 5

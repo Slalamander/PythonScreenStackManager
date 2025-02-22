@@ -8,14 +8,22 @@ import asyncio
 import re as regex
 import inspect
 
-from typing import *
+from typing import (
+    TYPE_CHECKING,
+    Coroutine,
+    Callable,
+    Awaitable,
+    Any,
+    Union,
+    TypedDict,
+    Literal
+)
 from math import cos, sin, floor
 from  pathlib import Path
 from abc import ABCMeta
 from types import MappingProxyType
-from abc import abstractmethod
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageChops
+from PIL import Image, ImageDraw, ImageOps, ImageChops
 from PIL.ImageColor import getrgb as PILgetrgb, getcolor as PILgetcolor
 
 from mdi_pil import ALLOWED_MDI_IDENTIFIERS, MDI_WEATHER_ICONS as MDI_WEATHER_CONDITION_ICONS
@@ -24,10 +32,11 @@ from . import constants as const
 from .constants import PATH_TO_PSSM
 
 
-from .pssm_types import *
+# from .pssm_types import *
+from .pssm_types import PSSMarea, PSSMdimension, ColorType
 
 if TYPE_CHECKING:
-    from . import elements
+    from .pssm_types import Element
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -95,7 +104,6 @@ class customproperty(property):
         return type(self)(self.fget, self.fset, fdel, self.__doc__)
 
 
-
 # ########################## - OTHERS - ######################################
 def returnFalse(*args, **kwargs): return False
 
@@ -119,11 +127,11 @@ def function_checker(func: Union[Callable[...,None], bool, None], default: Calla
 
     if callable(func):
         return func
-    elif func == None:
+    elif func is None:
         return default
-    elif type(func) == bool:
+    elif type(func) is bool:
         if func:
-            _LOGGER.warning(f"interaction booleans can only be False, setting to False")
+            _LOGGER.warning("interaction booleans can only be False, setting to False")
     return False
 
 def validate_action_call(func: Union[Callable, Coroutine], keyword_arguments: dict, validate_required: bool = True, positional_args: list = []):
@@ -164,6 +172,7 @@ def update_nested_dict(update_dict: dict, old_dict: dict) -> dict:
     
     The old_dict is copied and will not be overwritten. Not yet present keys will be added.
     Any values in the update_dict that are not dicts will directly overwrite the value in the old_dict, regardless of whether it is a dict or not.
+    If the values of a key in both update_dict and old_dict are dicts, they will be updated recursively (i.e. any dicts present in other keys are updated per this function, etc.)
     
     Parameters
     ----------
@@ -664,7 +673,7 @@ def is_valid_Color(color : ColorType) -> bool:
         Whether the color is valid
     """    
 
-    if color == None:
+    if color is None:
         return True
     
     if isinstance(color,int):
@@ -994,7 +1003,7 @@ def parse_weather_icon(condition, night:bool=False, conditionDict:dict=MDI_WEATH
 
     ##Maybe add a check to see if it returns a valid mdi icon
     if not (conditionDict.get("default",False) or conditionDict.get("day",False) or conditionDict.get("night",False)):
-        _LOGGER.error(f"A condition dict must have keys default, day and night")
+        _LOGGER.error("A condition dict must have keys default, day and night")
         raise KeyError
     
     if condition in {"default", None}:
@@ -1375,18 +1384,18 @@ class DrawShapes:
         Draws an octogon onto the given image by calling ImageDraw.regular_polygon with n_sides = 8
         """
 
-        color_keys = ["fill","outline"]
-        defaultArgs = {"n_sides":8}
-        args = defaultArgs
-        for key,value in drawArgs.items():
-            if key in rescale:
-                value = cls.rescale(value,scale)
-            if key in color_keys:
-                value = get_Color(value,img.mode)
-            args[key] = value
+        # color_keys = ["fill","outline"]
+        # defaultArgs = {"n_sides":8}
+        # args = defaultArgs
+        # for key,value in drawArgs.items():
+        #     if key in rescale:
+        #         value = cls.rescale(value,scale)
+        #     if key in color_keys:
+        #         value = get_Color(value,img.mode)
+        #     args[key] = value
 
-        (mask,drawImg) = cls.draw_regular_polygon(img,args, paste=False)
-        scale = mask.width/img.width
+        drawArgs["n_sides"] = 8
+        (mask,drawImg) = cls.draw_regular_polygon(img,drawArgs, paste=False, rescale=rescale)
 
         mask = mask.resize(img.size, Image.Resampling.LANCZOS)
         if paste:
@@ -1400,18 +1409,19 @@ class DrawShapes:
         """
         Draws an octogon onto the given image by calling ImageDraw.regular_polygon with n_sides = 8
         """
-        color_keys = ["fill","outline"]
-        defaultArgs = {"n_sides":6}
-        args = defaultArgs
-        for key,value in drawArgs.items():
-            if key in rescale:
-                value = cls.rescale(value,scale)
-            if key in color_keys:
-                value = get_Color(value,img.mode)
-            args[key] = value
+        # color_keys = ["fill","outline"]
+        # defaultArgs = {"n_sides":6}
+        # args = defaultArgs
+        # for key,value in drawArgs.items():
+        #     if key in rescale:
+        #         value = cls.rescale(value,scale)
+        #     if key in color_keys:
+        #         value = get_Color(value,img.mode)
+        #     args[key] = value
+        drawArgs["n_sides"] = 6
 
-        (mask,drawImg) = cls.draw_regular_polygon(img,args, paste=False)
-        scale = mask.width/img.width
+        (mask,drawImg) = cls.draw_regular_polygon(img, drawArgs, paste=False, rescale=rescale)
+        # scale = mask.width/img.width
 
         mask = mask.resize(img.size, Image.Resampling.LANCZOS)
         if paste:
@@ -1435,10 +1445,11 @@ class DrawShapes:
         if not use_mask:
             drawImg = ImageDraw.Draw(img)
             drawFunc = getattr(drawImg,method)
+            (_, scale) = cls.get_mask(img)
             _LOGGER.debug(f"Advanced drawing type returned method {drawFunc}.")
             for arg in rescale:
                 if arg in drawArgs:
-                    value = cls.rescale(value,scale)
+                    value = cls.rescale(drawArgs[arg],scale)
                     drawArgs[arg] = value
 
             drawFunc(**drawArgs)

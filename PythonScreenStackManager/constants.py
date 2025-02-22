@@ -37,7 +37,7 @@ try:
     "inkBoard" in entry_points[-1] or entry_points[:-2] == ("inkBoard", "__init__.py")   ##General usage
     or (hasattr(__main__,"debugpy") and __main__.cli.options.target == "inkBoard")): ##Debugging (in VScode using debugpy at least)
         INKBOARD = True
-except:
+except Exception:
     pass
 
 
