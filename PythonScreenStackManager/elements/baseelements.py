@@ -36,7 +36,7 @@ from .. import tools
 from ..tools import DummyTask, DrawShapes
 
 from ..pssm.styles import Style
-from ..pssm.decorators import colorproperty, elementaction, elementactionwrapper, trigger_condition
+from ..pssm.decorators import colorproperty, styleproperty, elementaction, elementactionwrapper, trigger_condition
 from ..pssm.util import isclassproperty, TriggerCondition, classproperty
 
 if TYPE_CHECKING:
@@ -272,7 +272,7 @@ class Element(ABC):
         Can be due to a temporary inversion (hardware inversion), a parent layout element or if inverted is true and it is printed as such."""
         return self._isInverted
 
-    @property
+    @styleproperty
     def inverted(self) -> bool:
         """True if the default inverted state of the element is inverted 
         (i.e. the image made in the generator will be inverted if true)."""
@@ -1188,6 +1188,7 @@ class Element(ABC):
         await self.feedbackTask
 
 colorproperty._base_element_class = Element
+styleproperty._base_element_class = Element
 
 #region Layout elements
 # ########################## - Layout Elements - ##############################
