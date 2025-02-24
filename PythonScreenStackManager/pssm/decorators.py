@@ -17,171 +17,171 @@ from ..util import classproperty
 if TYPE_CHECKING:
     from ..devices.windowed import Device
     from ..elements import Element
-    from .styles import Style
+    from .styles import Style, colorproperty, styleproperty
     from .screen import PSSMScreen as Screen
 
 _LOGGER = logging.getLogger(__name__)
 
-class colorproperty(customproperty):
-    """Decorator to indicate a property is defines the color of an element.
+# class colorproperty(customproperty):
+#     """Decorator to indicate a property is defines the color of an element.
     
-    This means it can automatically apply the default color_setter as the properties setter, and implements the logic parse the color values of parents when shorthands are used.
-    Requires the fget function to return the private variable of the properties name. 
+#     This means it can automatically apply the default color_setter as the properties setter, and implements the logic parse the color values of parents when shorthands are used.
+#     Requires the fget function to return the private variable of the properties name. 
     
-    Usage
-    ------
-    .. code-block:: python
+#     Usage
+#     ------
+#     .. code-block:: python
 
-        @colorproperty
-        def my_color(self):
-            return self._my_color
-    """   
+#         @colorproperty
+#         def my_color(self):
+#             return self._my_color
+#     """   
 
-    _found_properties = set()
+#     _found_properties = set()
 
-    __element_classes : dict[type[object],set] = {}
-    _base_element_class: "Element"    
+#     __element_classes : dict[type[object],set] = {}
+#     _base_element_class: "Element"    
     
-    def __init__(self,
-                fget=None, 
-                fset=None, 
-                fdel=None, 
-                doc=None,
-                allows_none = True):
-        """Attributes of 'our_decorator'
-        fget
-            function to be used for getting 
-            an attribute value
-        fset
-            function to be used for setting 
-            an attribute value
-        fdel
-            function to be used for deleting 
-            an attribute
-        doc
-            the docstring
-        """
+#     def __init__(self,
+#                 fget=None, 
+#                 fset=None, 
+#                 fdel=None, 
+#                 doc=None,
+#                 allows_none = True):
+#         """Attributes of 'our_decorator'
+#         fget
+#             function to be used for getting 
+#             an attribute value
+#         fset
+#             function to be used for setting 
+#             an attribute value
+#         fdel
+#             function to be used for deleting 
+#             an attribute
+#         doc
+#             the docstring
+#         """
 
-        if fset == None:
-            fset = self._color_setter
-        self._allows_none = allows_none
-        super().__init__(fget,fset,fdel,doc)
-        return
+#         if fset == None:
+#             fset = self._color_setter
+#         self._allows_none = allows_none
+#         super().__init__(fget,fset,fdel,doc)
+#         return
 
-    class NOT_NONE(customproperty):
-        "Decorator to mark any color properties that do not accept a None value for their color."
-        def __new__(cls, fget=None, fset=None, fdel=None, doc=None) -> "colorproperty":
-            obj = colorproperty(fget, fset,fdel, doc, allows_none=False)
-            return obj
+#     class NOT_NONE(customproperty):
+#         "Decorator to mark any color properties that do not accept a None value for their color."
+#         def __new__(cls, fget=None, fset=None, fdel=None, doc=None) -> "colorproperty":
+#             obj = colorproperty(fget, fset,fdel, doc, allows_none=False)
+#             return obj
 
-    def __get__(self, obj: "Element", objtype=None):
-        if obj is None:
-            return self
-        if self.fget is None:
-            raise AttributeError("unreadable attribute")
+#     def __get__(self, obj: "Element", objtype=None):
+#         if obj is None:
+#             return self
+#         if self.fget is None:
+#             raise AttributeError("unreadable attribute")
 
-        return self._get_element_color(obj)
+#         return self._get_element_color(obj)
 
-    def __set_name__(self, owner, name):
-        _LOGGER.log(5,f"decorating {self} and using {owner}")
-        self._color_attribute = name
-        self.__add_class_color(owner, name)
+#     def __set_name__(self, owner, name):
+#         _LOGGER.log(5,f"decorating {self} and using {owner}")
+#         self._color_attribute = name
+#         self.__add_class_color(owner, name)
 
-    def _color_setter(self, element:"Element", value : ColorType, cls : type = None):
-        """
-        Tests if a given color is valid, and sets the attribute if so. Otherwise, logs an error
+#     def _color_setter(self, element:"Element", value : ColorType, cls : type = None):
+#         """
+#         Tests if a given color is valid, and sets the attribute if so. Otherwise, logs an error
 
-        Parameters
-        ----------
-        value : ColorType; 
-            The color to check and set
-        attribute : str
-            The attribute to set.
-        allows_None : bool
-            Whether this color can be set to None, defaults to True
-        """
+#         Parameters
+#         ----------
+#         value : ColorType; 
+#             The color to check and set
+#         attribute : str
+#             The attribute to set.
+#         allows_None : bool
+#             Whether this color can be set to None, defaults to True
+#         """
 
-        attribute = self._color_attribute
-        set_attribute = "_" + attribute
-        allows_None = self._allows_none
+#         attribute = self._color_attribute
+#         set_attribute = "_" + attribute
+#         allows_None = self._allows_none
 
-        if value == "None": #YAML parses null or nothing to None, however for colors, having a value that is representative of the color value is important I think.
-            value = None
+#         if value == "None": #YAML parses null or nothing to None, however for colors, having a value that is representative of the color value is important I think.
+#             value = None
 
-        if hasattr(element, set_attribute) and value == getattr(element, set_attribute):
-            ##Do nothing if the color does not change
-            return
+#         if hasattr(element, set_attribute) and value == getattr(element, set_attribute):
+#             ##Do nothing if the color does not change
+#             return
 
-        msg = None
-        if Style.is_valid_color(value):
-            if value == None and (not allows_None):
-                msg = f"{element}: {attribute} does not allow {value} as a color value"
-            else:
-                setattr(element, set_attribute, value)
-        elif isinstance(value,str):
-            if element.parentLayout == None and not element in element.screen.stack:
-                ##Means it will be validated later
-                setattr(element, set_attribute, value)
-            elif value in getattr(element.parentLayout,"_color_shorthands",{}):
-                setattr(element, set_attribute, value)
-            else:
-                msg = f"{element}: {value} is not identified as a valid color nor a valid shorthand for its parent ({self.parentLayout}) colors"
-        else:
-            msg = f"{element}: {value} is not identified as a valid color"
+#         msg = None
+#         if Style.is_valid_color(value):
+#             if value == None and (not allows_None):
+#                 msg = f"{element}: {attribute} does not allow {value} as a color value"
+#             else:
+#                 setattr(element, set_attribute, value)
+#         elif isinstance(value,str):
+#             if element.parentLayout == None and not element in element.screen.stack:
+#                 ##Means it will be validated later
+#                 setattr(element, set_attribute, value)
+#             elif value in getattr(element.parentLayout,"_color_shorthands",{}):
+#                 setattr(element, set_attribute, value)
+#             else:
+#                 msg = f"{element}: {value} is not identified as a valid color nor a valid shorthand for its parent ({self.parentLayout}) colors"
+#         else:
+#             msg = f"{element}: {value} is not identified as a valid color"
 
-        if msg:
-            _LOGGER.error(msg,exc_info=ValueError(msg))
-        elif hasattr(element, "_style_update"):
-            element._style_update(attribute, value)
+#         if msg:
+#             _LOGGER.error(msg,exc_info=ValueError(msg))
+#         elif hasattr(element, "_style_update"):
+#             element._style_update(attribute, value)
 
-    def _get_element_color(self, element: "Element"):
-        val = self.fget(element)
-        if isinstance(val, str) and element.parentLayout != None:
-            if val in getattr(element.parentLayout,"_color_shorthands",{}):
-                prop = element.parentLayout._color_shorthands[val]
-                val = getattr(element.parentLayout, prop)
-        return val
+#     def _get_element_color(self, element: "Element"):
+#         val = self.fget(element)
+#         if isinstance(val, str) and element.parentLayout != None:
+#             if val in getattr(element.parentLayout,"_color_shorthands",{}):
+#                 prop = element.parentLayout._color_shorthands[val]
+#                 val = getattr(element.parentLayout, prop)
+#         return val
 
-    @classmethod
-    def __add_class_color(cls, elt_cls : type["Element"], property_name : str):
-        if elt_cls in cls.__element_classes:
-            cls.__element_classes[elt_cls].add(property_name)
-        else:
-            cls.__element_classes[elt_cls] = set([property_name])
-        cls._found_properties.add(property_name)
+#     @classmethod
+#     def __add_class_color(cls, elt_cls : type["Element"], property_name : str):
+#         if elt_cls in cls.__element_classes:
+#             cls.__element_classes[elt_cls].add(property_name)
+#         else:
+#             cls.__element_classes[elt_cls] = set([property_name])
+#         cls._found_properties.add(property_name)
 
-    @classmethod
-    def _get_class_colors(cls, elt_cls):
-        if elt_cls not in cls.__element_classes:
-            cols = set()
-        else:
-            cols = cls.__element_classes[elt_cls].copy()
+#     @classmethod
+#     def _get_class_colors(cls, elt_cls):
+#         if elt_cls not in cls.__element_classes:
+#             cols = set()
+#         else:
+#             cols = cls.__element_classes[elt_cls].copy()
 
-        for base in elt_cls.__bases__:
-            if not issubclass(base,cls._base_element_class):
-                continue
+#         for base in elt_cls.__bases__:
+#             if not issubclass(base,cls._base_element_class):
+#                 continue
 
-            base_cols = cls._get_class_colors(base)
-            cols.update(base_cols)
-        return cols
+#             base_cols = cls._get_class_colors(base)
+#             cols.update(base_cols)
+#         return cols
 
-class styleproperty(customproperty):
-    """Decorator that can be used to indicate a property is a style property. It also automatically applied the logic to allow using color shorthands to reference colors from parents.
+# class styleproperty(customproperty):
+#     """Decorator that can be used to indicate a property is a style property. It also automatically applied the logic to allow using color shorthands to reference colors from parents.
 
-    Does not provide functionality to automatically add a setter, but is used to aggregate all color properties such that they can be easily gotten by calling a classes color_properties
+#     Does not provide functionality to automatically add a setter, but is used to aggregate all color properties such that they can be easily gotten by calling a classes color_properties
 
-    Usage
-    ------
-    .. code-block: python
+#     Usage
+#     ------
+#     .. code-block: python
 
-        @styleproperty
-        def element_action(self):
-            "performs an action for the element'
-            return self._myColor
+#         @styleproperty
+#         def element_action(self):
+#             "performs an action for the element'
+#             return self._myColor
 
-    Most important is to use the decorator after the `@property` decorator.
-    Also, it is best to make any colorProperty return a private variable, i.e. use a single `_` and append the name of the property. Using double `__` causes problems when parsing parent colors.
-    """    
+#     Most important is to use the decorator after the `@property` decorator.
+#     Also, it is best to make any colorProperty return a private variable, i.e. use a single `_` and append the name of the property. Using double `__` causes problems when parsing parent colors.
+#     """    
 
 
 class trigger_condition:
