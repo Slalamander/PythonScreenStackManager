@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from types import MappingProxyType
 import json
 import asyncio
+import inspect
 
 from functools import wraps
 
@@ -153,3 +154,50 @@ class ClassPropertyMetaClass(type):
             return obj.__set__(self, value)
 
         return super(ClassPropertyMetaClass, self).__setattr__(attr, value)
+    
+
+def _get_elt_init_args(element_class: type["Element"]):
+
+    #0 is class itself, than highest is older parent
+    ##This can be nested relatively ok by recursively calling the function.
+    ##make dict: start at class itself, create dict. Then continue and call setdefault
+    
+    # f = mro_classes[0].__elt_init__ ##use this as the original __init__ is overwritten by __init_subclass__
+    
+    try:
+        base_elt_class = Element
+    except NameError:
+        base_elt_class = element_class
+
+    if element_class == base_elt_class:
+        init_func = base_elt_class.__init__
+    else:
+        init_func = element_class.__elt_init__
+        
+    
+    base_args = inspect.signature(init_func)
+    required_args = []
+    optional_args = {}
+
+    mro_classes = inspect.getmro(element_class)
+    for param in base_args.parameters.values():
+        if param.default == param.empty:
+            if param.name == "self" or param.kind == param.VAR_KEYWORD or param.kind == param.VAR_POSITIONAL:
+                continue 
+            required_args.append(param.name)
+        else:
+            optional_args[param.name] = param.default
+    for parent_cls in mro_classes[1:]:
+        if parent_cls == base_elt_class:
+            init_func = parent_cls.__init__
+        elif hasattr(parent_cls, "__elt_init__"):
+            init_func = parent_cls.__elt_init__
+        else:
+            continue
+
+        init_args = inspect.signature(init_func)
+        for param in init_args.parameters.values():
+            if param.default != param.empty:
+                optional_args.setdefault(param.name, param.default)
+
+    return tuple(required_args), MappingProxyType(optional_args)

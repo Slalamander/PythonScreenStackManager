@@ -207,6 +207,9 @@ class Tile(base.TileElement):
             for key, value in Tile._default_vertical_sizes[size_key].items():
                 vertical_sizes.setdefault(key, value)
 
+        ##background_color foreground_color etc are not set to style values
+        ##because they are not added to the style tree
+        ##handle that when registering a new class
         super().__init__(tile_layout="None", horizontal_sizes=horizontal_sizes, vertical_sizes=vertical_sizes,
                         foreground_color=foreground_color, background_color=background_color, outline_color=outline_color,
                         element_properties=element_properties,  **kwargs)
@@ -550,20 +553,20 @@ class Tile(base.TileElement):
 
     def generator(self, area=None, skipNonLayoutGen=False):
 
-        if area==None:
+        if area is None:
             area = self.area
         
-        if area == None:
+        if area is None:
             return
         
         if not self.isGenerating:
             #This ensures the layout is fully dealt with in case the generator is called, or generate is called without an event loop.
             if self.__tile_layout in {"horizontal", "vertical"}:
-                if (l := self._build_tile_layout_str(self.__tile_layout)) != self._layoutstr:
-                    self._layoutstr = l
+                if (l_str := self._build_tile_layout_str(self.__tile_layout)) != self._layoutstr:
+                    self._layoutstr = l_str
                     self._reparse_layout = True
 
-            if self._layoutstr != None and self._reparse_layout:
+            if self._layoutstr is not None and self._reparse_layout:
                 old_layout = self.layout
 
                 new_layout = base.parse_layout_string(self._layoutstr, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
@@ -581,7 +584,7 @@ class Tile(base.TileElement):
         
         self._feedbackImg = None
 
-        if self.background_shape != None:
+        if self.background_shape is not None:
             background_shape = self.background_shape
             if self.background_shape == "default":
                 if self.tile_layout == "vertical": background_shape = "rounded_rectangle"
@@ -620,6 +623,8 @@ class Tile(base.TileElement):
             shape_img.alpha_composite(img)
             self._imgData = shape_img
 
+        # if self.id == "debug-tile":
+        #     self.imgData.show()
         return self.imgData
 
     # async def async_generate(self, area = None, skipNonLayoutGen=False):

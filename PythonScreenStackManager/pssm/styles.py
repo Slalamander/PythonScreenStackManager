@@ -1,6 +1,8 @@
 
 import logging
 from typing import TYPE_CHECKING
+import inspect
+from copy import deepcopy
 
 from .. import tools
 from ..util import classproperty
@@ -9,6 +11,7 @@ from ..constants import PSSM_COLORS
 
 from . import decorators
 from .decorators import customproperty, elementaction, trigger_condition
+from .util import _get_elt_init_args
 
 if TYPE_CHECKING:
     from ..elements import Element
@@ -18,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 SHORTHAND_COLORS = PSSM_COLORS.copy()
 
-__invalidcolor = object()
+_invalidcolor = object()
 
 ##linking to a style: any string starting and ending with a ':' (think about using that one, yaml does start complaining about nested mappings with it unless explicitly setting it to a string)
 ##i.e. ':style:' would apply the default style value said property
@@ -40,6 +43,10 @@ class Style:
 
     screen: "PSSMScreen"
     _color_shorthands: dict[str,ColorType] = {}
+    default_style = "style"
+    base_style_tree = None
+    
+    registered_styles = ("style")
 
     @classproperty
     def shorthand_colors(cls):
@@ -59,7 +66,54 @@ class Style:
             
         Will always return ``False``, whereas for example ``None`` is a valid color value.
         """
-        return __invalidcolor
+        return _invalidcolor
+    
+    @classmethod
+    def setup_style_tree(cls):
+        new_tree = deepcopy(styleproperty._style_tree_root)
+
+        new_tree["Button"]["font_color"] = "green"
+        new_tree["Layout"]["outline_color"] = "blue"
+        new_tree["Layout"]["outline_width"] = 10
+
+        new_tree["Tile"]["outline_color"] = "yellow"
+
+        cls.base_style_tree = new_tree
+        return
+
+    @classmethod
+    def get_value(cls, style_value : str, element: "Element" = None):
+        if not cls.base_style_tree:
+            cls.setup_style_tree()
+
+        if not isinstance(style_value, str):
+            return style_value
+
+        style_tuple = style_value.split("::")
+        style_length = len(style_tuple)
+        if style_length > 3:
+            raise ValueError("A style string can be made up of 3 components at most")
+        
+        elif style_length == 3:
+            (style, owner, prop) = style_tuple
+            ##Shoud all be known! -> may not make this comparison here?
+            ##Let the property setter take care of making it a valid string
+
+        # owner_cls = styleproperty._element_classes[owner]
+        if prop in cls.base_style_tree.get(owner,{}):
+            val = cls.base_style_tree[owner][prop]
+            return val
+        else:
+            bases = inspect.getmro(styleproperty._element_classes[owner])
+
+            for base in bases[1:]:
+                if prop in (d := cls.base_style_tree.get(base.__name__,{})):
+                    val = d[prop]
+                    return val
+                if base == Element:
+                    break
+            val = cls.base_style_tree[prop]
+        return val
 
     @classmethod
     def get_color(cls, value: ColorType, colormode: str = "screen-image"):
@@ -68,8 +122,12 @@ class Style:
         elif colormode == "screen":
             colormode = cls.screen.colorMode
         
-        if isinstance(value,str) and value.lower() in cls.shorthand_colors:
-            return cls.shorthand_colors[value.lower()]
+        if isinstance(value,str) and (value.lower() in cls.shorthand_colors or "::" in value):
+            if value.lower() in cls.shorthand_colors:
+                return cls.shorthand_colors[value.lower()]
+            elif "::" in value:
+                return cls.get_value(value)
+
         else:
             try:
                 return tools.get_Color(value,colormode)
@@ -101,11 +159,15 @@ class Style:
         bool
             Whether the color is valid
         """
+
         if element and isinstance(value,str):
             if element.parentLayout is None and element not in element.screen.stack:
                 return True
             elif value in getattr(element.parentLayout,"_color_shorthands",{}):
                 return True
+        
+        if isinstance(value, str) and "::" in value:
+            return True
 
         if isinstance(value,str) and value.lower() in cls.shorthand_colors:
             return True
@@ -147,10 +209,11 @@ class styleproperty(customproperty):
 
     _found_properties = set()
 
-    __element_classes : dict[type[object],set] = {}
+    _element_classes : dict[str,type["Element"]] = {}
     _base_element_class: "Element"
     
-    __base_style_tree = {}
+    _style_tree_root = {}
+    _base_styles = {}
     
     def __init__(self,
                 fget=None, 
@@ -180,19 +243,125 @@ class styleproperty(customproperty):
         self._style_attribute = name
         owner_elt = owner.__name__
         cls = self.__class__
-        val = 1
+        
         ##Extracting the values:
         ##Call the defaultdict from the docs if owner is not yet known
         ##safe that and use it to get the value
-        if owner_elt in cls.__base_style_tree:
-            cls.__base_style_tree[owner_elt][name] = val
-        else:
-            cls.__base_style_tree[owner_elt] = {name: val}
+        # if owner_elt in cls.__base_style_tree:
+        #     cls.__base_style_tree[owner_elt][name] = val
+        # else:
+        #     cls.__base_style_tree[owner_elt] = {name: val}
 
+        # if hasattr(owner,"__elt_init__"):
+        #     init_func = owner.__elt_init__
+        # else:
+        #     init_func = owner.__init__
+
+        ##Do not use __elt_init__ here, __set_name__ is called before __init_subclass__
+        init_func = owner.__init__
+        base_args = inspect.signature(init_func)
         
+        default_val = Style.NOTACOLOR
+        for param in base_args.parameters.values():
+            if param.name == name:
+                default_val = param.default
+                break
+
+        # param.default = style_name
+
+        ##Instead of replacing the values in the __init__, can also overwrite them in the new_init perhaps?
 
 
-class colorproperty(customproperty):
+        if default_val is Style.NOTACOLOR:
+            return
+
+        ##Maybe the style tree should be put onto the Style class tbh
+        if owner_elt in cls._style_tree_root:
+            cls._style_tree_root[owner_elt][name] = default_val
+        else:
+            cls._style_tree_root[owner_elt] = {name: default_val}
+            cls._element_classes[owner_elt] = owner
+
+        if name not in cls._base_styles:
+            cls._base_styles[name] = default_val
+        return
+
+    @classmethod
+    def _set_element_styles(cls, owner : type["Element"]):
+        ##Register style properties present in __init__ but registered from a baseclass
+        owner_elt = owner.__name__
+
+        cls._style_tree_root.setdefault(owner_elt,{})
+        cls._element_classes.setdefault(owner_elt,owner)
+
+        if hasattr(owner,"__elt_init__"):
+            init_func = owner.__elt_init__
+        else:
+            init_func = owner.__init__
+        base_args = inspect.signature(init_func)
+        
+        for param in base_args.parameters.values():
+            # if hasattr()
+            if (param.default is not param.empty
+                and isinstance(getattr(owner,param.name,None), styleproperty)
+                and param.name not in cls._style_tree_root[owner_elt]):
+                cls._style_tree_root[owner_elt][param.name] = param.default
+
+        return
+
+    def __get__(self, obj, objtype=None):
+
+        val = self.fget(obj)
+        if isinstance(val,str) and "::" in val:
+            style_val = Style.get_value(val, obj)
+            return style_val
+        return super().__get__(obj, objtype)
+
+    def __set__(self, obj, value):
+        if isinstance(value,str) and "::" in value:
+            value = self.create_style_string(obj, value)
+            setattr(obj,f"_{self._style_attribute}", value)
+            return
+        return super().__set__(obj, value)
+    
+    def create_style_string(self, obj : "Element", string : str):
+
+        style_tuple = string.split("::")
+        # style_length = len(style_tuple)
+
+        # d = {"style": None, "owner": None, "prop": None}
+        d = {}
+
+        if style_tuple and len(style_tuple) <= 3:
+            for val in style_tuple:
+                if val in Style.registered_styles:
+                    d["style"] = val
+                elif val in self._element_classes:
+                    d["owner"] = val
+                elif val in self._base_styles:
+                    d["prop"] = val
+                else:
+                    msg = f"{obj}: Unknown style specifier {val} in attribute {self._style_attribute}"
+                    raise ValueError(msg)
+        else:
+            raise ValueError("Invalid style tuple length")
+        
+        d.setdefault("style","style")
+        d.setdefault("owner",obj.__class__.__name__)
+        d.setdefault("prop", self._style_attribute)
+
+        style_string = "::".join((d["style"],d["owner"],d["prop"]))
+        return style_string
+
+    @classmethod
+    def style_init_args(cls, element_cls):
+
+        if element_cls.__name__ in cls._style_tree_root:
+            return cls._style_tree_root[element_cls.__name__]
+        return {}
+
+
+class colorproperty(styleproperty):
     """Decorator to indicate a property is defines the color of an element.
     
     This means it can automatically apply the default color_setter as the properties setter, and implements the logic parse the color values of parents when shorthands are used.
@@ -235,7 +404,8 @@ class colorproperty(customproperty):
         if fset == None:
             fset = self._color_setter
         self._allows_none = allows_none
-        super().__init__(fget,fset,fdel,doc)
+        # super().__init__(fget,fset,fdel,doc)
+        customproperty.__init__(self, fget,fset,fdel,doc)
         return
 
     class NOT_NONE(customproperty):
@@ -256,6 +426,7 @@ class colorproperty(customproperty):
         _LOGGER.log(5,f"decorating {self} and using {owner}")
         self._color_attribute = name
         self.__add_class_color(owner, name)
+        super().__set_name__(owner, name)
 
     def _color_setter(self, element:"Element", value : ColorType, cls : type = None):
         """
@@ -284,12 +455,12 @@ class colorproperty(customproperty):
 
         msg = None
         if Style.is_valid_color(value):
-            if value == None and (not allows_None):
+            if value is None and (not allows_None):
                 msg = f"{element}: {attribute} does not allow {value} as a color value"
             else:
                 setattr(element, set_attribute, value)
         elif isinstance(value,str):
-            if element.parentLayout == None and not element in element.screen.stack:
+            if element.parentLayout is None and element not in element.screen.stack:
                 ##Means it will be validated later
                 setattr(element, set_attribute, value)
             elif value in getattr(element.parentLayout,"_color_shorthands",{}):
@@ -300,7 +471,7 @@ class colorproperty(customproperty):
             msg = f"{element}: {value} is not identified as a valid color"
 
         if msg:
-            _LOGGER.error(msg,exc_info=ValueError(msg))
+            _LOGGER.error(msg, exc_info=ValueError(msg))
         elif hasattr(element, "_style_update"):
             element._style_update(attribute, value)
 

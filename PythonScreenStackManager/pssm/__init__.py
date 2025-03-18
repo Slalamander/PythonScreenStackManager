@@ -3,12 +3,15 @@ import concurrent.futures
 
 from .screen import PSSMScreen, const
 from .styles import Style
-from . import decorators, util
+from . import styles, decorators, util
 
 from ..elements import baseelements
 from ..tools import Singleton
+from .. import tools
 
 baseelements.Screen = PSSMScreen
+
+styles.Element = baseelements.Element
 
 decorators.Element = baseelements.Element
 decorators.Style = Style
@@ -17,6 +20,8 @@ decorators.Screen = PSSMScreen
 util.Element = baseelements.Element
 util.Style = Style
 util.Screen = PSSMScreen
+
+tools.Style = Style
 
 def get_screen():
     "Returns the screen instance"

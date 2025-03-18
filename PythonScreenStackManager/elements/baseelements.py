@@ -39,6 +39,8 @@ from ..pssm.styles import Style
 from ..pssm.decorators import colorproperty, styleproperty, elementaction, elementactionwrapper, trigger_condition
 from ..pssm.util import isclassproperty, TriggerCondition, classproperty
 
+from ..pssm import util
+
 if TYPE_CHECKING:
     from ..pssm.screen import PSSMScreen as Screen
     
@@ -106,6 +108,11 @@ class Element(ABC):
     def color_properties(cls) -> set:
         "Set containing all color properties of an element"
         return colorproperty._get_class_colors(cls)
+    
+    @classproperty
+    def style_arguments(cls) -> dict:
+
+        return styleproperty.style_init_args(cls)
 
     @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["Element", CoordType],Any]]:
@@ -118,13 +125,25 @@ class Element(ABC):
 
     def __init_subclass__(cls, *args, **kwargs):
         ##Method gotten from: https://stackoverflow.com/questions/71183263/automatically-call-method-after-init-in-child-class
-        ##Cannot use a metaclass for this, which would've probably been preferred, as it messes up other elements that already have metaclasses
+        ##Cannot use a metaclass for this, which would've probably been preferred, but it messes up other elements that already have metaclasses
         super().__init_subclass__(*args, **kwargs)
+
+        styleproperty._set_element_styles(cls)
+        elt_styles = {}
+        for elt_style in cls.style_arguments:
+            # elt_styles[elt_style] = f"style::{cls.__name__}::{elt_style}"
+            elt_styles[elt_style] = f"style::{elt_style}"
+
+
         init = cls.__init__
-        def new_init(self, *args, **kwargs):
+
+        def new_init(self : "Element", *args, **kwargs):
             asyncio.set_event_loop(self.screen.mainLoop)
+            
             id = kwargs.get("id",None)
             _register = kwargs.get("_register",None)
+
+            kwargs = elt_styles | kwargs
             init(self, *args, **kwargs)
             if cls is type(self):
                 self.__post_init__(id, _register)
@@ -182,8 +201,8 @@ class Element(ABC):
                 tap_action: InteractionFunctionType = None,
                 hold_action: InteractionFunctionType = None,
                 hold_release_action: InteractionFunctionType = None,
-                background_color: Optional[ColorType] = None,
-                isInverted: bool = False, show_feedback: bool = None,
+                background_color: Optional[ColorType] = None, #"style::background_color",
+                inverted: bool = False, show_feedback: bool = None,
                 feedback_duration: Union[float,DurationType] = DEFAULT_FEEDBACK_DURATION, forcePrintOnTop: bool = False,
                 _register : Optional[bool] = None,
                 **kwargs):
@@ -228,8 +247,8 @@ class Element(ABC):
         self.hold_release_action_map = {}
         self.hold_release_action = hold_release_action
 
-        self._isInverted = isInverted
-        self._inverted = isInverted
+        self._isInverted = inverted
+        self._inverted = inverted
         
         if show_feedback == None:
             show_feedback = True if tap_action != None else False
@@ -816,6 +835,12 @@ class Element(ABC):
             if update:
                 self.update()
 
+    def get_style_value(self, style_value : str):
+        "Returns the appropriate value for the given style string"
+
+        val = Style.get_value(style_value, self)
+        return val
+
     def _color_setter(self,attribute:str, value : ColorType, allows_None : bool = True, cls : type = None):
         """
         Tests if a given color is valid, and sets the attribute if so. Otherwise, logs an error
@@ -1069,7 +1094,6 @@ class Element(ABC):
             if func:
                 return (func, kwargs)
 
-
     @abstractmethod
     def generator(self, area : PSSMarea=None, skipNonLayoutGen : bool =False) -> Image.Image:
         """
@@ -1187,6 +1211,7 @@ class Element(ABC):
         self._feedbackTask = self.screen.create_task(self.parentPSSMScreen.async_invert_element(self,self.feedback_duration))
         await self.feedbackTask
 
+util.Element = Element
 colorproperty._base_element_class = Element
 styleproperty._base_element_class = Element
 
@@ -1249,7 +1274,7 @@ class Layout(Element):
         "Set of elements to call the on_add function of. Emptied after calling the element's own on_add"
 
         self._layout = []
-        if layout != None:
+        if layout is not None:
             self.layout = layout
 
         self.background_color = background_color
@@ -1349,7 +1374,7 @@ class Layout(Element):
         Set to None to use no outline"""
         return self._outline_color
 
-    @property
+    @styleproperty
     def outline_width(self) -> PSSMdimension:
         "Width of the outline of the encompassing rectangle"
         return self._outline_width
@@ -2438,7 +2463,8 @@ class TileElement(Layout):
 
         ##Check what to do with regenerating layouts, mainly for when colors change.
         ##May be doable by overwriting async update and checking if a color property is in it.
-        return super().generator(area, skipNonLayoutGen)
+        i = super().generator(area, skipNonLayoutGen)
+        return i
 
     async def pre_generate(self, area = None, skipNonLayoutGen = False):
         
