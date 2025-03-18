@@ -119,8 +119,7 @@ class Element(ABC):
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
         return {"generate": "async_generate", "update": "async_update_action"}
     
-    @property
-    def _emulator_icon(cls): return "mdi:shape"
+    emulator_icon = "mdi:shape"
     "Icon to use in the element tree of the emulator"
 
     def __init_subclass__(cls, *args, **kwargs):
@@ -1253,8 +1252,7 @@ class Layout(Element):
         "Class method to get shorthands for color setters, to allow for parsing their values in element properties. Returns a dict with the [key] being the shorthand to use for element properties and [value] being the tile attribute it links to."
         return {"background": "background_color", "outline": "outline_color", "foreground": "foreground_color", "accent": "accent_color"}
 
-    @property
-    def _emulator_icon(cls): return "mdi:view-dashboard"
+    emulator_icon = "mdi:view-dashboard"
 
     def __init__(self, layout : PSSMLayout, area=None, background_color : ColorType = None, isInverted=False, radius : PSSMdimension = 0, 
                 outline_color : ColorType=None, foreground_color : ColorType = DEFAULT_FOREGROUND_COLOR, accent_color : ColorType = DEFAULT_ACCENT_COLOR,
@@ -2180,8 +2178,7 @@ class TileElement(Layout):
         "Class method to get shorthands for color setters, to allow for parsing their values in element properties. Returns a dict with the [key] being the shorthand to use for element properties and [value] being the tile attribute it links to."
         return {"background": "background_color", "foreground": "foreground_color", "outline": "outline_color", "accent": "accent_color"}
 
-    @property
-    def _emulator_icon(cls): return "mdi:layers-triple"
+    emulator_icon = "mdi:layers-triple"
 
     def __init__(self, tile_layout : Union[str,PSSMLayout], vertical_sizes = {"inner": 0, "outer": 0}, horizontal_sizes = {"inner": 0, "outer": 0},
                 foreground_color : Optional[ColorType] = DEFAULT_FOREGROUND_COLOR, accent_color : Optional[ColorType] = DEFAULT_ACCENT_COLOR, background_color : Optional[ColorType] = None, 
@@ -2664,8 +2661,7 @@ class Popup(Layout):
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
         return Element.action_shorthands | {"show-popup": "async_show", "close-popup": "async_close"}
 
-    @property
-    def _emulator_icon(cls): return "mdi:tooltip"
+    emulator_icon = "mdi:tooltip"
 
     def __init__(self, layout=[], width: PSSMdimension = "W*0.8", height: PSSMdimension = "H*0.5",
                 horizontal_position: PSSMdimension = "(W-w)/2", vertical_position: PSSMdimension = "(H-h)/2", 
@@ -2880,8 +2876,7 @@ class PopupConfirm(Popup):
         
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:tooltip-question"
+    emulator_icon = "mdi:tooltip-question"
 
     def __init__(self, titleText:str="", mainText:str="", confirmText:str="OK",
                 cancelText:str="Cancel",
@@ -2993,8 +2988,7 @@ class PopupMenu(Popup):
         Color of the header bar, by default DEFAULT_MENU_HEADER_COLOR    
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:tooltip-outline"
+    emulator_icon = "mdi:tooltip-outline"
 
     ##This one will provide the basis, but shouldn't be singleton
     ##Building: make layout with a title and a close button, everything underneath is up to the designer
@@ -3109,8 +3103,7 @@ class PopupButtons(Popup):
         vertical_position (float): Relative position on the y axis of the center point
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:tooltip-text"
+    emulator_icon = "mdi:tooltip-text"
 
     def __init__(self, userButtons: list =[],  titleText:str="", mainText:str="",
                 title_font:str=DEFAULT_FONT, title_font_size:str=DEFAULT_FONT_SIZE,
@@ -3218,8 +3211,8 @@ class PopupDrawer(Popup):
         showCloseArrow (bool): show an arrow that can be tapped to close the drawer? 
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:tooltip-minus"
+
+    emulator_icon = "mdi:tooltip-minus"
 
     def __init__(self, *drawerElements, parentElt, direction:str, drawerLength:Optional[Union[str,int]]=None, 
                 overlapParent:bool=False, showCloseArrow:bool=True,
@@ -3463,8 +3456,7 @@ class Button(Element):
         fit text into the Element's area. If true, font_size will be used as the minimum font_size (set to 0 for no minimum), by default False
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:alpha-b-box"
+    emulator_icon = "mdi:alpha-b-box"
 
     def __init__(self, text: Optional[str]="", font:str= "default", font_size: PSSMdimension = DEFAULT_FONT_SIZE, font_color : Union[bool,ColorType] = DEFAULT_FOREGROUND_COLOR, #"black",
                 background_color: ColorType =None, outline_color: Optional[ColorType] = None, outline_width : PSSMdimension = 1, radius:int=0, 
@@ -4078,8 +4070,7 @@ class Picture(ImageElement):
         If the picture should be mirrored, by default False
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:image"
+    emulator_icon = "mdi:image"
 
     def __init__(self, picture: Union[str, Path, Image.Image], background_color : Optional[ColorType]=None, 
                 background_shape:IMPLEMENTED_ICON_SHAPES_HINT = None, 
@@ -4421,8 +4412,7 @@ class Icon(ImageElement):
         amount of pixels to offset the badge from the borders of the element, by default 0
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:drawing-box"
+    emulator_icon = "mdi:drawing-box"
 
     def __init__(self, icon: Optional[Union[mdiType,str]] = DEFAULT_ICON, icon_color:Union[ColorType,bool] = DEFAULT_FOREGROUND_COLOR, background_color : Optional[ColorType]=None, background_shape:IMPLEMENTED_ICON_SHAPES_HINT = None, shape_settings : dict = {},
                 isInverted : bool = False, invert_icon : bool = False, show_feedback : bool = True,
@@ -5148,8 +5138,7 @@ class Line(Element):
         Alignment of the line, by default "center"
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:ruler"
+    emulator_icon = "mdi:ruler"
 
     def __init__(self, line_color: ColorType = DEFAULT_FOREGROUND_COLOR, width: PSSMdimension = 1, orientation : Literal["horizontal","vertical","diagonal1", "diagonal2"]="horizontal", 
                  alignment : Union[Literal["center","top","bottom", "left", "right"], PSSMdimension]="center", **kwargs):
