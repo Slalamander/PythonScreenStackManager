@@ -1221,7 +1221,9 @@ class DrawShapes:
             if key in color_keys:
                 value = get_Color(value,img.mode)
             args[key] = value
-        
+
+        if args.get("outline", None) is None:
+            args.setdefault("width",0)
         _LOGGER.log(0,f"Drawing pieslice with arguments {args}")
         drawImg = ImageDraw.Draw(mask)
         drawImg.pieslice(**args)
@@ -1258,7 +1260,9 @@ class DrawShapes:
             if key in color_keys:
                 value = get_Color(value,img.mode)
             args[key] = value
-        
+
+        if args.get("outline", None) is None:
+            args.setdefault("width",0)        
         _LOGGER.log(0, f"Drawing square with arguments {args}")
 
         drawImg = ImageDraw.Draw(mask)
@@ -1296,6 +1300,9 @@ class DrawShapes:
             args[key] = value
         
         _LOGGER.log(0,f"Drawing rounded rectangle with arguments {args}")
+        
+        if args.get("outline", None) is None:
+            args.setdefault("width",0)
 
         drawImg = ImageDraw.Draw(mask)
         drawImg.rounded_rectangle(**args)
@@ -1333,7 +1340,10 @@ class DrawShapes:
             if key in color_keys:
                 value = get_Color(value,img.mode)
             args[key] = value
-        
+
+        if args.get("outline", None) is None:
+            args.setdefault("width",0)
+
         _LOGGER.log(0,f"Drawing rounded square with arguments {args}")
         drawImg = ImageDraw.Draw(mask)
         drawImg.rounded_rectangle(**args)
@@ -1366,7 +1376,10 @@ class DrawShapes:
             if key in color_keys:
                 value = get_Color(value,img.mode)
             args[key] = value
-        
+
+        if args.get("outline", None) is None:
+            args.setdefault("width",0)
+
         _LOGGER.log(0,f"Drawing octagon with arguments {args}")
 
         drawImg = ImageDraw.Draw(mask)
