@@ -37,6 +37,7 @@ from .pssm_types import PSSMarea, PSSMdimension, ColorType
 
 if TYPE_CHECKING:
     from .pssm_types import Element
+    from .pssm.styles import Style
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -774,6 +775,8 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
                 return const.PSSM_COLORS[color]
             else:
                 return get_Color(const.PSSM_COLORS[color],colorMode)
+        elif "::" in color:
+            return Style.get_color(color)
         
         try:
             colorTup = PILgetcolor(color,colorMode)
