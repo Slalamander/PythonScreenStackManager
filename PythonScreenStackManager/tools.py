@@ -589,6 +589,45 @@ def is_valid_dimension(dimStr: Union[PSSMdimension,list[PSSMdimension]], variabl
         
     return True
 
+def construct_margin_tuple(margin_value : Union[tuple[PSSMdimension],list[PSSMdimension], PSSMdimension]) -> tuple[PSSMdimension,PSSMdimension,PSSMdimension,PSSMdimension]:
+    """Construct a 4 tuple for use with dimensions
+
+    Tuple is created with the same logic as css margins, i.e. 1 value means a 4 tuple with identical values is returned, 2 values return a tuple with (VALUE_1, VALUE_2, VALUE_1, VALUE_2), etc.
+
+    Parameters
+    ----------
+    margin_value : Union[tuple[PSSMdimension],list[PSSMdimension], PSSMdimension]
+        The value to convert to a margin tuple
+
+    Returns
+    -------
+    tuple[PSSMdimension,PSSMdimension,PSSMdimension,PSSMdimension]
+        Margin tuple as (TOP, LEFT, BOTTOM, RIGHT)
+
+    Raises
+    ------
+    ValueError
+        Raised if margin_value is a list or tuple longer than 4
+    TypeError
+        Raised if margin_value is not a known type
+    """
+
+    if isinstance(margin_value,(tuple,list)):
+        if len(margin_value) > 4:
+            msg = "Margin lists cannot be larger than 4."
+            raise ValueError(msg)
+        elif len(margin_value) == 2:
+            margin_value = margin_value*2
+        elif  len(margin_value) == 3:
+            margin_value = (margin_value[0],margin_value[1],margin_value[2],margin_value[1])
+    
+    elif isinstance(margin_value,(int,float,str)):
+        margin_value = (margin_value,)*4
+    else:
+        msg = f"Invalid margin type {type(margin_value)}"
+        raise TypeError(msg)
+    return margin_value
+
 def convert_XArgs_to_PX(xPosition, objw, textw, myElt=None) -> int:
     """
     Converts xPosition string arguments to numerical values
@@ -731,7 +770,7 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
         Raised if the color could not be converted
     """    
 
-    if color == None:
+    if color is None:
         colorList = [0]*len(colorMode)
         return tuple(colorList)
     if isinstance(color,int):
@@ -769,12 +808,14 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
             return tuple(colorList)
     
     if isinstance(color, str):
-        if color in const.PSSM_COLORS:
+        # if color in const.PSSM_COLORS:
+        if color in Style.shorthand_colors:
             _LOGGER.debug(f"Parsing pssm color: {color}")
             if colorMode == "RGBA":
-                return const.PSSM_COLORS[color]
+                return Style.shorthand_colors[color]
+                # return const.PSSM_COLORS[color]
             else:
-                return get_Color(const.PSSM_COLORS[color],colorMode)
+                return get_Color(Style.shorthand_colors[color],colorMode)
         elif "::" in color:
             return Style.get_color(color)
         
