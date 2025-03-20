@@ -25,13 +25,14 @@ from .. import tools
 from ..pssm_types import *
 from ..exceptions import *
 
-from ..constants import DEFAULT_BACKGROUND
+from ..constants import DEFAULT_BACKGROUND, DEBUG
 from .. import constants as const
 
 from ..pssm_settings import SETTINGS, settings_type
 
 from ..devices import PSSMdevice, FEATURES
 from .. import elements, devices
+from ..elements.baseelements import Element, Popup
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 _LOGGER = logging.getLogger(__name__)
@@ -938,7 +939,7 @@ class PSSMScreen:
         if safe_print and element.parentLayouts and element.parentLayouts[0] != self.stack[-1]:
             ##This way elements in the topmost popup should still be able to safely print
             for popup in self.popupsOnTop:
-                if tools.get_rectangles_intersection(element.area,popup.area) or popup.blur_background:
+                if tools.get_rectangles_intersection(element.area,popup.area) or Popup.blur_background.value(popup):
                     _LOGGER.debug(f"{element}: Not simple printing as popup {popup} is interfering")
                     return
 
@@ -948,7 +949,7 @@ class PSSMScreen:
             img = element.imgData.copy()
 
         if apply_background:
-            if element.background_color != None:
+            if Element.background_color.value(element) != None:
                 pass
             elif element.parentBackground == None:
                 crop_box = [x,y,x+w,y+h]
@@ -1260,8 +1261,7 @@ class PSSMScreen:
 
         self.device.print_pil(fb_img, *element.area[0])
 
-        # sleep_time = tools.parse_duration_string(element.feedback_duration)
-        await asyncio.sleep(element.feedback_duration)
+        await asyncio.sleep(element.feedbackSeconds)
 
         if not self.popupsOnTop:
             self.device.print_pil(element.imgData, *element.area[0])
@@ -1683,7 +1683,7 @@ class PSSMScreen:
             L = await asyncio.gather(*coro_list, return_exceptions=True)
             for i, res in enumerate(L):
                 if isinstance(res,Exception): 
-                    _LOGGER.error(f"{coro_list[i]} returned an exception: {res} ")
+                    _LOGGER.error(f"{coro_list[i]} returned an exception: {res}", exc_info=DEBUG)
                     if const.RAISE: raise res
             _LOGGER.verbose(f"Click  {x,y} coroutine gather returned with {L}")
             
@@ -1717,7 +1717,7 @@ class PSSMScreen:
                         asyncio.to_thread(
                             func,elt, interaction,**kwargs))
                     
-            if elt.show_feedback:
+            if elt.show_feedback or (elt_action and elt.show_feedback == const.FEEDBACK_ON_ACTION):
                 coro_list.append(
                     elt.feedback_function())
 
