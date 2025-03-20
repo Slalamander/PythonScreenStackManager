@@ -10,6 +10,8 @@ from .constants import DEFAULT_FONT, DEFAULT_FONT_SIZE
 from .. import tools, \
         constants as const
 
+CURSOR_CHAR = "|"
+
 class OSK(Layout):
     """
     A PSSM Layout element which builds an on-screen keyboard
@@ -19,8 +21,7 @@ class OSK(Layout):
             keyChar as argument
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:keyboard"
+    emulator_icon = "mdi:keyboard"
 
     def __init__(self, keymapPath=const.DEFAULT_KEYMAP_PATH, onKeyPress=None,
                  area=None, **kwargs):
@@ -61,7 +62,7 @@ class OSK(Layout):
         isAlDefined = self.keymap_imgs['alt']
         areAllDefined = isStDefined and isCaDefined and isAlDefined
         if forceRegenerate or (not areAllDefined):
-            logger.info("[PSSM OSK] Regenration started")
+            _LOGGER.info("[PSSM OSK] Regenration started")
             # Let's create all the Images
             # Standard view is created last, because it is the one which is to
             # be displayed
@@ -184,7 +185,7 @@ class Input(Button):
 
     def pssmOnClickInside(self, coords):
         if not self.parentPSSMScreen.osk:
-            logger.warning(
+            _LOGGER.warning(
                 "[PSSM] Keyboard not initialized, Input element cannot be " +
                 "properly handled"
             )
@@ -300,8 +301,7 @@ class PopupInput(Popup):
     A Popup that allows for input. OSK has not been investigated yet from the original PSSM, so element is not fully implemented.
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:tooltip-text"
+    emulator_icon = "mdi:tooltip-text"
 
     def __init__(self, titleText:str="", mainText:str="", confirmText:str="OK",
                 title_font:str=DEFAULT_FONT, title_font_size:str=DEFAULT_FONT_SIZE,
@@ -382,7 +382,7 @@ class PopupInput(Popup):
         return layout
 
     def toggleConfirmation(self, elt=None, coords=None):
-            logger.info("Toggling confirmation")
+            _LOGGER.info("Toggling confirmation")
             self.userConfirmed = True
 
     def waitForResponse(self):

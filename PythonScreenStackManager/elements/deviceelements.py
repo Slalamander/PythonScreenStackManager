@@ -133,8 +133,7 @@ class DeviceButton(_DeviceMonitor, base.Button):
         The type the monitored value is converted to, before applying the suffic and prefix. Can allow for removing e.g. trailing zeros. strings are evaluated to a type.
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:cellphone-text"
+    emulator_icon = "mdi:cellphone-text"
     
     def __init__(self, monitor_feature : Literal["battery", "network", "backlight"], monitor_attribute : str, prefix : str = "", suffix : str = "", typing : Optional[Union[type, str]] = None, **kwargs):
         
@@ -227,8 +226,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         Additional styling options for the element mapping to the states of all possible device features, by default {}
     """   
 
-    @property
-    def _emulator_icon(cls): return "mdi:cellphone-information"
+    emulator_icon = "mdi:cellphone-information"
 
     def __init__(self, icon_feature : Union[Literal["battery","network","backlight"], mdiType] ="mdi:cog", badge_feature : Optional[Union[Literal["battery","network","backlight"], mdiType]] = None, 
                 battery_style : Literal["filled","bars"] = "filled", battery_icon_states : BatteryIconMapping = DEFAULT_BATTERY_STYLE,
@@ -617,8 +615,7 @@ class BacklightSlider(_DeviceMonitor, comps.Slider):
         If brightness, the brightness is directly changed to the new value
     """  
 
-    @property
-    def _emulator_icon(cls): return "mdi:brightness-percent"
+    emulator_icon = "mdi:brightness-percent"
 
     def __init__(self, monitor_attribute : Literal["brightness", "default_brightness"]= "brightness", **kwargs):
 

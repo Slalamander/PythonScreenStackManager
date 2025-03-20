@@ -114,8 +114,7 @@ class GridLayout(base.Layout):
         Like `outer_margins`, values are parsed as CSS grids.
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:dots-grid"
+    emulator_icon = "mdi:dots-grid"
     
     def __init__(self, elements : Sequence[base.Element], rows : int = None, columns : int = None,
                 row_sizes : list[PSSMdimension] = "?", column_sizes : list[PSSMdimension] = "?",
@@ -508,8 +507,7 @@ class NavigationTile(base.TileElement):
     def tiles(cls):
         return ("icon","name","line")
 
-    @property
-    def _emulator_icon(cls): return "mdi:navigation-variant"
+    emulator_icon = "mdi:navigation-variant"
 
     def __init__(self, tile_layout : str, icon : mdiType, name : str, **kwargs): 
         
@@ -645,8 +643,7 @@ class TabPages(base.TileElement):
     _restricted_element_properties : dict[str,set[str]] = {"navigation": {"allow_deselect", "tap_action"}, "handle-next" : {"tap_action"}, "handle-previous" : {"tap_action"}}
     "Properties of the elements that are not allowed to be set."
 
-    @property
-    def _emulator_icon(cls): return "mdi:page-layout-sidebar-left"
+    emulator_icon = "mdi:page-layout-sidebar-left"
 
     @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["base.Element", CoordType],Any]]:

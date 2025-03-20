@@ -25,7 +25,7 @@ from ..tools import DrawShapes, DummyTask
 
 from . import baseelements as base
 from .baseelements import _LOGGER, IMPLEMENTED_ICON_SHAPES, Style,\
-        colorproperty, elementaction, elementactionwrapper, trigger_condition, classproperty
+        colorproperty, styleproperty, elementaction, elementactionwrapper, trigger_condition, classproperty
 
 BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
 
@@ -92,8 +92,7 @@ class Tile(base.TileElement):
     _restricted_element_properties : dict[str,set[str]] = {"icon": {"icon", "badge_icon", "badge_settings"}, "text": {"text"}, "title": {"text"}}
     "Properties of the elements that are not allowed to be set."
 
-    @property
-    def _emulator_icon(cls): return "mdi:image-text"
+    emulator_icon = "mdi:image-text"
 
     class _elements(TypedDict):
         icon : base.Icon
@@ -248,7 +247,7 @@ class Tile(base.TileElement):
         "Color of the background shape. Set using background color."
         return self.background_color
 
-    @property
+    @styleproperty
     def radius(self) -> PSSMdimension:
         "Corner radius of the element's background. Only applicable when no background shape is used, otherwise 0."
         if self.background_shape != None:
@@ -793,8 +792,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         Clock tap action, by default None
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:clock"
+    emulator_icon = "mdi:clock"
 
     def __init__(self, timezone: str = None, minimum_resolution: int = DrawShapes.MINRESOLUTION, outline_width: PSSMdimension = 5, 
                 clock_fill_color : Optional[ColorType]=None, outline_color : Optional[ColorType] = "black", 
@@ -1116,8 +1114,7 @@ class DigitalClock(base.Button, dateTimeElementInterval):
         True if the text is to be automatically fitted into the text box, by default True
     """   
 
-    @property
-    def _emulator_icon(cls): return "mdi:clock-digital"
+    emulator_icon = "mdi:clock-digital"
 
     def __init__(self, time_format="%H:%M", timezone=None, orientation: Literal["horizontal","vertical"] = "horizontal",
                 font=DEFAULT_FONT_CLOCK, font_size="h*0.9", resize=DEFAULT_FONT_SIZE, fit_text=True,  **kwargs):
@@ -1216,8 +1213,7 @@ class DateElement(base.Button, dateTimeElementInterval):
         try and fit the clock into the box? (Not a dynamic function, will use font_size as a minimum value, but not change it. resize takes precendent over it as well.), by default True
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:calendar-week"
+    emulator_icon = "mdi:calendar-week"
 
     def __init__(self, date_format="%Y-%m-%-d", timezone=None, font='default-bold', font_size: PSSMdimension ="h*0.9", resize: PSSMdimension=DEFAULT_FONT_SIZE, fit_text: bool = True,  **kwargs):
 
@@ -1287,8 +1283,7 @@ class LineSlider(base._BaseSlider):
         Size of the endicons, by default None, which means its set to a half of the element height/width for orientations horizontal/vertical respectively.
     """
     
-    @property
-    def _emulator_icon(cls): return "mdi:vector-line"
+    emulator_icon = "mdi:vector-line"
 
     def __init__(self, color : 'ColorType' = "black", width : PSSMdimension = None, orientation : Literal["horizontal", "vertical"] ="horizontal", tap_action : Optional[Callable[[base.Element,tuple[int,int]],None]]=None,
                 thumb : Literal["circle", "rectangle", "rounded_rectangle", None] ="rounded_rectangle", thumb_width : Optional[PSSMdimension] =None, thumb_height : Optional[PSSMdimension] = None, thumb_color : Optional[ColorType]=None, 
@@ -1670,8 +1665,7 @@ class BoxSlider(base._BaseSlider):
         Size of the endpoints, by default the same as the slider width.
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:arrow-right-bold-box"
+    emulator_icon = "mdi:arrow-right-bold-box"
 
     def __init__(self, active_color : ColorType = DEFAULT_FOREGROUND_COLOR, inactive_color: Optional[ColorType] = None, outline_color : Optional[ColorType] = DEFAULT_FOREGROUND_COLOR,   width : 'PSSMdimension' = None, outline_width = 5, radius=5, orientation : Literal["horizontal", "vertical"] ="horizontal", tap_action : Optional[Callable[[base.Element,tuple[int,int]],None]]=None,
             thumb_color : Optional[ColorType]=None, 
@@ -2001,8 +1995,7 @@ class Slider(LineSlider, BoxSlider):
         Slider orientation, by default "horizontal"
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:tune-variant"
+    emulator_icon = "mdi:tune-variant"
 
     def __init__(self, style : Literal["line", "box"] = "line", orientation : Literal["horizontal", "vertical"] ="horizontal", **kwargs):
 
@@ -2086,8 +2079,7 @@ class TimerSlider(Slider):
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
         return Slider.action_shorthands | {"start-timer": "start_timer", "pause-timer": "pause_timer", "cancel-timer": "cancel_timer", "toggle-timer": "toggle_timer"}
 
-    @property
-    def _emulator_icon(cls): return "mdi:timeline-clock"
+    emulator_icon = "mdi:timeline-clock"
 
     def __init__(self, count : Literal["up","down"], style: Literal['line','box'] = "line", orientation: Literal['horizontal','vertical'] = "horizontal",
                 interactive=False, **kwargs):
@@ -2331,8 +2323,7 @@ class CheckBox(base._BoolElement, base.Icon):
         show on screen feedback when interacting with the element (aside from toggling the element), by default False
     """
     
-    @property
-    def _emulator_icon(cls): return "mdi:checkbox-multiple-outline"
+    emulator_icon = "mdi:checkbox-multiple-outline"
 
     def __init__(self, checked : bool = False, checked_icon : Optional[MDItype] = "mdi:check", unchecked_icon : Optional[MDItype] = None, 
                 on_set : Callable[["CheckBox", bool],Any] = None, state_attributes : base.CheckStateDict ={True:{},False: {}},
@@ -2461,8 +2452,7 @@ class Toggle(CheckBox):
         show on screen feedback when interacting with the element (aside from toggling the element), by default False
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:toggle-switch"
+    emulator_icon = "mdi:toggle-switch"
 
     def __init__(self, state : bool =False, on_set : Callable[["CheckBox", bool],Any] =None, state_attributes : base.CheckStateDict = {True:{},False: {}}, show_feedback : bool = True, **kwargs):
         base.Icon.__init__(self, icon=None, show_feedback=show_feedback, **kwargs)
@@ -2516,16 +2506,16 @@ class DropDown(base.Button):
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
         return base.Button.action_shorthands | {"select": "_async_select", "open-menu": "open_menu", "close-menu": "close_menu"}
 
-    @property
-    def _emulator_icon(cls): return "mdi:form-select"
+    emulator_icon = "mdi:form-select"
 
     def __init__(self, options : list[str] = [], selected : int=0, on_select : Callable[[base.Element,str],Any] = None,
                 closed_icon : MDItype = "mdi:menu-down", opened_icon : MDItype = "mdi:menu-up", 
                 margins : PSSMdimension = None, radius : PSSMdimension="h*0.2",
                 background_color : ColorType = DEFAULT_BACKGROUND_COLOR,  outline_color : ColorType = None, outline_width : PSSMdimension = 5, **kwargs):
-        set_margins = True if margins == None else False
+        
+        set_margins = True if Style.get_value(margins, self, "margins") is None else False
             
-        super().__init__(text = None, background_color=background_color, **kwargs)
+        super().__init__(text = None, margins=0, background_color=background_color, **kwargs)
         if not isinstance(options, (list,tuple)):
             options = list(options)
 
@@ -2566,6 +2556,8 @@ class DropDown(base.Button):
                 bottom_margin = -1*self.outline_width
 
             self.margins = (0,0,bottom_margin)
+        else:
+            self.margins = margins
         self.__menuOpen = False
 
     #region
@@ -2795,8 +2787,7 @@ class Counter(base.TileElement):
     _restricted_element_properties : dict[str,set[str]] = {"count": {"text"}, "up": {"icon", "tap_action"}, "down": {"icon", "tap_action"}}
     "Properties of the elements that are not allowed to be set."
 
-    @property
-    def _emulator_icon(cls): return "mdi:counter"
+    emulator_icon = "mdi:counter"
 
     def __init__(self, tile_layout : Union[Literal["default", "horizontal"], PSSMLayoutString] = "default", value : float = 0, step : float = 1, roundDigits : int = None, minimum : float = None, maximum : float = None, 
                 on_count : Callable[["Counter",Union[float,int]],Any] = None,  downIcon : MDItype = "mdi:minus-box", upIcon : MDItype = "mdi:plus-box", 

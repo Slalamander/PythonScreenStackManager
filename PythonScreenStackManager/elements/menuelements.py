@@ -40,8 +40,7 @@ class StatusBar(layouts.GridLayout):
 
     _statusbar_elements = {}
 
-    @property
-    def _emulator_icon(cls): return "mdi:credit-card-outline"
+    emulator_icon = "mdi:credit-card-outline"
 
     @classproperty
     def statusbar_elements(cls) -> MappingProxyType[str, base.Element]:
@@ -281,8 +280,7 @@ class DeviceMenu(UniquePopupMenu):
     It can be accessed and shown via its id ``device-menu``.
     """
 
-    @property
-    def _emulator_icon(cls): return "mdi:tooltip-cellphone"
+    emulator_icon = "mdi:tooltip-cellphone"
 
     def __init__(self, **kwargs):
         self.device = self.parentPSSMScreen.device
@@ -370,8 +368,7 @@ class ScreenMenu(UniquePopupMenu):
         "The inkBoard or PSSM version running currently."
         return cls.__version__
 
-    @property
-    def _emulator_icon(cls): return "mdi:tooltip-image"
+    emulator_icon = "mdi:tooltip-image"
 
     def __init__(self, **kwargs):
 
