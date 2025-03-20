@@ -22,7 +22,7 @@ from mdi_pil import mdiType
 
 from .. import constants as const
 from ..constants import FuncExceptions, \
-                DEFAULT_FEEDBACK_DURATION
+                DEFAULT_FEEDBACK_DURATION, FEEDBACK_ON_ACTION, DEBUG
 
 from .constants import DEFAULT_FONT, \
     DEFAULT_FONT_SIZE, DEFAULT_BADGE_LOCATION, MISSING_PICTURE_ICON, MISSING_ICON, DEFAULT_ICON, \
@@ -127,47 +127,34 @@ class Element(ABC):
         ##Cannot use a metaclass for this, which would've probably been preferred, but it messes up other elements that already have metaclasses
         super().__init_subclass__(*args, **kwargs)
 
-        styleproperty._set_element_styles(cls)
+        init_args = styleproperty._set_element_styles(cls)
         elt_styles = {}
         for elt_style in cls.style_arguments:
-            # elt_styles[elt_style] = f"style::{cls.__name__}::{elt_style}"
             elt_styles[elt_style] = f"style::{elt_style}"
-
 
         init = cls.__init__
 
         def new_init(self : "Element", *args, **kwargs):
             asyncio.set_event_loop(self.screen.mainLoop)
             
-            id = kwargs.get("id",None)
-            _register = kwargs.get("_register",None)
+            id = kwargs.get("id", None)
+            _register = kwargs.get("_register", None)
 
-            kwargs = elt_styles | kwargs
+            ##Getting errors here with positional arguments.
+            ##So maybe bookkeep from elt_styles to remember their positions, and use that to create new kwargs.
+            for elt_style, (idx, val) in init_args.items():
+                if elt_style in kwargs or idx <= len(args):
+                    continue
+                kwargs[elt_style] = f"style::{elt_style}"
+
+
+            # kwargs = elt_styles | kwargs
             init(self, *args, **kwargs)
             if cls is type(self):
                 self.__post_init__(id, _register)
 
         cls.__elt_init__ = init
         cls.__init__ = new_init
-
-        # generatorClass = cls.generator.__qualname__.split(".")[0]
-        # if cls.__name__ == "Layout" or issubclass(cls,Layout):
-        #     generateClass = cls.async_generate.__qualname__.split(".")[0]
-
-        #     # if cls.__name__ in generatorClass and generateClass != generatorClass:
-        #     if generatorClass != "Layout":
-        #         msg = f"{cls.__name__}: custom layout generators need to also have async_generate defined. Generator class is {generatorClass}, async_generate is from {generateClass}"
-        #         # _LOGGER.warning(msg)
-        
-        # generator = cls.generator
-        # def generator_debug_wrapper(self, *args, **kwargs):
-        #     img = generator(self,*args,**kwargs)
-        #     if cls is type(self) and not self.isLayout:
-        #         self._generatedno += 1
-        #         msg = f"{self} has generated {self._generatedno} times"
-        #         _LOGGER.verbose(msg)
-        #     return img
-        # cls.generator = generator_debug_wrapper
 
     def __post_init__(self, id, _register):
 
@@ -200,16 +187,17 @@ class Element(ABC):
                 tap_action: InteractionFunctionType = None,
                 hold_action: InteractionFunctionType = None,
                 hold_release_action: InteractionFunctionType = None,
-                background_color: Optional[ColorType] = None, #"style::background_color",
-                inverted: bool = False, show_feedback: bool = None,
-                feedback_duration: Union[float,DurationType] = DEFAULT_FEEDBACK_DURATION, forcePrintOnTop: bool = False,
+                background_color: Optional[ColorType] = "style::background_color",
+                inverted: bool = "style::inverted", 
+                show_feedback: bool = "style::show_feedback",
+                feedback_duration: Union[float,DurationType] = "style::feedback_duration", 
                 _register : Optional[bool] = None,
                 **kwargs):
         
         self.__id: str
         self.__unique_id: str
 
-        if asyncio._get_running_loop() == None and Screen != None:
+        if asyncio._get_running_loop() is None and Screen is not None:
             ##Locks need to actually be created in a running loop.
             ##May even have to check if the loop should be changed back later.
             asyncio.set_event_loop(self.parentPSSMScreen.mainLoop)
@@ -246,16 +234,18 @@ class Element(ABC):
         self.hold_release_action_map = {}
         self.hold_release_action = hold_release_action
 
-        self._isInverted = inverted
-        self._inverted = inverted
+        self._isInverted = self.get_style_value(inverted)
+        self.inverted = inverted
+        self._isInverted = self.inverted
         
-        if show_feedback == None:
-            show_feedback = True if tap_action != None else False
+        # if Element.show_feedback.value(self) is None:
+        #     show_feedback = True if tap_action != None else False
         self.show_feedback = show_feedback
         self.feedback_duration = feedback_duration
 
         for param in kwargs:
-                if not hasattr(self, param): setattr(self, param, kwargs[param])
+            if not hasattr(self, param) or param in ("emulator_icon"):
+                setattr(self, param, kwargs[param])
 
     #region Element Properties
     @property
@@ -278,12 +268,23 @@ class Element(ABC):
         "Returns whether the element is a layout"
         return False
     
+    @property
+    def style(self) -> str:
+        "The style applied to the element"
+        return getattr(self,"_style", "style")
+    
+    @style.setter
+    def style(self, value : str):
+        assert isinstance(value, str), "style must be a string"
+        self._style = value
+
     @colorproperty
     def background_color(self) -> Union[ColorType,None]:
         """Color of the element background."""
         # Set to None to take on the color of its parent layout"""
         return self._background_color
-        
+    background_color.configure(default = DEFAULT_BACKGROUND_COLOR)
+
     @property
     def isInverted(self) -> bool:
         """True if the element is currently shown as inverted. 
@@ -295,6 +296,11 @@ class Element(ABC):
         """True if the default inverted state of the element is inverted 
         (i.e. the image made in the generator will be inverted if true)."""
         return self._inverted
+    inverted.configure(default = False)
+
+    @inverted.setter
+    def inverted(self, value):
+        self._inverted = bool(value)
 
     @property
     def isTemporaryInverted(self) -> bool:
@@ -302,13 +308,14 @@ class Element(ABC):
         """
         return self._isTemporaryInverted
 
-    @property
+    @styleproperty
     def feedback_duration(self) -> DurationType:
         """Duration of the element's feedback function
         The time an element will stay in 'feedback state', before returning to its normal state.
         Can be set to a string, which will be parsed to the right amount of seconds.
         """
         return self._feedback_duration
+    feedback_duration.configure(default = DEFAULT_FEEDBACK_DURATION)
     
     @feedback_duration.setter
     def feedback_duration(self, value):
@@ -322,6 +329,26 @@ class Element(ABC):
             _LOGGER.exception(TypeError(msg))
 
         self._feedback_duration = value
+
+    @styleproperty
+    def show_feedback(self) -> bool:
+        """Whether the element will show feedback when interacted with"
+        If set to ``on_action``, feedback will be shown based on whether an action is called.
+        """
+        return self._show_feedback
+    show_feedback.configure(default = FEEDBACK_ON_ACTION)
+
+    @show_feedback.setter
+    def show_feedback(self, value):
+        if value == FEEDBACK_ON_ACTION:
+            self._show_feedback = value
+        else:
+            self._show_feedback = bool(value)
+
+    @property
+    def feedbackSeconds(self) -> Union[float,int]:
+        "The time in seconds to show feedback for"
+        return tools.parse_duration_string(self.feedback_duration)
 
     @property
     def feedbackTask(self) -> asyncio.Task:
@@ -447,8 +474,8 @@ class Element(ABC):
         If the element is a layout itself, and the background is set, will return that value.
         """
         for parent in reversed(self.parentLayouts):
-            if parent.background_color != None:
-                return parent.background_color
+            if (v:= parent.get_style_value(parent.background_color, "background_color")) is not None:
+                return v
         else:
             return None
     
@@ -456,7 +483,7 @@ class Element(ABC):
     def parentBackgroundColor(self) -> ColorType:
         """The assumed color of the parent background, in case none have a color defined.
         If it is determined to be an image, returns the default device color"""
-        if self.parentBackground == None or isinstance(self.parentBackground,Image.Image):
+        if self.parentBackground is None or isinstance(self.parentBackground,Image.Image):
             if Style.is_valid_color(self.parentPSSMScreen.background):
                 return self.parentPSSMScreen.background
             else:
@@ -505,11 +532,15 @@ class Element(ABC):
         for param in updateAttributes:
             if not hasattr(self,param) and self.parentPSSMScreen.printing:
                 msg = f"{self.id} does not have attribute {param}. Call add_attribute if you want to add attributes during printing."
-                _LOGGER.exception(AttributeError(msg))
+                _LOGGER.error(msg)
             else:
-                if getattr(self,param) != updateAttributes[param]:
-                    setattr(self, param, updateAttributes[param])
-                    updated = True
+                try:
+                    if getattr(self, param) != updateAttributes[param]:
+                        setattr(self, param, updateAttributes[param])
+                        updated = True
+                except (AttributeError, *FuncExceptions) as exce:
+                    _LOGGER.error(f"{self}: unable to update attribute {param}: {exce}", exc_info = DEBUG)
+                    raise
         return updated
 
     async def _async_update_attributes(self, updateAttributes = {}) -> bool:
@@ -755,13 +786,16 @@ class Element(ABC):
         
         Paramaters
         ----------
-            dimension: the dimension, or iterable of dimensions, to convert
+            dimension: the dimension, or iterable of dimensions, to convert. Style strings can be handled within the function.
             variables (dict): dict with additional variable key value pairs to evaluate, along with `'W'`,`'H'`,`'w'`,`'h'`  and `'?'`
 
         Note:
             When using question mark dimension (like `"?*2"`), the question mark
             MUST be at the beginning of the string. I'd advice using question mark dimensions only in Layouts as well.
         """
+
+        if Style.is_style_string(dimension):
+            dimension = self.get_style_value(dimension)
 
         if isinstance(dimension,(list,tuple)):
             dim_list = []
@@ -834,11 +868,11 @@ class Element(ABC):
             if update:
                 self.update()
 
-    def get_style_value(self, style_value : str):
+    def get_style_value(self, style_value : str, property_name : str = None):
         "Returns the appropriate value for the given style string"
-
-        val = Style.get_value(style_value, self)
-        return val
+        if isinstance(style_value, str) and Style.is_style_string(style_value):
+            return Style.get_value(style_value, self, property_name)
+        return style_value
 
     def _color_setter(self,attribute:str, value : ColorType, allows_None : bool = True, cls : type = None):
         """
@@ -915,7 +949,11 @@ class Element(ABC):
         short_cols = getattr(parent,"_color_shorthands",{})
         update = False
         for col in self.color_properties:
-            col_val = getattr(self,f"_{col}",None)
+            # col_val = getattr(self,f"_{col}", None)
+            if (prop :=  getattr(self.__class__, col, Style.NOTACOLOR)) is Style.NOTACOLOR:
+                continue
+            # prop : colorproperty
+            col_val = prop.value(self)
             if isinstance(col_val,str):
                 if col_val in short_cols and short_cols[col_val] in updated_colors:
                     update = True
@@ -1136,13 +1174,13 @@ class Element(ABC):
                 #Can't promise this works, generally you'd want to call the async version
                 img = tools._block_run_coroutine(self.async_generate(**saved_args), loop)
         except Exception as e:
-            _LOGGER.warning(f"{e} went wrong generating {self}")
+            _LOGGER.error(f"{e} went wrong generating {self}")
             return
 
         return img
     
     @elementactionwrapper.method
-    async def async_generate(self, area : PSSMarea=None, skipNonLayoutGen : bool =False) -> Image.Image:
+    async def async_generate(self, area : PSSMarea = None, skipNonLayoutGen : bool =False) -> Image.Image:
         """
         Generates the element's image data.
 
@@ -1185,6 +1223,8 @@ class Element(ABC):
             return img
         except asyncio.CancelledError:
             return None
+        except Exception as exce:
+            _LOGGER.error(f"{self}: {type(exce).__name__} while generating: {exce}", exc_info=DEBUG)
 
     async def _await_generator(self):
         "Helper coroutine that can be used to wait for an element's generator to finish."
@@ -1207,7 +1247,7 @@ class Element(ABC):
     async def feedback_function(self) -> Callable[..., None]:
         "Function that makes visual feedback being shown when an element is interacted with. Defaults to invert_element as defined in pssm.PSSMscreen"
         
-        self._feedbackTask = self.screen.create_task(self.parentPSSMScreen.async_invert_element(self,self.feedback_duration))
+        self._feedbackTask = self.screen.create_task(self.parentPSSMScreen.async_invert_element(self,self.feedbackSeconds))
         await self.feedbackTask
 
 util.Element = Element
@@ -1383,7 +1423,7 @@ class Layout(Element):
         self._dimension_setter('_outline_width',value)
         self._rebuild_area_matrix = True
 
-    @property
+    @styleproperty
     def radius(self) -> PSSMdimension:
         "Corner radius of the outlining rectangle"
         return self._radius
@@ -1505,7 +1545,7 @@ class Layout(Element):
             for elt in old_elts - new_elts: ##This returns every element that is in old_elts but not in new_elts
                 if elt._parentLayout == self: 
                     elt._parentLayout = None
-                    if callable(getattr(elt,"on_remove",None)):
+                    if callable(getattr(elt,"on_remove", None)):
                         elt.on_remove()
 
     def on_add(self, call_all = False):
@@ -1557,7 +1597,9 @@ class Layout(Element):
         """
 
         colorMode = self.parentPSSMScreen.imgMode
-        color = Style.get_color(self.background_color, colorMode)
+        # color = Style.get_color(self.background_color, colorMode)
+        color = Layout.background_color.value(self)
+        color = Style.get_color(color, colorMode)
         
         if area is not None:
             self._area = area
@@ -1569,10 +1611,10 @@ class Layout(Element):
             self.create_area_matrix()
             if self._call_on_add:
                 self.on_add()
-            self.createImgMatrix(skipNonLayoutGen=False, background_color = self.background_color)
+            self.createImgMatrix(skipNonLayoutGen=False, background_color = color)
 
         elif not self.isGenerating: ##This means the async_generate function is running, i.e. it has created the image matrix already. Also in case of the _rebuild_area_matrix
-            self.createImgMatrix(skipNonLayoutGen=skipNonLayoutGen, background_color = self.background_color)
+            self.createImgMatrix(skipNonLayoutGen=skipNonLayoutGen, background_color = color)
 
         [(x, y), (w, h)] = self.area
         
@@ -1595,9 +1637,13 @@ class Layout(Element):
                     else:
                         placeholder.paste(elt_img, pos)
 
-        if self.radius != 0:
+        r = self._convert_dimension(Layout.radius.value(self))
+        outlineCol = Layout.outline_color.get_color(self, colorMode)
+        outW = self._convert_dimension(Layout.outline_width.value(self))
+        # if radius != 0:
+        if r != 0:
             ##There should also be a way to draw this when outline width is not 0
-            r = self._convert_dimension(self.radius)
+            # r = self._convert_dimension(self.radius)
 
             mask = Image.new("RGBA",placeholder.size,None)
             (mask,_) = DrawShapes.draw_rounded_rectangle(mask,
@@ -1614,8 +1660,9 @@ class Layout(Element):
                 newImg.paste(placeholder, mask=mask)
                 placeholder = newImg
 
-            outlineCol = Style.get_color(self.outline_color, colorMode)
-            outW = self._convert_dimension(self.outline_width)
+            # outlineCol = Style.get_color(self.outline_color, colorMode)
+            # outlineCol = Layout.outline_color.get_color(self, colorMode)
+            # outW = self._convert_dimension(Layout.outline_width.value(self))
 
             if outW > 0:
                 ##Draw the outline on top, to ensure nothing is sticking out over it
@@ -1630,9 +1677,9 @@ class Layout(Element):
 
                 placeholder.alpha_composite(outline)
 
-        elif self.outline_width != 0 and self.outline_color != None:
-            outlineCol = Style.get_color(self.outline_color, colorMode)
-            outW = self._convert_dimension(self.outline_width)
+        elif outW != 0 and outlineCol != None:
+            # outlineCol = Style.get_color(self.outline_color, colorMode)
+            # outW = self._convert_dimension(self.outline_width)
             (outline,_) = DrawShapes.draw_square(placeholder,
                     {"xy":  [(0, 0), (w,h)],
                     "fill": None,
@@ -1644,9 +1691,9 @@ class Layout(Element):
 
         if self.isInverted: 
             for elt in self.create_element_list():
-                if self.isInverted and elt.inverted:
+                if self.isInverted and Element.inverted.value(elt):
                     elt._isInverted = False
-                elif self.isInverted and not elt.inverted:
+                elif self.isInverted and not Element.inverted.value(elt):
                     elt._isInverted = True
                 elif not self.isInverted and elt.isInverted:
                     pass
@@ -1834,8 +1881,10 @@ class Layout(Element):
             return
 
         [(x, y), (w, h)] = self.area[:]
-        if self.outline_width != 0 and self.outline_color != None:
-            outW = self._convert_dimension(self.outline_width)
+        outW = Layout.outline_width.value(self)
+        outC = Layout.outline_color.get_color(self)
+        if outW != 0 and outC is not None:
+            outW = self._convert_dimension(outW)
             outW = floor(outW*0.75)
             x = x + outW
             y = y + outW
@@ -1892,7 +1941,7 @@ class Layout(Element):
                 x0 += true_elt_width
 
                 row_cols.append(element_area)
-                if element != None:
+                if element is not None:
                     element._area = element_area
 
             y0 += true_row_height
@@ -1915,8 +1964,8 @@ class Layout(Element):
             Returns all elements in this layout and any `LayoutElement`'s contained within
         """
         eltList = []
-        if layout == None:
-            if not hasattr(self,"layout"):
+        if layout is None:
+            if not hasattr(self, "layout"):
                 ##In case a layout has not been set yet, for color setters
                 return []
             layout = self.layout
@@ -2297,7 +2346,7 @@ class TileElement(Layout):
         self.__hide = tuple(value_set)
         self._reparse_layout = True
 
-    @property
+    @styleproperty
     def vertical_sizes(self) -> dict[str,PSSMdimension]:
         """Vertical sizing of the tiles.
         Setting this will update from the current values, not overwrite it.
@@ -2313,11 +2362,14 @@ class TileElement(Layout):
             msg = f"{self.id} vertical sizes only allows {allowed_keys}. {value.keys()} has at least 1 not allowed. Don't forget to add new elements before setting vertical and horizontal sizes."
             _LOGGER.exception(KeyError(msg))
             return
-
-        self._vertical_sizes.update(value)
+        
+        if isinstance(self._vertical_sizes, str):
+            self._vertical_sizes = value
+        else:
+            self._vertical_sizes.update(value)
         self._reparse_layout = True
 
-    @property
+    @styleproperty
     def horizontal_sizes(self) -> dict[str,PSSMdimension]:
         """Horizontal sizing of the tiles.
         Setting this will update from the current values, not overwrite it.
@@ -2334,7 +2386,10 @@ class TileElement(Layout):
             _LOGGER.exception(KeyError(msg))
             return
 
-        self._horizontal_sizes.update(value)
+        if isinstance(self._horizontal_sizes, str):
+            self._horizontal_sizes = value
+        else:
+            self._horizontal_sizes.update(value)
         self._reparse_layout = True
 
     @property
@@ -2467,7 +2522,9 @@ class TileElement(Layout):
         
         if self.tile_layout != None and self._reparse_layout:
             old_layout = self.layout.copy()
-            new_layout = parse_layout_string(self.tile_layout, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
+            vertical_sizes = TileElement.vertical_sizes.value(self)
+            horizontal_sizes = TileElement.horizontal_sizes.value(self)
+            new_layout = parse_layout_string(self.tile_layout, None, self.hide, vertical_sizes, horizontal_sizes, **self.elements)
             if new_layout != old_layout: ##This doesn't quite work since sublayouts are a thing
                 self.set_parent_layouts(old_layout,new_layout)
                 self._layout = new_layout
@@ -2679,7 +2736,7 @@ class Popup(Layout):
         self.auto_close = auto_close
         self.blur_background = blur_background
 
-        if self.parentPSSMScreen != None:
+        if self.parentPSSMScreen is not None:
             self.make_area()
 
         self._tapEvent : asyncio.Event
@@ -2704,7 +2761,7 @@ class Popup(Layout):
         "ID of this popup by which it can be found in the popup register, if not None"
         return self.__popupID
     
-    @property
+    @styleproperty
     def blur_background(self) -> bool:
         """Blurs the dashboards behind the popup when it is shown.
         If true, when adding the popup to the screen, the background around it is blurred"""
@@ -2714,7 +2771,7 @@ class Popup(Layout):
     def blur_background(self, value):
         self.__blur_background = bool(value)
 
-    @property
+    @styleproperty
     def width(self) -> PSSMdimension:
         "The width of the popup"
         return self._width
@@ -2723,7 +2780,7 @@ class Popup(Layout):
     def width(self, value: PSSMdimension):
         self._width = value
 
-    @property
+    @styleproperty
     def height(self) -> PSSMdimension:
         "The height of the popup"
         return self._height
@@ -2732,7 +2789,7 @@ class Popup(Layout):
     def height(self, value: PSSMdimension):
         self._height = value
 
-    @property
+    @styleproperty
     def horizontal_position(self) -> PSSMdimension:
         "x Postion off the popup's upper left corner."
         return self._horizontal_position
@@ -2742,7 +2799,7 @@ class Popup(Layout):
         self._horizontal_position : PSSMdimension
         self._dimension_setter("_horizontal_position", value)
 
-    @property
+    @styleproperty
     def vertical_position(self) -> PSSMdimension:
         "y Position of the popups upper left corner"
         return self._vertical_position
@@ -2752,7 +2809,7 @@ class Popup(Layout):
         self._vertical_position : PSSMdimension
         self._dimension_setter("_vertical_position", value)
 
-    @property
+    @styleproperty
     def auto_close(self) -> DurationType:
         """The time with no interaction after which this popup is automatically closed.
         Set to False to disable. If True, it will use the default value of the screen instance.
@@ -2775,14 +2832,16 @@ class Popup(Layout):
     #endregion
 
     def create_area_matrix(self):
-        if self.area == None:
+        if self.area is None:
             self._area = self.make_area()
         super().create_area_matrix()
 
     def make_area(self):
-        w = self._convert_dimension(self.width)
-        h = self._convert_dimension(self.height)
-        (x,y) = self._convert_dimension((self.horizontal_position, self.vertical_position),{"w":w,"h":h})
+        w = self._convert_dimension(Popup.width.value(self))
+        h = self._convert_dimension(Popup.height.value(self))
+        hor = Popup.horizontal_position.value(self)
+        ver = Popup.vertical_position.value(self)
+        (x,y) = self._convert_dimension((hor, ver),{"w":w,"h":h})
         return [(x, y), (w, h)]
 
     def show(self):
@@ -2808,12 +2867,12 @@ class Popup(Layout):
             _LOGGER.warning(f"Popup {self.id} is already on screen. Close it first.")
         
         self._tapEvent = asyncio.Event()
-        if self.auto_close:
+        if Popup.auto_close.value(self):
             asyncio.create_task(self._auto_close_timer())
         if self in self.parentPSSMScreen.popupsOnTop:
             if self.parentPSSMScreen.popupsOnTop.count(self) > 1:
                 ##For some reason it puts two menus on top?
-                _LOGGER.warning("this is weird")
+                _LOGGER.warning(f"this is weird, {self} is shown multiple times?")
         return
 
     def close(self, *args, **kwargs):
@@ -2842,10 +2901,11 @@ class Popup(Layout):
                 self.screen.triggerCondition.notify_all()
 
     async def _auto_close_timer(self):
-        if self.auto_close == True:
+        auto_close = Popup.auto_close.value(self)
+        if auto_close == True:
             time = self.parentPSSMScreen.close_popup_seconds
         else:
-            time = self.auto_close
+            time = tools.parse_duration_string(auto_close)
         if not time: 
             return
         while self in self.parentPSSMScreen.popupsOnTop:
@@ -2992,7 +3052,8 @@ class PopupMenu(Popup):
 
     ##This one will provide the basis, but shouldn't be singleton
     ##Building: make layout with a title and a close button, everything underneath is up to the designer
-    def __init__(self,  menu_layout : Layout, title : str, title_font : str = DEFAULT_FONT_HEADER,  close_icon : Optional[mdiType] = "mdi:close-thick", title_color : ColorType = "white", close_icon_color : ColorType = "white", header_color : ColorType = DEFAULT_MENU_HEADER_COLOR, **kwargs):
+    def __init__(self,  menu_layout : Layout, title : str, 
+                title_font : str = DEFAULT_FONT_HEADER,  close_icon : Optional[mdiType] = "mdi:close-thick", title_color : ColorType = "white", close_icon_color : ColorType = "white", header_color : ColorType = DEFAULT_MENU_HEADER_COLOR, **kwargs):
         self.title = title
         "Title of the menu"
 
@@ -3050,7 +3111,7 @@ class PopupMenu(Popup):
                 value = self.screen.elementRegister[value]
         self._menu_layout = value
 
-    @property
+    @styleproperty
     def title_font(self) -> str:
         "The font used for the popup title"
         return self._title_font
@@ -3059,7 +3120,7 @@ class PopupMenu(Popup):
     def title_font(self, value):
         self._title_font = value
 
-    @property
+    @styleproperty
     def close_icon(self) -> str:
         "The mdi icon to use for the button that closes the popup"
         return self._close_icon
@@ -3075,10 +3136,19 @@ class PopupMenu(Popup):
         title_H = self._convert_dimension("H*0.1", {"H": self.screen.height})
         if title_H < 50:
             title_H = 50
-        titleButton = Button(self.title, self.title_font, fit_text=True, font_size=40, font_color=self.title_color, show_feedback=False)
-        close_icon = Icon(self.close_icon, tap_action=self.async_close, icon_color=self.close_icon_color)
+        
+        button_args = {"font": PopupMenu.title_font.value(self),
+                    "font_color": PopupMenu.title_color.get_color(self),
+                    }
+        icon_args = {"icon": PopupMenu.close_icon.value(self),
+                    "icon_color": PopupMenu.close_icon_color.value(self),
+        }
+
+        titleButton = Button(self.title, background_color=None, fit_text=True, font_size=40, show_feedback=False, **button_args)
+        close_icon = Icon(tap_action=self.async_close, background_color=None, **icon_args)
         titleLayout = [["?*0.1", (None, "?")],["?*0.8",(titleButton,"?"),(close_icon,"r*2")], ["?*0.15", (None, "?")]]
-        titleLayout = Layout(titleLayout, background_color=self.header_color)
+        
+        titleLayout = Layout(titleLayout, background_color=PopupMenu.header_color.value(self))
         layout = [[title_H,(titleLayout,"w*1.01")],
                 ["?", (self.menu_layout,"?")]]
         return layout
@@ -3461,9 +3531,9 @@ class Button(Element):
     def __init__(self, text: Optional[str]="", font:str= "default", font_size: PSSMdimension = DEFAULT_FONT_SIZE, font_color : Union[bool,ColorType] = DEFAULT_FOREGROUND_COLOR, #"black",
                 background_color: ColorType =None, outline_color: Optional[ColorType] = None, outline_width : PSSMdimension = 1, radius:int=0, 
                 margins : int = 0, text_x_position : Union[int,Literal["l","m","r","s"]] ="center", text_y_position : Union[int,Literal["a","t","m","s","b","d"]] ="center", text_anchor_alignment : textAlignmentType = (None,None), multiline : bool =False, 
-                isInverted:bool=False, resize=False, fit_text=False, **kwargs):
+                inverted:bool=False, resize=False, fit_text=False, **kwargs):
 
-        super().__init__(isInverted=isInverted, **kwargs)
+        super().__init__(inverted=inverted, **kwargs)
         
         if text != None:
             self.text = text
@@ -3486,7 +3556,7 @@ class Button(Element):
         self._imgDraw = None
         self.fit_text = fit_text
         self.resize = resize
-        self._multiline = multiline
+        self.multiline = multiline
 
         self._current_font_size = 0
         "The currently used font_size, in pixels"
@@ -3510,7 +3580,7 @@ class Button(Element):
             value = str(value)
         self.__text = value
 
-    @property
+    @styleproperty
     def font(self):
         """The path to the element's font.
         If set to a shorthand font, the path will automatically be parsed"""
@@ -3531,7 +3601,7 @@ class Button(Element):
         "The color of the font"
         return self._font_color
 
-    @property
+    @styleproperty
     def font_size(self) -> PSSMdimension:
         "The size of the font"
         return self._font_size
@@ -3541,7 +3611,7 @@ class Button(Element):
         self._font_size: PSSMdimension
         self._dimension_setter("_font_size", value)
     
-    @property
+    @styleproperty
     def radius(self) -> PSSMdimension:
         """Corner radius of the encapsulating rectangle.
         Currently only accepts integers"""
@@ -3557,7 +3627,7 @@ class Button(Element):
         Set to None to use no outline (i.e. the background color)"""
         return self._outline_color
 
-    @property
+    @styleproperty
     def outline_width(self) -> PSSMdimension:
         "The width of the outline of the background rectangle"
         return self._outline_width
@@ -3571,7 +3641,7 @@ class Button(Element):
         return self._imgDraw
     
     # ---------------------------- Textbox properties ---------------------------- #
-    @property
+    @styleproperty
     def margins(self) -> tuple[int,int,int,int]:
         """The text margins.
         Always returns a 4 tuple, but can be set to a single number, or two/three/four item iterable. 
@@ -3584,8 +3654,8 @@ class Button(Element):
         self._margins : PSSMdimension
         if isinstance(value,(tuple,list)):
             if len(value) > 4:
-                msg = f"Margin lists cannot be larger than 4."
-                _LOGGER.exception(msg,ValueError(msg))
+                msg = f"{self}: Margin lists cannot be larger than 4."
+                _LOGGER.error(msg)
                 return
             elif len(value) == 2:
                 value = value*2
@@ -3595,12 +3665,13 @@ class Button(Element):
         elif isinstance(value,(int,float,str)):
             value = (value,)*4
         else:
-            msg = f"Invalid margin type."
-            _LOGGER.exception(msg,TypeError(msg))
+            msg = f"{self}: Invalid margin type {type(value)}"
+            _LOGGER.error(msg)
+            raise TypeError(msg)
             return
         self._dimension_setter('_margins',value)
     
-    @property
+    @styleproperty
     def multiline(self) -> bool:
         """Allows the button to try and fit its text over multiple lines.
         May not work very well with the settings that automatically set the font size.
@@ -3611,7 +3682,7 @@ class Button(Element):
     def multiline(self, value:bool):
         self._multiline = value
 
-    @property
+    @styleproperty
     def fit_text(self) -> bool:
         """Adjusts the font size automatically to make it fit.
         If true, ``font_size`` will be used as a minimum allowed font_size.
@@ -3624,7 +3695,7 @@ class Button(Element):
     def fit_text(self,value:bool):
         self._fit_text = value
 
-    @property
+    @styleproperty
     def resize(self) -> Union[bool,PSSMdimension]:
         """Tracks the ``font_size`` and adjusts it to fit. The ``resize`` value updates and will be used as a starting point for the next update.
         If not False, will use this value as a minimum allowed size for any text displayed. 
@@ -3649,7 +3720,7 @@ class Button(Element):
             else:
                 self.__resize = value
             
-    @property
+    @styleproperty
     def text_x_position(self) -> Union[int,Literal["l","m","r","s"]]:
         """Horizontal alignment of the text.
         Can be top, bottom or center, a Pillow textanchor (shorthand and longhand), a pssm dimensional string or an integer."""
@@ -3675,7 +3746,7 @@ class Button(Element):
 
         self._text_x_position = value
 
-    @property
+    @styleproperty
     def text_y_position(self) -> Union[int,Literal["a","t","m","s","b","d"]]:
         """Vertical alignment of the text.
         Can be top, bottom or center, a Pillow textanchor (shorthand and longhand), a pssm dimensional string or an integer."""
@@ -3699,7 +3770,7 @@ class Button(Element):
             
         self._text_y_position = value
 
-    @property
+    @styleproperty
     def text_anchor_alignment(self) -> tuple[Literal[None,"l","m","r","s"],Literal[None,"a","t","m","s","b","d"]]:
         """Alignment of the textAnchor as (horizontal,vertical).
         Leave (one of) None to determine the anchor from text_x_position or text_y_position respectively. See https://pillow.readthedocs.io/en/stable/handbook/text-anchors.html#text-anchors for possible values, only accepts shorthands."""
@@ -3731,8 +3802,8 @@ class Button(Element):
         Depends on text_x_position and text_y_position. 
         If both are integers, or pssm dimensional strings, it will default to 'la'.
         """
-        (xAnch,yAnch) = self.text_anchor_alignment
-        xAL = self.text_x_position
+        (xAnch,yAnch) = self.get_style_value(self.text_anchor_alignment, self.__class__.text_anchor_alignment.property_name)
+        xAL = self.get_style_value(self.text_x_position, self.__class__.text_x_position.property_name)
         horAL = ["l","m","r","s"]# --> s is not valid but xPosition cannot be set to it anyways
         horDict = { "left": "l",
                     "middle": "m",
@@ -3754,7 +3825,7 @@ class Button(Element):
             hor = "l"
             x = xAL
 
-        yAL = self.text_y_position
+        yAL = self.get_style_value(self.text_y_position, self.__class__.text_y_position.property_name)
         verAL = ["a","t","m","s","b","d"]# --> s is not valid but xPosition cannot be set to it anyways
         verDict = { "ascender": "a",
                     "top": "a" if self.multiline else "t", ##Using t for top instead of a since it aligns it to the top like someone would (likely) expect. a leaves quite some space underneath still
@@ -3781,6 +3852,7 @@ class Button(Element):
     #endregion
 
     def generator(self, area=None, skipNonLayoutGen=False):
+        
         if area == None:
             area = self.area
 
@@ -3791,29 +3863,49 @@ class Button(Element):
 
         [(x, y), (w, h)] = area
 
-        marg = self._convert_dimension(self.margins)
+        ##Okay, two options here to handle margins:
+        ##Either convert the value here in the generator, or implement that thingy where custom setters can be used
+        ##Problem with that is that you lose the connection to the style
+        ##So maybe indeed handle the conversion here?
+        ##I think generally, for any style_property, make it expected that complicated conversion is done in the generator and adjacent functions.
+        ##Yes, that will mean changing a lot of things :)
+        # marg = self._convert_dimension(self.margins)
+        margin_tuple = tools.construct_margin_tuple(Button.margins.value(self))
+        marg = self._convert_dimension(margin_tuple)
+        
         textArea = [(area[0][0]+marg[3], area[0][1]+marg[0]),(area[1][0]-marg[1], area[1][1]-marg[2])]
         self._area = area
-        img_background = self.parentBackgroundColor if self.background_color == None else self.background_color
+
+        ##Handle this one a bit differently. First get own color from style. Parent background should be converted in the getter.
+        # elt_bg = self.get_style_value(self.background_color, self.__class__.background_color.property_name)
+        elt_bg = Button.background_color.value(self)
+        # if elt_bg is None:
+        #     img_background = self.parentBackgroundColor
+        # else:
+        #     img_background = elt_bg
+
         img_mode = self.parentPSSMScreen.imgMode
         if self.parentPSSMScreen.imgMode != 'RGBA':
-            img_background = self.parentBackgroundColor if self.background_color == None else self.background_color
+            img_background = self.parentBackgroundColor if elt_bg is None else elt_bg
         else:
-            img_background = self.background_color
+            img_background = elt_bg
 
-        if self.radius != 0 or (self.outline_width != 0 and self.outline_color != None):
+        radius = Button.radius.value(self)
+        outline_w = Button.outline_width.value(self)
+        outline_c = Button.outline_color.value(self)
+        if radius != 0 or (outline_w != 0 and outline_c is not None):
             img = Image.new(self.parentPSSMScreen.imgMode,(w,h),color=None)
-            r = self._convert_dimension(self.radius)
-            outW = self._convert_dimension(self.outline_width)
+            r = self._convert_dimension(radius)
+            outW = self._convert_dimension(outline_w)
             yOff = outW
             xOff = r if r>outW else outW
             textArea =  [(textArea[0][0]+xOff, textArea[0][1]+yOff),(textArea[1][0]-xOff, textArea[1][1]-yOff)]
             drawArgs = {
                 "xy": [(0,0),(w,h)],
                 "radius": r,
-                "fill": Style.get_color(self.background_color, img_mode),
-                "outline": Style.get_color(self.outline_color, img_mode),
-                "width": self._convert_dimension(self.outline_width)
+                "fill": Style.get_color(elt_bg, img_mode),
+                "outline": Style.get_color(outline_c, img_mode),
+                "width": self._convert_dimension(outline_w)
                 }
 
             (img, _) = DrawShapes.draw_rounded_rectangle(img, drawArgs=drawArgs, rescale=["xy","radius","width"], paste=False)
@@ -3828,10 +3920,11 @@ class Button(Element):
 
         self._imgDraw = imgDraw
 
-        if self.fit_text:
-            loaded_font = self.fit_text_func(self.text, textArea, self.font)
+        f = self.font
+        if Button.fit_text.value(self):
+            loaded_font = self.fit_text_func(self.text, textArea)
         else:
-            font_size = self.font_size
+            font_size = Button.font_size.value(self)
             if not isinstance(font_size, int):
                 font_size = self._convert_dimension(font_size)
                 if not isinstance(font_size, int):
@@ -3840,13 +3933,17 @@ class Button(Element):
                     font_size = self._convert_dimension(DEFAULT_FONT_SIZE)
             
             self._current_font_size = font_size
-            loaded_font = self.get_font(self.font, font_size)
+            font = Button.font.value(self)
+            loaded_font = self.get_font(font, font_size)
+
         self._loadedFont = loaded_font
 
-        if self.multiline:
+        # if self.multiline:
+        if multiline := Button.multiline.value(self):
             myText = self.wrapText(self.text, loaded_font, imgDraw)
         else:
             myText = self.text
+        
         self._convertedText = myText
         ((x,y),anchor) = self.textAlignment
 
@@ -3858,21 +3955,23 @@ class Button(Element):
             y = self._convert_dimension(y, variables={"w": textArea[1][0], "h": textArea[1][1]})
         y = y + abs(textArea[1][1] - area[1][1])
     
-        if isinstance(self.font_color, bool):
+        # font_color = self.get_style_value(self.font_color, self.__class__.font_color.property_name)
+        font_color = Button.font_color.value(self)
+        if isinstance(font_color, bool):
 
-            if self.background_color == None:
+            if elt_bg is None:
                 text_bg = self.parentBackgroundColor
             else:
-                text_bg = self.background_color
+                text_bg = elt_bg
 
             textCol = Style.contrast_color(text_bg, img_mode)
         else:
-            textCol = Style.get_color(self.font_color, self.parentPSSMScreen.imgMode)
+            textCol = Style.get_color(font_color, self.parentPSSMScreen.imgMode)
         
-        if self.multiline:
+        if multiline:
             alignment = "left"
 
-            alignment = self.text_x_position
+            alignment = Button.text_x_position.value(self)
             align_vals = {"left", "center", "right"}
             align_map = {"l": "left", "middle": "center", "m": "center", "r": "right", "s": "center", "baseline": "center"}
             
@@ -3899,7 +3998,7 @@ class Button(Element):
                 anchor=anchor, 
             )
         
-        if self.inverted:
+        if Button.inverted.value(self):
             img = tools.invert_Image(img)
 
         self._textArea = textArea
@@ -3942,19 +4041,26 @@ class Button(Element):
                 buf_width = 0
         return '\n'.join(wrapped_lines)
 
-    def fit_text_func(self, text : str, area : list[tuple[int],tuple[int]], font : str):
+    def fit_text_func(self, text : str, area : list[tuple[int],tuple[int]], font : str = None):
         #Start with the default size as an initial guess
         [(x, y), (w, h)] = area
         
-        if self.resize != False:
-            min_size = self._convert_dimension(self.resize)
-            start_size = self._convert_dimension(self.font_size)
+        # resize = self.get_style_value(self.resize, self.__class__.resize.property_name)
+        # font_size = self.get_style_value(self.font_size, self.__class__.font_size.property_name)
+        resize = Button.resize.value(self)
+        font_size = Button.font_size.value(self)
+        if resize:
+            min_size = self._convert_dimension(resize)
+            start_size = self._convert_dimension(font_size)
         else:
-            min_size = self._convert_dimension(self.font_size)
+            min_size = self._convert_dimension(font_size)
             start_size = floor(h*0.95)
 
         min_size = max(min_size, 1)
         text_height = max(start_size,1)
+
+        if font is None:
+            font = Button.font.value(self)
 
         # loaded_font = ImageFont.truetype(font, text_height)
         loaded_font = self.get_font(font, text_height)
@@ -3970,23 +4076,14 @@ class Button(Element):
             _LOGGER.verbose(f"Fitted text {text} with length {text_length} into area {area}")
         
         self._current_font_size = text_height
-        if self.resize:
+        if resize:
             self.font_size = text_height
         
         return loaded_font
 
     def get_font(self, font, font_size):
-        try:
-            f = ImageFont.truetype(font, font_size)
-            return f
-        except OSError:
-            font_file = Path(font)
-            if not font_file.exists():
-                _LOGGER.warning(f"{self}: fontfile {font} does not exist.")
-            else:
-                _LOGGER.error(f"{self}: unable to open fontfile {font}")
-            return ImageFont.truetype(DEFAULT_FONT, font_size)
-
+        
+        return Style.load_font(font, font_size)
 
 class ImageElement(Element):
     """Base class for the Picture and Icon element, for shared properties
@@ -3994,7 +4091,7 @@ class ImageElement(Element):
     Currently not implemented for the Icon class yet.
     """
 
-    @property
+    @styleproperty
     def background_shape(self) -> Literal[IMPLEMENTED_ICON_SHAPES_HINT]:
         """The shape of the element's background.
         If not set, no shape is used and background color is used as the background color of the entire element of the area.
@@ -4003,8 +4100,11 @@ class ImageElement(Element):
         """
         return self._background_shape
     
+    background_shape.configure(default = None)
+
     @background_shape.setter
     def background_shape(self, value:Union[str,None]):
+        tools.is_valid_dimension
         if value == None or value.lower() == "none":
             self._background_shape = None
         elif value == "ADVANCED":
@@ -4015,26 +4115,30 @@ class ImageElement(Element):
             ##Mainly, remove spaces for underscores, and lower all text
             self._background_shape = value 
         else:
-            _LOGGER.error(f"{value} is not a predefined icon background shape, nor is it set to ADVANCED. Setting shape to none")
-            self._background_shape = None
+            msg = f"{value} is not a predefined icon background shape, nor is it set to ADVANCED."
+            # _LOGGER.error(f"{value} is not a predefined icon background shape, nor is it set to ADVANCED. Setting shape to none")
+            # self._background_shape = None
+            raise ValueError(msg)
 
-    @property
+    @styleproperty
     def shape_settings(self) -> dict:
         """Settings for the background shape.
         Advanced setting, generally best to leave it as an emtpy dict. Stuff may not work as intended as I cannot test everything.
         Optional arguments are required using ADVANCED, except for icon_coords (icon will default to being centered)
         """
         return self._shape_settings.copy()
+    shape_settings.configure(default={})
     
     @shape_settings.setter
     def shape_settings(self, value:dict):
         value = value.copy()
         self._shape_settings = value
 
-    @property
+    @styleproperty
     def mirrored(self) -> bool:
         """Mirrors the element"""
         return self._mirrored
+    mirrored.configure(default = False)
     
     @mirrored.setter
     def mirrored(self,value:bool):
@@ -4064,7 +4168,7 @@ class Picture(ImageElement):
         This behaviour can be turned off by setting _cover_element_area to `False`
     fit_method_arguments : dict, optional
         Optional arguments to apply to the fitting method. Advanced method, and all fitting methods can be used without, by default {}
-    isInverted : bool, optional
+    inverted : bool, optional
         If the picture should be inverted, by default False
     mirrored : bool, optional
         If the picture should be mirrored, by default False
@@ -4073,9 +4177,9 @@ class Picture(ImageElement):
     emulator_icon = "mdi:image"
 
     def __init__(self, picture: Union[str, Path, Image.Image], background_color : Optional[ColorType]=None, 
-                background_shape:IMPLEMENTED_ICON_SHAPES_HINT = None, 
+                background_shape : IMPLEMENTED_ICON_SHAPES_HINT = None, 
                 fit_method = "fit", fit_method_arguments : dict = {}, shape_settings : dict = {},
-                isInverted = False, mirrored = False,
+                inverted = False, mirrored = False,
             **kwargs):  
 
         self._pictureImage = None
@@ -4109,7 +4213,7 @@ class Picture(ImageElement):
         self.__area = None
         self.__pictureData = None
 
-        super().__init__(isInverted=isInverted, background_color=background_color, **kwargs)
+        super().__init__(inverted=inverted, background_color=background_color, **kwargs)
         return
 
     #region
@@ -4171,7 +4275,7 @@ class Picture(ImageElement):
         ##May need to check though, perhaps it's good to add the reopen property? (set when the area changes)
         return self._pictureImage.copy()
 
-    @property
+    @styleproperty
     def fit_method(self) -> Literal["contain", "cover", "fit", "pad", "resize", "crop"]:
         """The way to fit the picture to the element area. 
         Cover and Contain are the base methods, and will always work (i.e. won't break no matter what is set in fit_method_arguments)
@@ -4192,7 +4296,7 @@ class Picture(ImageElement):
 
         self.__fit_method = value
 
-    @property
+    @styleproperty
     def fit_method_arguments(self) -> dict:
         """Arguments to apply to the fitting method.
 
@@ -4272,64 +4376,67 @@ class Picture(ImageElement):
             img = mdi.draw_mdi_icon(img, MISSING_PICTURE_ICON, icon_size=int(h*0.3))
             self._pictureImage = img
 
-        if self.background_shape != None:
+        bg_shape = Picture.background_shape.value(self)
+        bg_color = Picture.background_color.value(self)
+        if bg_shape is not None:
 
             ##Add in the shape_settings, and a way to automatically set a background color
             ##Probably the element background?
-
-            if self.background_shape == "ADVANCED":
-                method = self.shape_settings.pop("method")
+            shape_settings = Picture.shape_settings.value(self)
+            if bg_shape == "ADVANCED":
+                method = shape_settings.pop("method")
                 try:
                     (shape_img, _) = DrawShapes.draw_advanced(Image.new("RGBA", (w,h)), method, 
-                                                drawArgs=self.shape_settings.get("drawArgs",{}), paste=False)
+                                                drawArgs=shape_settings.get("drawArgs",{}), paste=False)
                 except FuncExceptions as exce:
                     _LOGGER.error(f"Error drawing advanced shape {method}: {exce}")
             else:
-                draw_func = DrawShapes.get_draw_function(self.background_shape)
-                drawArgs = self.shape_settings.get("drawArgs",{})
-                if not "fill" in drawArgs:
+                draw_func = DrawShapes.get_draw_function(bg_shape)
+                drawArgs = shape_settings.get("drawArgs",{})
+                if "fill" not in drawArgs:
                     ##Gotta use parentBackgroundColor since the background_shape will be used as a mask too.
-                    drawArgs["fill"] = self.parentBackgroundColor if self.background_color == None else self.background_color
+                    drawArgs["fill"] = self.parentBackgroundColor if bg_color == None else bg_color
                     # if drawArgs["fill"] == None: drawArgs["fill"] = "black"
                 (shape_img, _) = draw_func(Image.new("RGBA", (w,h)), drawArgs=drawArgs, paste=False)
 
             ##This would assume no transparency data in the image
             ##So fix this using a paste with mask I think.
 
-        if self.background_shape != None:
+        if bg_shape != None:
             pic_area = shape_img.getbbox() if shape_img.getbbox() else (0,0,w,h)
         else:
             pic_area = (0,0,w,h)
         pic_size = (pic_area[2]-pic_area[0], pic_area[3]-pic_area[1])
         
         ##None should automatically go to the last fit function which is not necessary anyways
-        fit_func =  self.fit_method if not self.fileError else None
+        fit_func = Picture.fit_method.value(self) if not self.fileError else None
 
         if img.size == pic_size:
             pass
         else:
             ##Gotta go through the method_arguments as it may require some colouring at least.
+            fit_args = Picture.fit_method_arguments.value(self)
             if fit_func == "crop":
-                kwargs = {"box": self.fit_method_arguments.get("box", pic_area)}
+                kwargs = {"box": fit_args.get("box", pic_area)}
             elif fit_func == "contain":
                 ##Don't need to use parentbackground or something since that'll get pasted over anyways
-                kwargs = {"color": self.fit_method_arguments.get("color", self.background_color)}
-                if "method" in self.fit_method_arguments:
-                    kwargs["method"] = self.fit_method_arguments["method"]
+                kwargs = {"color": fit_args.get("color", bg_color)}
+                if "method" in fit_args:
+                    kwargs["method"] = fit_args["method"]
             elif fit_func == "cover":
-                kwargs = {"method": self.fit_method_arguments.get("method", Image.Resampling.BICUBIC)}
+                kwargs = {"method": fit_args.get("method", Image.Resampling.BICUBIC)}
             else:
-                kwargs = dict(self.fit_method_arguments)
+                kwargs = dict(fit_args)
 
             img = tools.fit_Image(img, pic_size, fit_func, kwargs)
 
-        if self.isInverted:
+        if Picture.inverted.value(self):
             img = tools.invert_Image(img)
 
-        if self.mirrored:
+        if Picture.mirrored.value(self):
             img = ImageOps.mirror(img)
 
-        if self.background_shape != None:
+        if bg_shape != None:
             mask = shape_img.crop(shape_img.getbbox()).getchannel("A")
             mask = Image.eval(mask, lambda p: 255 if p > 0 else 0)
 
@@ -4415,11 +4522,11 @@ class Icon(ImageElement):
     emulator_icon = "mdi:drawing-box"
 
     def __init__(self, icon: Optional[Union[mdiType,str]] = DEFAULT_ICON, icon_color:Union[ColorType,bool] = DEFAULT_FOREGROUND_COLOR, background_color : Optional[ColorType]=None, background_shape:IMPLEMENTED_ICON_SHAPES_HINT = None, shape_settings : dict = {},
-                isInverted : bool = False, invert_icon : bool = False, show_feedback : bool = True,
+                inverted : bool = False, invert_icon : bool = False, show_feedback : bool = True,
                 mirrored:bool=False, rotation_angle: Union[int,float] = 0, force_aspect = True, 
                 badge_icon : Optional[Union[mdiType,str]] = None, badge_settings : dict = {}, badge_location : Optional[BadgeLocationType] = None, badge_color = None, badge_size : Optional[float] = None, badge_offset : int = 0, **kwargs):
     
-        super().__init__(isInverted=isInverted, show_feedback=show_feedback, **kwargs)
+        super().__init__(inverted=inverted, show_feedback=show_feedback, **kwargs)
         
         if icon != None: ##This allows elements that have a seperate setter to not throw the error
             self.icon = icon
@@ -4448,10 +4555,6 @@ class Icon(ImageElement):
 
         self._iconColorValue = None
         "Tuple with the color channel values as determined from the value of self.icon_color in concurrence with the other settings."
-
-        for param in kwargs:
-            if "alert" in param:
-                _LOGGER.warning(f"found leftover alert in icon, change to badge. Entity is {kwargs.get('entity', 'Not defined')}")
 
     #region
     # -------------------------- Icon Element properties ------------------------- #      
@@ -4527,7 +4630,7 @@ class Icon(ImageElement):
         "Pillow Image that will be shown when interacting with the icon."
         return self.__feedbackImg
 
-    @property
+    @styleproperty
     def rotation(self) -> Union[int,float]:
         """The rotation of the icon in degrees. 
         Positive for counterclockwise, negative for clockwise."""
@@ -4546,8 +4649,15 @@ class Icon(ImageElement):
         I would advise against using booleans on screens that are not black and white.
         """
         return self._icon_color
+    icon_color.configure(allows_none=False)
 
-    @property
+    @colorproperty
+    def badge_color(self):
+        """The color of the badge icon, if one is set.
+        If None, it defaults to the icon_color"""
+        return self._badge_color
+
+    @styleproperty
     def shape_settings(self) -> dict:
         """Settings for the background shape.
         Advanced setting, generally best to leave it as an emtpy dict. Stuff may not work as intended as I cannot test everything.
@@ -4569,15 +4679,18 @@ class Icon(ImageElement):
         # drawArgs : (dict)
         #     dict with arguments to be passed to the ImageDraw function. If background_shape is an implemented shape, omitting arguments will means default values will be used.
 
-        return self._shape_settings.copy()
-    
+        s = self._shape_settings
+        if isinstance(s, dict):
+            return dict(s)
+        return s
+
     @shape_settings.setter
     def shape_settings(self, value:dict):
         value = value.copy()
         self._shape_settings = value
 
     # ---------------------------- Boolean properties ---------------------------- #
-    @property
+    @styleproperty
     def mirrored(self) -> bool:
         """Mirrors the icon"""
         return self._mirrored
@@ -4586,9 +4699,9 @@ class Icon(ImageElement):
     def mirrored(self,value:bool):
         self._mirrored = value
 
-    @property
+    @styleproperty
     def invert_icon(self) -> bool:
-        """Inverts *only* the icon, not the entier element.
+        """Inverts *only* the icon, not the entire element.
         This works seperately from isInverted, which inverts an entire element, and is applicable to all elements. 
         invert_icon is only applicable for icons, mainly to provide a way to give images which do not have a solid color (like filled meteocons) more contrast without being confined to a single colored icon.
         """
@@ -4598,7 +4711,7 @@ class Icon(ImageElement):
     def invert_icon(self, value:bool):
         self._invert_icon = value
 
-    @property
+    @styleproperty
     def force_aspect(self) -> bool:
         """Forces the aspect ratio of the icon to fit."""
         return self._force_aspect
@@ -4631,8 +4744,10 @@ class Icon(ImageElement):
     def badge_settings(self) -> dict:
         """Dict with settings to apply to the badge
         """
+        ##Not making this a style property due to the inner workings
+        ##Also, most settings are settable via the other badge properties anyways
         d = self._badge_settings.copy()
-        d.setdefault("icon_color", self.badge_color)
+        d.setdefault("icon_color", Icon.badge_color.value(self))
         return d
     
     @badge_settings.setter
@@ -4644,7 +4759,7 @@ class Icon(ImageElement):
                 value.pop(key)
         self._badge_settings = value
 
-    @property
+    @styleproperty
     def badge_location(self) -> BadgeLocationType:
         """The location of the badge. 
         Can be Can be one of UR, LR, UL or LL (Upper Right, Lower Right, Upper Left, Lower Left). Also accepts the fully written strings, but will be set to  the abbreviated location.
@@ -4741,47 +4856,53 @@ class Icon(ImageElement):
         
         drawImg = False
 
-        if self.background_shape != None:
+        bg_shape = Icon.background_shape.value(self)
+        shape_settings = Icon.shape_settings.value(self)
+
+        bg_color = Icon.background_color.value(self)
+        icon_color = Icon.icon_color.value(self)
+        if bg_shape != None:
             loadedImg = Image.new(imgMode, (draw_size[0],draw_size[1]),None)
             img_background = Style.get_color(layoutBackgroundColor, imgMode)
             ##Currently only implemented for L/LA colortype
-            if self.background_color != True:
-                shape_color = Style.get_color(self.background_color, imgMode)
+            if bg_color != True:
+                shape_color = Style.get_color(bg_color, imgMode)
             else: 
                 shape_color = Style.contrast_color(layoutBackgroundColor,imgMode)
                 if "L" in imgMode:
                     if shape_color[0] > 110 and shape_color[0] < 175: shape_color = Style.get_color("white",imgMode)
 
             icon_bg = shape_color
-            if self.background_color == None:
+            if bg_color is None:
                 icon_bg = img_background
                 ##Default to white if the shape color and background color do not contrast enough
 
-            shape = self.background_shape.strip().lower().replace(" ","_")
-            if self.background_shape == "ADVANCED":
-                method = self.shape_settings["method"]
-                icon_size = self.shape_settings.get("icon_size",1)
+            shape = bg_shape.strip().lower().replace(" ","_")
+
+            if bg_shape == "ADVANCED":
+                method = shape_settings["method"]
+                icon_size = shape_settings.get("icon_size",1)
                 _LOGGER.verbose(f"Drawing advanced shape {method}")
                 try:
                     (loadedImg, drawImg) = DrawShapes.draw_advanced(loadedImg, method, 
-                                                drawArgs=self.shape_settings.get("drawArgs",{}), paste=False)
+                                                drawArgs=shape_settings.get("drawArgs",{}), paste=False)
                 except FuncExceptions as exce:
                     _LOGGER.error(f"Error drawing advanced shape {method}: {exce}")
             
             elif shape in IMPLEMENTED_ICON_SHAPES:
                 drawFunc, relSize = IMPLEMENTED_ICON_SHAPES[shape]
-                icon_size = self.shape_settings.get("icon_size",floor(min(draw_size)*relSize))
+                icon_size = shape_settings.get("icon_size",floor(min(draw_size)*relSize))
                 
-                drawArgs = self.shape_settings.get("drawArgs",{})
+                drawArgs = shape_settings.get("drawArgs",{})
                 if not "fill" in drawArgs:
                     drawArgs["fill"] = shape_color
                 (loadedImg, drawImg) = drawFunc(loadedImg, drawArgs=drawArgs, paste=False)
             else:
                 ##This should not happen since the check happens (or will happen) when setting the value
-                _LOGGER.error(f"{self.background_shape} is not a recognised valid value for background shape.")
+                _LOGGER.error(f"{bg_shape} is not a recognised valid value for background shape.")
         else:
-            if self.background_color != None:
-                img_background = Style.get_color(self.background_color, imgMode)
+            if bg_color is not None:
+                img_background = Style.get_color(bg_color, imgMode)
                 icon_bg = img_background
                 loadedImg = Image.new(imgMode, (draw_size[0],draw_size[1]),img_background)
             elif layoutBackgroundColor != None:
@@ -4802,10 +4923,10 @@ class Icon(ImageElement):
             _LOGGER.verbose(f"Parsing mdi icon {icon}")
             mdistr = mdi.parse_MDI_Icon(icon)
             
-            if isinstance(self.icon_color, bool):
+            if isinstance(icon_color, bool):
                 icon_color_value = Style.contrast_color(icon_bg, imgMode)
             else:
-                icon_color_value = Style.get_color(self.icon_color,imgMode)
+                icon_color_value = Style.get_color(icon_color,imgMode)
 
             if mdistr[0]: 
                 self._iconData = mdistr
@@ -4816,8 +4937,8 @@ class Icon(ImageElement):
                     scale = dw_size[0]/draw_size[0]
                     dr_im = drawImg._image
                     icon_size = int(icon_size*scale)
-                    if "icon_coords" in self.shape_settings:
-                        coords = self.shape_settings["icon_coords"]
+                    if "icon_coords" in shape_settings:
+                        coords = shape_settings["icon_coords"]
                         icon_coords = (int(coords[0]*scale),int(coords[1]*scale))
                         loadedImg = mdi.draw_mdi_icon(dr_im, self._iconData, icon_size=icon_size, icon_color=icon_color_value, iconDraw= drawImg, icon_coords=icon_coords)
                     else:
@@ -4858,19 +4979,19 @@ class Icon(ImageElement):
                 thumbSize = int(squareSize*liveArea)
                 iconImg = ImageOps.contain(iconImg,(thumbSize,thumbSize))
                 
-                if self.icon_color:
-                    if self.icon_color == True:
+                if icon_color:
+                    if icon_color == True:
                         icon_color_value = Style.contrast_color(icon_bg, imgMode)
                     else:
-                        icon_color_value = Style.get_color(self.icon_color,imgMode)
+                        icon_color_value = Style.get_color(icon_color,imgMode)
                     icondraw = ImageDraw.Draw(iconImg)
                     icondraw.bitmap((0,0),iconImg.getchannel("A"),icon_color_value)
                 else:
                     ##This is set for the badge default later on, not applied to the image itself.
                     icon_color_value = Style.contrast_color(icon_bg, imgMode)
                 
-                if "icon_coords" in self.shape_settings:
-                    iconOriging = self.shape_settings["icon_coords"]
+                if "icon_coords" in shape_settings:
+                    iconOriging = shape_settings["icon_coords"]
                 else:
                     iconOriging = (
                         int((draw_size[0]-iconImg.width)/2), 
@@ -4885,10 +5006,10 @@ class Icon(ImageElement):
                     ## I had some moments where pasting an alpha image would mean the alpha channel would also be applied to the original image, i.e. remove its background 
                     loadedImg.paste(iconImg, iconOriging, iconImg)
         else:
-            if isinstance(self.icon_color, bool):
+            if isinstance(icon_color, bool):
                 icon_color_value = Style.contrast_color(icon_bg, imgMode)
             else:
-                icon_color_value = Style.get_color(self.icon_color,imgMode)
+                icon_color_value = Style.get_color(icon_color,imgMode)
         self._iconColorValue = icon_color_value
 
         if self.fileError:
@@ -4901,64 +5022,66 @@ class Icon(ImageElement):
             drawImg = False
 
         #Mirror the image if required        
-        if self.mirrored:
+        if Icon.mirrored.value(self):
             loadedImg = ImageOps.mirror(loadedImg)
             drawImg = False
 
         #Rotate the image if the angle is not a multiple of 360
         ##I think I need to check this?
-        if self.rotation % 360:
-            loadedImg = loadedImg.rotate(self.rotation)
+        rota = Icon.rotation.value(self)
+        if rota % 360:
+            loadedImg = loadedImg.rotate(rota)
             drawImg = False
 
         if self.badge_icon != None:
             #badgeOpts = {"badge_color": "color", "badge_location": "location", "badge_size": "relSize", "badge_offset": "offset"}
-            badgeDict = self.badge_settings #{"background_color": icon_bg}
+            badge_settings = self.badge_settings #{"background_color": icon_bg}
             
-            if "background_color" not in self.badge_settings: 
-                if self.background_shape == None:
+
+            if "background_color" not in badge_settings: 
+                if bg_shape == None:
                     ##This should be ok, the color is the problem I suspect
-                    badgeDict["background_color"] = None
+                    badge_settings["background_color"] = None
                 else:
-                    badgeDict["background_color"] = shape_color
+                    badge_settings["background_color"] = shape_color
 
-            badgeDict.setdefault("icon_color", self.badge_color)
+            badge_settings.setdefault("icon_color", Icon.badge_color.value(self))
 
-            if self.badge_location != None:
-                badgeDict.setdefault("location", self.badge_location)
+            if Icon.badge_location.value(self) != None:
+                badge_settings.setdefault("location", Icon.badge_location.value(self))
 
             ##I think this needs to be rewritten for quite a bit since multiple badge properties are not taken into account
-            _LOGGER.verbose(f"Badge dict is {badgeDict}")
+            _LOGGER.verbose(f"Badge dict is {badge_settings}")
 
             try:
-                loadedImg = self.add_badge(loadedImg, parentIconSize=draw_size, **badgeDict)
+                loadedImg = self.add_badge(loadedImg, parentIconSize=draw_size, **badge_settings)
             except:
                 _LOGGER.error(f"{self} Could not add badge", exc_info=True)
 
-        if self.invert_icon:
-            _LOGGER.verbose(f"Inverting an icon")
+        if Icon.invert_icon.value(self):
+            _LOGGER.verbose("Inverting an icon")
             loadedImg = tools.invert_Image(loadedImg)
             drawImg = False
 
         self.__feedbackImg = None
 
-        if self.show_feedback == "press":
+        if Icon.show_feedback.value(self) == "press":
             self.__feedbackImg = self.generate_feedback_icon(loadedImg, img_background, (w,h))
 
-        if self.background_color != None and self.background_shape == None:
-            col = Style.get_color(self.background_color,imgMode)
+        if bg_color != None and bg_shape == None:
+            col = Style.get_color(bg_color,imgMode)
         else:
             col = None
         loadedImg = ImageOps.pad(loadedImg,(w,h), color=col)
 
-        if self.inverted:
+        if Icon.inverted.value(self):
             loadedImg = tools.invert_Image(loadedImg)
 
         self._imgData = loadedImg
         return self.imgData
 
     def add_badge(self, img : Image.Image, drawImg = False, parentIconSize=None,  background_color=None,
-                        icon_color = None, relSize : float = 0.4, location=DEFAULT_BADGE_LOCATION, offset : tuple =(0,0)) -> Image.Image:
+                        icon_color = None, relSize : float = 0.4, location = DEFAULT_BADGE_LOCATION, offset : tuple =(0,0)) -> Image.Image:
         """Adds a badge to the icon.
         args:
             img: PILLOW image object to add the badge to
@@ -5008,7 +5131,7 @@ class Icon(ImageElement):
         else:
             background_color_tuple = Style.get_color(None, colorMode)
 
-        if icon_color == None: icon_color = self.icon_color          
+        if icon_color == None: icon_color = Icon.icon_color.value(self)          
         icon_color = Style.get_color(icon_color,"RGBA")
         
         relSize = floor(IMPLEMENTED_ICON_SHAPES["circle"][1]*DrawShapes.MINRESOLUTION)
@@ -5169,14 +5292,14 @@ class Line(Element):
     #     ##The main goal here is to prevent the multiple generators running when they shouldn't
     #     self._line_color = value
 
-    @property
+    @styleproperty
     def width(self) -> PSSMdimension:
         "Width of the line"
-        return self.__width
+        return self._width
     
     @width.setter
     def width(self, value):
-        self._dimension_setter("__width",value)
+        self._dimension_setter("_width",value)
 
     @property
     def orientation(self) -> Literal["horizontal","vertical","diagonal1", "diagonal2"]:
@@ -5194,7 +5317,7 @@ class Line(Element):
         self.__orientation = value
     
     @property
-    def alignment(self) -> Union[Literal["center","top","bottom", "left", "right"], PSSMdimension]:
+    def alignment(self) -> Union[Literal["center","top", "bottom", "left", "right"], PSSMdimension]:
         """Alignment of the line relative to it's area.
         top/bottom and left/right are adjusted respectively for the orientation.
         Has no affect when orientation is diagonal
@@ -5483,7 +5606,7 @@ class _BaseSlider(Element):
                 self._fast_position_update, new_position)
         elif hasattr(self,"_fast_position_update"):    
             for popup in self.parentPSSMScreen.popupsOnTop:
-                if tools.get_rectangles_intersection(self.area,popup.area) or popup.blur_background:
+                if tools.get_rectangles_intersection(self.area,popup.area) or Popup.blur_background.value(popup):
                     self.position = new_position
                     asyncio.create_task(self.async_update(updated=True))
                     if self.on_position_set:
@@ -5845,6 +5968,9 @@ class _ElementSelect(Element):
         if value == self._active_properties:
             return
         
+        ##may want to make these two styleproperties?
+        ##but especially with these, and perhaps some others, how to handle updating?
+        ##I.e. update nested dict or not?
         self._active_properties = tools.update_nested_dict(value, self._active_properties)
         self._reparse_colors = True
 
@@ -6376,7 +6502,7 @@ def parse_layout_string(layout_string : str, sublayout : Optional[str] = None, h
 
     buildlayout = layoutstr
     sublayout_dict = {}
-    while s := re.findall("\[([^[\]]*)\]", buildlayout):
+    while s := re.findall(r"\[([^[\]]*)\]", buildlayout):
         sub_idx = len(sublayout_dict)
         regexlayout_str = s[0]
         p = bool(regexlayout_str)
