@@ -76,6 +76,14 @@ class InteractEvent(NamedTuple):
     action: str
     "Type of interaction function that was registered. I.e. 'tap', 'hold' or 'hold_release'"
 
+class StyleStringDict(TypedDict):
+    "Dict for styles. Mainly for backend purposes"
+
+    style : str
+
+    owner : str
+
+    prop : str
 
 class ElementActionFunction(Protocol):
     def __call__(self, element: "Element", any: Any, **kwargs) -> Any:
@@ -102,7 +110,6 @@ class ElementActionType(dict):
 
     map: dict[str,Any]
     "Keywords whos value will be passed as the value of the corresponding attribute of the element"
-
 
 InteractionFunctionType = Union[str,Callable[["Element",InteractEvent,Any],Any],None]
 # "Type hint for interaction functions, like tap_action"
