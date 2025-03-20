@@ -177,8 +177,13 @@ TOUCH_LONG = "TOUCH-LONG"
 
 _touch_types = (TOUCH_PRESS, TOUCH_RELEASE)
 
+FEEDBACK_ON_ACTION = "on_action"
+"indicates an element shows feedback if an action is called"
+
 DEFAULT_DEBOUNCE_TIME = '1ms'
 DEFAULT_HOLD_TIME = '0.5s'
+
+STYLE_SEPERATOR = "::"
 
 DEFAULT_FEEDBACK_DURATION : float = 0.75
 "Default duration to show element feedback"
@@ -238,8 +243,10 @@ SHORTHAND_FONTS['default-regular'] = SHORTHAND_FONTS['notosans-regular']
 SHORTHAND_FONTS['default-bold'] = SHORTHAND_FONTS['notosans-bold']
 SHORTHAND_FONTS["header"] = SHORTHAND_FONTS['default-bold']
 
-##I believe like this it should work from the working directory, not the directory where pssm is installed
+DEFAULT_FONT = SHORTHAND_FONTS["default"]
+"The default font"
 
+##I believe like this it should work from the working directory, not the directory where pssm is installed
 CUSTOM_FOLDERS = {"font_folder": Path("./fonts"), 
                 "icon_folder": Path("./icons"), 
                 "picture_folder": Path("./pictures")}
