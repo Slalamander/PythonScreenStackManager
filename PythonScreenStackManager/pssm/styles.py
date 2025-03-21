@@ -429,10 +429,9 @@ class styleproperty(customproperty):
 
     .. code-block: python
 
-        @styleproperty
+        @styleproperty(vdefault = 10).getter
         def styled_height(self):
             return self._styled_height
-        styled_height.configure(default = 10)
 
     This sets the default value to 10. If ``styled_height`` appears in the __init__ function *of the same class*, the value is not overwritten. For child classes, it will be treated as an updated value.
     """   
@@ -449,6 +448,7 @@ class styleproperty(customproperty):
 
     @property
     def get_func(self):
+        raise AttributeError
         return getattr(self, "_fget", self.fget)
     
     @property
@@ -486,6 +486,7 @@ class styleproperty(customproperty):
                 fset=None, 
                 fdel=None, 
                 doc=None,
+                *,
                 vdefault=Style.NONESTYLE
                 ):
         """Attributes of 'our_decorator'
@@ -504,6 +505,9 @@ class styleproperty(customproperty):
         super().__init__(fget,fset,fdel,doc)
         self.vdefault = vdefault
         return
+
+    # def __call__(self, fget = None):
+    #     return self.getter(fget)
 
     def __set_name__(self, owner, name):
         _LOGGER.log(5,f"decorating {self} and using {owner}")
@@ -544,12 +548,11 @@ class styleproperty(customproperty):
     def __get__(self, obj, objtype=None):
         if obj is None:
             return self
-        if self.get_func is None:
+        if self.fget is None:
             raise AttributeError("unreadable attribute")
 
-        val = self.get_func(obj)
+        val = self.fget(obj)
 
-        t = obj.__class__
         if obj.__class__ is self.owner:
             return val
         if isinstance(val,str) and "::" in val:
@@ -594,13 +597,13 @@ class styleproperty(customproperty):
         return self
 
     def getter(self, fget):
-        return type(self)(fget, self.fset, self.fdel, self.__doc__, self.vdefault)
+        return type(self)(fget, self.fset, self.fdel, self.__doc__, vdefault=self.vdefault)
 
     def setter(self, fset):
-        return type(self)(self.fget, fset, self.fdel, self.__doc__, self.vdefault)
+        return type(self)(self.fget, fset, self.fdel, self.__doc__, vdefault=self.vdefault)
 
     def deleter(self, fdel):
-        return type(self)(self.fget, self.fset, fdel, self.__doc__, self.vdefault)
+        return type(self)(self.fget, self.fset, fdel, self.__doc__, vdefault=self.vdefault)
 
     def create_style_string(self, obj : "Element", string : str):
 
@@ -671,7 +674,7 @@ class colorproperty(styleproperty):
                 fdel=None, 
                 doc=None,
                 vdefault = Style.NONESTYLE,
-                allows_none = True
+                vallowsnone = True
                 ):
         """Attributes of 'our_decorator'
         fget
@@ -689,8 +692,8 @@ class colorproperty(styleproperty):
 
         if fset is None:
             fset = self._color_setter
-        super().__init__(fget, fset, fdel, doc, vdefault)
-        self._allows_none = allows_none
+        super().__init__(fget, fset, fdel, doc, vdefault=vdefault)
+        self._allows_none = vallowsnone
         return
 
     class NOT_NONE(customproperty):
@@ -703,12 +706,35 @@ class colorproperty(styleproperty):
     def __get__(self, obj: "Element", objtype=None):
         if obj is None:
             return self
-        if self.get_func is None:
+        if self.fget is None:
             raise AttributeError("unreadable attribute")
-
-        # if type(obj) is self.owner:   #Do this later for colors, to ensure they work. Implemented to deeply rn to do it already.
-        #     return self.get_func(obj)
         return self._get_element_color(obj)
+
+    # def __set__(self, obj, value):
+        
+    #     try:
+    #         return self.fset(obj, value)
+    #         return super().__set__(obj, value)
+    #     except Exception as exce:
+    #         _LOGGER.error(exce)
+    #         raise
+        # if self.fset is None:
+        #     raise AttributeError("can't set attribute")
+
+        # if self.fset and isinstance(value,str) and "::" in value:
+        #     try:
+        #         style_string = self.create_style_string(obj, value)
+        #         style_value = Style.get_value(style_string)
+        #         super().__set__(obj, style_value)
+        #         # self.set_func(obj, style_value)
+        #         setattr(obj,f"_{self._style_attribute}", style_string)
+        #         return
+        #     except (ValueError, TypeError, AttributeError, AssertionError) as exce:
+        #         msg = f"{obj}: can't set property {self._style_attribute} to style {style_string}, {exce}"
+        #         _LOGGER.error(msg, exc_info=DEBUG)
+        #         raise
+        
+        # return self.fset(obj,value)
 
     def __set_name__(self, owner, name):
         _LOGGER.log(5,f"decorating {self} and using {owner}")
@@ -765,10 +791,10 @@ class colorproperty(styleproperty):
             element._style_update(attribute, value)
 
     def _get_element_color(self, element: "Element"):
-        val = self.get_func(element)
+        val = self.fget(element)
         if Style.is_style_string(val):
             val = Style.get_value(val, element, self._style_attribute)
-        if isinstance(val, str) and element.parentLayout != None:
+        if isinstance(val, str) and element.parentLayout is not None:
             if val in getattr(element.parentLayout,"_color_shorthands",{}):
                 prop = element.parentLayout._color_shorthands[val]
                 val = getattr(element.parentLayout, prop)
@@ -811,14 +837,15 @@ class colorproperty(styleproperty):
         return super().configure(default=default)
 
     def getter(self, fget):
-        n = type(self)(fget, self.fset, self.fdel, self.__doc__, self.vdefault, self._allows_none)
-        return n
+        fset = None if self.fset == self._color_setter else self.fset
+        return type(self)(fget, fset, self.fdel, self.__doc__, vdefault=self.vdefault, vallowsnone=self._allows_none)
 
     def setter(self, fset):
-        return type(self)(self.fget, fset, self.fdel, self.__doc__, self.vdefault, self._allows_none)
+        return type(self)(self.fget, fset, self.fdel, self.__doc__, vdefault=self.vdefault, vallowsnone=self._allows_none)
 
     def deleter(self, fdel):
-        return type(self)(self.fget, self.fset, fdel, self.__doc__, self.vdefault, self._allows_none)
+        fset = None if self.fset == self._color_setter else self.fset
+        return type(self)(self.fget, fset, fdel, self.__doc__, vdefault=self.vdefault, vallowsnone=self._allows_none)
 
 
 decorators.colorproperty = colorproperty
