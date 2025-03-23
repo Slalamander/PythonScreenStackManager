@@ -184,6 +184,7 @@ DEFAULT_DEBOUNCE_TIME = '1ms'
 DEFAULT_HOLD_TIME = '0.5s'
 
 STYLE_SEPERATOR = "::"
+STYLE_PARENTCLASS_SEPERATOR = "."
 
 DEFAULT_FEEDBACK_DURATION : float = 0.75
 "Default duration to show element feedback"
