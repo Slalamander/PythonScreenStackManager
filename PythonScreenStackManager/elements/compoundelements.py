@@ -155,9 +155,10 @@ class Tile(base.TileElement):
                 setList[set_key] = v
 
         if _IconElement == None:
-            self.__IconElement = base.Icon(icon, _register = False)
+            self.__IconElement = base.Icon(icon, _register = False, styleParent = self)
         else:
             self.__IconElement = _IconElement
+            _IconElement._styleParent = self
 
         if _TextElement == None:
             self.__TextElement = base.Button(text, text_x_position="m", _register = False)
@@ -247,47 +248,48 @@ class Tile(base.TileElement):
         "Color of the background shape. Set using background color."
         return self.background_color
 
-    @styleproperty
+    @base.Layout.radius.getter
     def radius(self) -> PSSMdimension:
         "Corner radius of the element's background. Only applicable when no background shape is used, otherwise 0."
-        if self.background_shape != None:
+        if Tile.background_shape.value(self) != None:
             return 0
         else:
             return self._radius
 
-    @radius.setter
-    def radius(self, value):
-        base.Layout.radius.fset(self, value)
+    # @radius.setter
+    # def radius(self, value):
+    #     base.Layout.radius.fset(self, value)
 
-    @property
+    @styleproperty
     def background_shape(self) -> Optional[DrawShapes.shapeTypes]:
         """
         The shape to apply to the button background. Keep in mind some square shapes won't automatically fit the shape.
         The shape takes the background colour.
         """        
         ##Look into how this works with radius etc.
-        return self.__background_shape
+        return self._background_shape
 
     @background_shape.setter
     def background_shape(self, value : str):
         if value in {None, "default"}:
             pass
         elif value.lower() not in DrawShapes.shapeTypes.__args__ and value != "ADVANCED":
-            msg = f"{value} is not recognised as a valid background shape."
-            _LOGGER.exception(ValueError(msg))
-            return
+            msg = f"{value} is not recognised as a valid background shape"
+            raise ValueError(msg)
         
-        self.__background_shape = value
+        # self._background_shape = value
 
-    @property
+    @styleproperty
     def shape_settings(self) -> dict:
         """
         Settings to apply to the tile background. background_color and outline_color/width are set from the properties if not present. 
         If backgroundshape is ADVANCED, you are responsible for all settings yourself, as well as specifying the drawing method to use.
         """
-        d = self.__shape_settings.copy()
 
-        if self.background_shape == "ADVANCED":
+        d = Tile.shape_settings.value(self)
+        if isinstance(d, MappingProxyType):
+            d = dict(d)
+        if Tile.background_shape.value(self) == "ADVANCED":
             return d
 
         d.setdefault("fill", self._shapeColor)
@@ -302,7 +304,8 @@ class Tile(base.TileElement):
     
     @shape_settings.setter
     def shape_settings(self, value : dict):
-        self.__shape_settings = value.copy()
+        if not isinstance(value, (dict, MappingProxyType)):
+            raise TypeError("shape_settings must be a dict or mappingproxy")
 
     @property
     def icon(self) -> Optional[Union[str,Image.Image]]:
@@ -353,7 +356,11 @@ class Tile(base.TileElement):
         self._badge_settings = value
         self.__IconElement.update({"badge_settings": value}, skipPrint=self.isUpdating)
 
-    @property
+    ##Just remove these they're not really needed tbh
+    ##Butttt this raises the question: how to style default child elements?
+    ##Can think of two options: add style class property for child elements i.e. Tile.Icon
+    ##And then (try to) find options in style tree Tile -> Icon
+    @styleproperty(vsetraw=True).getter
     def badge_location(self) -> BadgeLocationType:
         """
         The location of the badge. 
