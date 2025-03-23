@@ -9,7 +9,8 @@ from pathlib import Path
 from .. import tools
 from ..util import classproperty
 from ..pssm_types import ColorType, StyleStringDict
-from ..constants import PSSM_COLORS, DEBUG, STYLE_SEPERATOR, SHORTHAND_FONTS, DEFAULT_FONT
+from ..constants import PSSM_COLORS, DEBUG, STYLE_SEPERATOR,  STYLE_PARENTCLASS_SEPERATOR,\
+        SHORTHAND_FONTS, DEFAULT_FONT
 
 from . import decorators
 from .decorators import customproperty, elementaction, trigger_condition
@@ -48,7 +49,7 @@ class Style:
     screen: "PSSMScreen"
     _color_shorthands: dict[str,ColorType] = {}
     default_style = "style"
-    base_style_tre : dict[str,dict[str,Any]] = None
+    base_style_tree : dict[str,dict[str,Any]] = {}
     
     registered_styles = ("style")
 
@@ -79,7 +80,11 @@ class Style:
         Similar to NOTACOLOR
         """
         return _nonstyle
-    
+
+    @classproperty
+    def _knownowners(cls) -> dict[str,"Element"]:
+        return styleproperty._element_classes
+
     @classmethod
     def setup_style_tree(cls, user_tree : dict = {}):
         new_tree = deepcopy(styleproperty._style_tree_root)
@@ -152,10 +157,12 @@ class Style:
 
         if "owner" not in d:
             if isinstance(element, Element):
-                element = element.__class__.__name__
+                # element = element.__class__.__name__
+                # parent_classes = 
+                s = element.styleOwnerString
+                d["owner"] = element.styleClass
             elif not element:
-                element = Element.__name__
-            d["owner"] = element
+                d["owner"] = Element.__name__
         
         if "prop" not in d:
             if property_name is None:
@@ -239,6 +246,30 @@ class Style:
                 cls.construct_style_string(style_value, element = element, property_name=property_name))
 
         (style, owner, prop) = style_tuple
+
+        if STYLE_PARENTCLASS_SEPERATOR in owner:
+            owners = owner.split(STYLE_PARENTCLASS_SEPERATOR)
+            # owner_name = owners[-1]
+
+            ##Don't forget to check if this includes or excludes the last one
+            cur_tree = cls.base_style_tree
+            for parent_owner in owners[:-1]:
+                if parent_owner not in cls._knownowners:
+                    raise KeyError(f"Unknown element class {parent_owner} in style string {style_value}")
+                
+                elif parent_owner not in cur_tree:
+                    ##check for base tree? Or simply break here regardless.
+                    ##Also, to make it easier to reference styles from other things: simply use style::Parent::Owner AS THE STYLE VALUE
+                    _LOGGER.debug(f"Unable to fully traverse style tree for owners {owner}")
+                    cur_tree = cls.base_style_tree
+                    break
+                else:
+                    cur_tree = cur_tree[parent_owner]
+            owner = owners[-1]
+        elif owner in cls._knownowners:
+            cur_tree = cls.base_style_tree            
+        else:
+            raise KeyError(f"Unknown element class {owner} in style string {style_value}") 
 
         if prop in cls.base_style_tree.get(owner,{}):
             val = cls.base_style_tree[owner][prop]
@@ -405,14 +436,17 @@ class styleproperty(customproperty):
     styleproperties and their default values are aggregated to automatically create a styletree of each element. This allows users to create coherent themes.
     When the __init__ function of an element is called, all styleproperties that are not present in the keyword arguments are set to a stylestring.
     
-    This property should generally only be used for simple getter functions, as it catches out any style strings and returns the corresponding value. If it is not a style string, the raw value is returned. This behaviour may change to have it return the actual style string.
-    For the setter, it also catches out the property being set to a style string.
+    For the setter, it also catches the property being set to a style string.
     For style strings it constructs to the appropriate 3 part style string (``style::ElementClass::property``). It then determines the value corresponding to said style and passes that to the setter.
     The setter can raise ``AssertionError``, ``AttributeError``, ``TypeError`` or ``ValueError`` and the property takes care of logging. If no error is raised, the appropriate attribute (``_[property``]) on the element is set to the style string.
+    So, unless ``vsetraw==True``, the setter can be best thought of as validator for the style value. Error logging is also handled by the decorator.
+    If ``vsetraw==True``, the above is not the case. 
 
     Usage
     ------
-    .. code-block: python
+    ```
+    class ExampleElement(Element):
+        ...
 
         @styleproperty
         def styled_height(self):
@@ -422,18 +456,29 @@ class styleproperty(customproperty):
         def styled_height(self, value):
             if not tools.is_valid_dimension(value):
                 raise ValueError(f"{value} is not a valid dimension")
-
+    ```
+                    
     After the class is fully defined, the property checks if a corresponding argument is present in the class' ``__init__`` function. If so, it saves said value and automatically sets it as the ``default`` attribute for the property.
     In child classes, the same logic is applied. Any styleproperties present in their parent and their __init__ will lead to a new entry with default value in the styletree for that element class.
     If something is, for example, a base class with no __init__ function, or if a different default value is desired from the one present in the __init__, the property can be applied as follows:
 
-    .. code-block: python
-
-        @styleproperty(vdefault = 10).getter
-        def styled_height(self):
-            return self._styled_height
-
+    ```
+    @styleproperty(vdefault = 10).getter
+    def styled_height(self):
+        return self._styled_height
+    ```
+        
     This sets the default value to 10. If ``styled_height`` appears in the __init__ function *of the same class*, the value is not overwritten. For child classes, it will be treated as an updated value.
+
+    
+    When for example generating the element, the most convenient way to get the value of the property is using the ``value`` function via the element class.
+    This function calls ``Style.get_value`` with all the arguments set appropriately for the element instance.
+
+    ```
+    def generator(self, ...):
+        
+        height = ExampleElement.styled_height.value(self)
+    ```
     """   
 
     _found_properties = set()
@@ -451,10 +496,6 @@ class styleproperty(customproperty):
         raise AttributeError
         return getattr(self, "_fget", self.fget)
     
-    @property
-    def set_func(self):
-        return getattr(self, "_fset", self.fset)
-
     @property
     def _style_attribute(self) -> str:
         ##Returns the (presumably) correct name of the connected attribute
@@ -487,7 +528,8 @@ class styleproperty(customproperty):
                 fdel=None, 
                 doc=None,
                 *,
-                vdefault=Style.NONESTYLE
+                vdefault=Style.NONESTYLE,
+                vsetraw=False,
                 ):
         """Attributes of 'our_decorator'
         fget
@@ -501,13 +543,21 @@ class styleproperty(customproperty):
             an attribute
         doc
             the docstring
+        vdefault
+            The default value to use for the style. This means the value in the __init__ is not set for the owner class. It will be for child classes.
+        vsetraw
+            Have the setter function handle setting, not just validating.
+            This means the setter can be passed raw style strings as well.
         """
         super().__init__(fget,fset,fdel,doc)
         self.vdefault = vdefault
+        self.vsetraw = vsetraw
         return
 
-    # def __call__(self, fget = None):
-    #     return self.getter(fget)
+    # def __call__(self, element):
+    #     ##Currently leaving __call__ commented out
+    #     ##I think it it obfuscates what it does, and typing .value does not require much more space.
+    #     return self.value(element)
 
     def __set_name__(self, owner, name):
         _LOGGER.log(5,f"decorating {self} and using {owner}")
@@ -565,28 +615,32 @@ class styleproperty(customproperty):
         if self.fset is None:
             raise AttributeError("can't set attribute")
 
-        if self.fset and isinstance(value,str) and "::" in value:
+        if self.vsetraw:
+            self.fset(obj, value)
+        else:
             try:
-                style_string = self.create_style_string(obj, value)
-                style_value = Style.get_value(style_string)
-                super().__set__(obj, style_value)
-                # self.set_func(obj, style_value)
-                setattr(obj,f"_{self._style_attribute}", style_string)
+                if Style.is_style_string(value):
+                    style_string = self.create_style_string(obj, value)
+                    style_value = Style.get_value(style_string, obj, self.property_name)
+                    self.fset(obj, style_value)
+                    setattr(obj,f"_{self._style_attribute}", style_string)
+                else:
+                    self.fset(obj, value)
+                    setattr(obj,f"_{self.property_name}", value)
                 return
             except (ValueError, TypeError, AttributeError, AssertionError) as exce:
                 msg = f"{obj}: can't set property {self._style_attribute} to style {style_string}, {exce}"
                 _LOGGER.error(msg, exc_info=DEBUG)
                 raise
         
-        return self.set_func(obj,value)
-        # return super().__set__(obj, value)
+        return self.fset(obj,value)
 
     def value(self, element : "Element"):
         """Returns the value of this property for the given element
 
         Conversion of style strings is handled in this function.
         """        
-        val = element.get_style_value(getattr(element, self.property_name), self.property_name)
+        val = element.get_style_value(getattr(element, f"_{self.property_name}"), self.property_name)
         if isinstance(val, dict):
             return val.copy()
         return val
@@ -597,13 +651,13 @@ class styleproperty(customproperty):
         return self
 
     def getter(self, fget):
-        return type(self)(fget, self.fset, self.fdel, self.__doc__, vdefault=self.vdefault)
+        return type(self)(fget, self.fset, self.fdel, self.__doc__, vdefault=self.vdefault, vsetraw=self.vsetraw)
 
     def setter(self, fset):
-        return type(self)(self.fget, fset, self.fdel, self.__doc__, vdefault=self.vdefault)
+        return type(self)(self.fget, fset, self.fdel, self.__doc__, vdefault=self.vdefault, vsetraw=self.vsetraw)
 
     def deleter(self, fdel):
-        return type(self)(self.fget, self.fset, fdel, self.__doc__, vdefault=self.vdefault)
+        return type(self)(self.fget, self.fset, fdel, self.__doc__, vdefault=self.vdefault, vsetraw=self.vsetraw)
 
     def create_style_string(self, obj : "Element", string : str):
 
