@@ -422,8 +422,7 @@ def parse_duration_string(string : Union[str, int, float]) -> float:
     match_dict = match_duration_string(string)
     if not match_dict:
         msg = f"Could not parse duration {string} into time values. Please check if you used the right notations and everything is in order from largest to smallest."
-        _LOGGER.exception(ValueError(msg))
-        return
+        raise ValueError(msg)
     secs = 0
     for unit, t in match_dict.items():
         mult = second_multipliers[unit]
