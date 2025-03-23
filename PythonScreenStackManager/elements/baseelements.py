@@ -147,7 +147,6 @@ class Element(ABC):
                     continue
                 kwargs[elt_style] = f"style::{elt_style}"
 
-
             # kwargs = elt_styles | kwargs
             init(self, *args, **kwargs)
             if cls is type(self):
@@ -158,11 +157,11 @@ class Element(ABC):
 
     def __post_init__(self, id, _register):
 
-        if self.screen == None:
+        if self.screen is None:
             return
 
-        if _register == None:
-            _register = not self.parentPSSMScreen.printing if id == None else True
+        if _register is None:
+            _register = not self.parentPSSMScreen.printing if id is None else True
         if _register:
             self.parentPSSMScreen._register_element(self)
         return
@@ -173,6 +172,13 @@ class Element(ABC):
         instance = super().__new__(cls)
         id = kwargs.get("id",None)
         (instance.__id, instance.__unique_id) =  instance.__set_id(id)
+
+        instance.style = kwargs.get("style","style")
+
+        styleParent = kwargs.get("styleParent",None)
+        assert isinstance(styleParent, Element) or styleParent is None, "styleParent must be None or an element object"
+        instance._styleParent = styleParent
+
         instance._generatedno = 0
         instance._updatequeue = asyncio.Queue()
         instance._triggerCondition = TriggerCondition()
@@ -183,7 +189,7 @@ class Element(ABC):
             raise AttributeError(f"{self}: Cannot set classproperties on elements")
         return super().__setattr__(name, value)
 
-    def __init__(self,  id: str =None, area: PSSMarea=None, imgData: Image.Image = None, 
+    def __init__(self, area: PSSMarea=None, imgData: Image.Image = None, 
                 tap_action: InteractionFunctionType = None,
                 hold_action: InteractionFunctionType = None,
                 hold_release_action: InteractionFunctionType = None,
@@ -191,11 +197,14 @@ class Element(ABC):
                 inverted: bool = "style::inverted", 
                 show_feedback: bool = "style::show_feedback",
                 feedback_duration: Union[float,DurationType] = "style::feedback_duration", 
+                id: str =None,
                 _register : Optional[bool] = None,
+                styleParent : Optional["Element"] = None,
                 **kwargs):
         
         self.__id: str
         self.__unique_id: str
+        self._styleParent : Optional[Element]
 
         if asyncio._get_running_loop() is None and Screen is not None:
             ##Locks need to actually be created in a running loop.
@@ -217,6 +226,7 @@ class Element(ABC):
 
         self._imgData = imgData
         self._area = area
+        
         self.background_color = background_color
         
         self._tap_action = None
@@ -267,7 +277,7 @@ class Element(ABC):
     def isLayout(self) -> bool:
         "Returns whether the element is a layout"
         return False
-    
+
     @property
     def style(self) -> str:
         "The style applied to the element"
@@ -278,12 +288,42 @@ class Element(ABC):
         assert isinstance(value, str), "style must be a string"
         self._style = value
 
-    @colorproperty
+    @property
+    def styleClass(self) -> str:
+        "style class of the element, i.e. it's class name"
+        return self.__class__.__name__
+
+    @property
+    def styleParent(self) -> Optional["Element"]:
+        """The element acting as a parent to get the style from
+        Used when nesting elements in, for example, tiles, or other elements which internally are made up of others.
+        """
+        return self._styleParent
+
+    @property
+    def styleOwnerString(self) -> str:
+        if self.styleParent:
+            return f"{self.styleParentString}{const.STYLE_PARENTCLASS_SEPERATOR}{self.styleClass}"
+        return self.styleClass
+
+    @property
+    def styleParentString(self) -> str:
+        """Fully constructed parent classes for this element's style string
+        """
+        if self.styleParent:
+            if self.styleParent.styleParent:
+                return f"{self.styleParent.styleParentString}{const.STYLE_PARENTCLASS_SEPERATOR}{self.styleParent.styleClass}"
+            else:
+                return self.styleParent.styleClass
+        
+        ##Check if this constructs a correct string. May cause .'s to be linked however
+        return None
+
+    @colorproperty(vdefault = DEFAULT_BACKGROUND_COLOR).getter
     def background_color(self) -> Union[ColorType,None]:
         """Color of the element background."""
         # Set to None to take on the color of its parent layout"""
         return self._background_color
-    background_color.configure(default = DEFAULT_BACKGROUND_COLOR)
 
     @property
     def isInverted(self) -> bool:
@@ -291,12 +331,11 @@ class Element(ABC):
         Can be due to a temporary inversion (hardware inversion), a parent layout element or if inverted is true and it is printed as such."""
         return self._isInverted
 
-    @styleproperty
+    @styleproperty(vdefault = False).getter
     def inverted(self) -> bool:
         """True if the default inverted state of the element is inverted 
         (i.e. the image made in the generator will be inverted if true)."""
         return self._inverted
-    inverted.configure(default = False)
 
     @inverted.setter
     def inverted(self, value):
@@ -308,14 +347,13 @@ class Element(ABC):
         """
         return self._isTemporaryInverted
 
-    @styleproperty
+    @styleproperty(vdefault = DEFAULT_FEEDBACK_DURATION).getter
     def feedback_duration(self) -> DurationType:
         """Duration of the element's feedback function
         The time an element will stay in 'feedback state', before returning to its normal state.
         Can be set to a string, which will be parsed to the right amount of seconds.
         """
         return self._feedback_duration
-    feedback_duration.configure(default = DEFAULT_FEEDBACK_DURATION)
     
     @feedback_duration.setter
     def feedback_duration(self, value):
@@ -326,17 +364,17 @@ class Element(ABC):
 
         if not isinstance(value, (int,float)):
             msg = f"Feedback duration must be either a valid duration string, or an interger or float. {value} is not valid."
-            _LOGGER.exception(TypeError(msg))
+            raise TypeError(msg)
 
         self._feedback_duration = value
 
-    @styleproperty
+    @styleproperty(vdefault = FEEDBACK_ON_ACTION).getter
     def show_feedback(self) -> bool:
         """Whether the element will show feedback when interacted with"
         If set to ``on_action``, feedback will be shown based on whether an action is called.
         """
         return self._show_feedback
-    show_feedback.configure(default = FEEDBACK_ON_ACTION)
+    # show_feedback.configure(default = FEEDBACK_ON_ACTION)
 
     @show_feedback.setter
     def show_feedback(self, value):
@@ -431,9 +469,9 @@ class Element(ABC):
             ##Technically, for elements directly in the stack, the parentlayout should be none too.
             return ()
 
-        l = list(self.parentLayout.parentLayouts)
-        l.append(self.parentLayout)
-        return tuple(l)
+        # l = list(self.parentLayout.parentLayouts)
+        # l.append(self.parentLayout)
+        return (*self.parentLayout.parentLayouts, self.parentLayout,)
 
     @property
     def isPopup(self) -> bool:
@@ -2346,7 +2384,7 @@ class TileElement(Layout):
         self.__hide = tuple(value_set)
         self._reparse_layout = True
 
-    @styleproperty
+    @styleproperty(vsetraw=True).getter
     def vertical_sizes(self) -> dict[str,PSSMdimension]:
         """Vertical sizing of the tiles.
         Setting this will update from the current values, not overwrite it.
@@ -2356,6 +2394,12 @@ class TileElement(Layout):
     @vertical_sizes.setter
     def vertical_sizes(self, value : dict):
 
+        if Style.is_style_string(value):
+            set_value = value
+            value = TileElement.vertical_sizes.value(self)
+        else:
+            set_value = value
+
         allowed_keys = {"inner", "outer"} | set(self.elements.keys())
         val_keys = set(value.keys()) | allowed_keys
         if val_keys != allowed_keys:
@@ -2363,13 +2407,16 @@ class TileElement(Layout):
             _LOGGER.exception(KeyError(msg))
             return
         
-        if isinstance(self._vertical_sizes, str):
-            self._vertical_sizes = value
+        if Style.is_style_string(set_value):
+            self._vertical_sizes = set_value
+        elif Style.is_style_string(self._vertical_sizes):
+            self._vertical_sizes = TileElement.vertical_sizes.value(self) | value
         else:
             self._vertical_sizes.update(value)
+
         self._reparse_layout = True
 
-    @styleproperty
+    @styleproperty(vsetraw=True).getter
     def horizontal_sizes(self) -> dict[str,PSSMdimension]:
         """Horizontal sizing of the tiles.
         Setting this will update from the current values, not overwrite it.
@@ -2379,6 +2426,13 @@ class TileElement(Layout):
     @horizontal_sizes.setter
     def horizontal_sizes(self, value : dict[str,PSSMdimension]):
 
+        if Style.is_style_string(value):
+            set_value = value
+            value = TileElement.horizontal_sizes.value(self)
+        else:
+            set_value = value
+            # self._horizontal_sizes = value
+
         allowed_keys = {"inner", "outer"} | set(self.elements.keys())
         val_keys = set(value.keys()) | allowed_keys
         if val_keys != allowed_keys:
@@ -2386,8 +2440,10 @@ class TileElement(Layout):
             _LOGGER.exception(KeyError(msg))
             return
 
-        if isinstance(self._horizontal_sizes, str):
-            self._horizontal_sizes = value
+        if Style.is_style_string(set_value):
+            self._horizontal_sizes = set_value
+        elif Style.is_style_string(self._horizontal_sizes):
+            self._horizontal_sizes = TileElement.horizontal_sizes.value(self) | value
         else:
             self._horizontal_sizes.update(value)
         self._reparse_layout = True
@@ -3687,7 +3743,7 @@ class Button(Element):
         """Adjusts the font size automatically to make it fit.
         If true, ``font_size`` will be used as a minimum allowed font_size.
         """
-        if self.resize != False: ##This prevents a value of 0 from messing stuff up
+        if Button.resize.value(self) != False: ##This prevents a value of 0 from messing stuff up
             return True
         return self._fit_text
     
@@ -3702,7 +3758,7 @@ class Button(Element):
         Changes the font_size parameter when needed, such that the text size won't change with every new text. Sizes are not saved upon resets, so finding a good size takes a few changes. 
         The same goes when the element is resized.
         """
-        return self.__resize
+        return self._resize
     
     @resize.setter
     def resize(self, value):
@@ -3711,14 +3767,15 @@ class Button(Element):
                 msg = "Resize cannot be explicitly true, please use an integer or dimensional string"
                 _LOGGER.exception(ValueError(msg))
             else:
-                self.__resize = value
+                self._resize = value
             return
 
         if v := tools.is_valid_dimension(value):
             if isinstance(v,Exception):
-                _LOGGER.exception(v,exc_info=v)
+                raise v
+                # _LOGGER.exception(v,exc_info=v)
             else:
-                self.__resize = value
+                self._resize = value
             
     @styleproperty
     def text_x_position(self) -> Union[int,Literal["l","m","r","s"]]:
@@ -3803,7 +3860,8 @@ class Button(Element):
         If both are integers, or pssm dimensional strings, it will default to 'la'.
         """
         (xAnch,yAnch) = self.get_style_value(self.text_anchor_alignment, self.__class__.text_anchor_alignment.property_name)
-        xAL = self.get_style_value(self.text_x_position, self.__class__.text_x_position.property_name)
+        # xAL = self.get_style_value(self.text_x_position, self.__class__.text_x_position.property_name)
+        xAL = Button.text_x_position.value(self)
         horAL = ["l","m","r","s"]# --> s is not valid but xPosition cannot be set to it anyways
         horDict = { "left": "l",
                     "middle": "m",
@@ -3825,7 +3883,8 @@ class Button(Element):
             hor = "l"
             x = xAL
 
-        yAL = self.get_style_value(self.text_y_position, self.__class__.text_y_position.property_name)
+        # yAL = .get_style_value(self.text_y_position, self.__class__.text_y_position.property_name)
+        yAL = Button.text_y_position.value(self)
         verAL = ["a","t","m","s","b","d"]# --> s is not valid but xPosition cannot be set to it anyways
         verDict = { "ascender": "a",
                     "top": "a" if self.multiline else "t", ##Using t for top instead of a since it aligns it to the top like someone would (likely) expect. a leaves quite some space underneath still
@@ -3920,7 +3979,6 @@ class Button(Element):
 
         self._imgDraw = imgDraw
 
-        f = self.font
         if Button.fit_text.value(self):
             loaded_font = self.fit_text_func(self.text, textArea)
         else:
@@ -4120,25 +4178,26 @@ class ImageElement(Element):
             # self._background_shape = None
             raise ValueError(msg)
 
-    @styleproperty
+    @styleproperty(vdefault={}).getter
     def shape_settings(self) -> dict:
         """Settings for the background shape.
         Advanced setting, generally best to leave it as an emtpy dict. Stuff may not work as intended as I cannot test everything.
         Optional arguments are required using ADVANCED, except for icon_coords (icon will default to being centered)
         """
-        return self._shape_settings.copy()
-    shape_settings.configure(default={})
+        v = self._shape_settings
+        if isinstance(v, dict):
+            return v.copy()
+        return v
     
     @shape_settings.setter
     def shape_settings(self, value:dict):
         value = value.copy()
         self._shape_settings = value
 
-    @styleproperty
+    @styleproperty(vdefault = False).getter
     def mirrored(self) -> bool:
         """Mirrors the element"""
         return self._mirrored
-    mirrored.configure(default = False)
     
     @mirrored.setter
     def mirrored(self,value:bool):
@@ -4285,7 +4344,7 @@ class Picture(ImageElement):
 
         If the image still does not happen to be the correct size, it will be forcibly fitted.
         """
-        return self.__fit_method
+        return self._fit_method
     
     @fit_method.setter
     def fit_method(self, value):
@@ -4294,7 +4353,7 @@ class Picture(ImageElement):
             _LOGGER.warning(msg)
             value = "default"
 
-        self.__fit_method = value
+        self._fit_method = value
 
     @styleproperty
     def fit_method_arguments(self) -> dict:
@@ -4308,11 +4367,11 @@ class Picture(ImageElement):
         
         ##For resampling method: each method has an integer value: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Resampling.NEAREST
         ##Do apply a check for method, i.e. it must be an integer value
-        return self.__fit_method_arguments.copy()
+        return self._fit_method_arguments
     
     @fit_method_arguments.setter
     def fit_method_arguments(self, value):
-        self.__fit_method_arguments = MappingProxyType(value)
+        self._fit_method_arguments = MappingProxyType(value)
     
     @property
     def _area(self):
@@ -4640,7 +4699,7 @@ class Icon(ImageElement):
     def rotation(self, value:Union[int,float]):
         self._rotation = value
 
-    @colorproperty
+    @colorproperty(vallowsnone=False).getter
     def icon_color(self) -> Union[ColorType,bool]:
         """Color of the icon. 
         If a boolean and an mdi icon, the color is set automatically for best contrast. 
@@ -4649,7 +4708,6 @@ class Icon(ImageElement):
         I would advise against using booleans on screens that are not black and white.
         """
         return self._icon_color
-    icon_color.configure(allows_none=False)
 
     @colorproperty
     def badge_color(self):
@@ -4686,8 +4744,9 @@ class Icon(ImageElement):
 
     @shape_settings.setter
     def shape_settings(self, value:dict):
-        value = value.copy()
-        self._shape_settings = value
+        if not isinstance(value, (dict,MappingProxyType)):
+            raise TypeError("Shape settings must be a dict")
+        # self._shape_settings = value
 
     # ---------------------------- Boolean properties ---------------------------- #
     @styleproperty
@@ -6345,7 +6404,7 @@ class _IntervalUpdate(ABC):
             self.__update_every = None
             return
         elif value not in allowed:
-            msg = f"Updateinterval must be one of hour, minute or second"
+            msg = "Updateinterval must be one of hour, minute or second"
             _LOGGER.error(msg)
             if const.RAISE: raise ValueError(msg)
         else:
