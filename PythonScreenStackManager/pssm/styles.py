@@ -2,6 +2,7 @@
 import logging
 from typing import TYPE_CHECKING, Any, Union
 import inspect
+import sys
 from copy import deepcopy
 from PIL import ImageFont
 from pathlib import Path
@@ -160,7 +161,7 @@ class Style:
                 # element = element.__class__.__name__
                 # parent_classes = 
                 s = element.styleOwnerString
-                d["owner"] = element.styleClass
+                d["owner"] = element.styleOwnerString
             elif not element:
                 d["owner"] = Element.__name__
         
@@ -175,6 +176,16 @@ class Style:
             return "::".join((d["style"],d["owner"],d["prop"]))
         except Exception as exce:
             print(exce)
+
+    @classmethod
+    def _split_style_class(cls, style_class : str) -> tuple[str, str]:
+        """Convenience method to split up an element's styleClass string
+        If not style_class is set, it simply returns a tuple with two duplicate values
+        """
+        if STYLE_PARENTCLASS_SEPERATOR in style_class:
+            return tuple(style_class.split(STYLE_PARENTCLASS_SEPERATOR, 1))
+        else:
+            return style_class, style_class
 
 
     @classmethod
@@ -225,7 +236,7 @@ class Style:
 
         if len(style_tuple) not in (1,2,3):
             msg = "A style string must return at most 3 parts"
-            raise ValueError(msg)
+            # raise ValueError(msg)
         return style_tuple
 
     @classmethod
@@ -240,40 +251,82 @@ class Style:
         style_tuple = cls._construct_style_tuple(style_value)
         style_length = len(style_tuple)
         if style_length > 3:
-            raise ValueError("A style string can be made up of 3 components at most")
-        elif style_length != 3:
+            pass
+            # raise ValueError("A style string can be made up of 3 components at most")
+        elif style_length < 3:
             style_tuple = cls._construct_style_tuple(
                 cls.construct_style_string(style_value, element = element, property_name=property_name))
 
-        (style, owner, prop) = style_tuple
+        # (style, owner, prop) = style_tuple
+        style, prop = style_tuple[0], style_tuple[-1]
+        
+        owner = style_tuple[1:-1]  ##Again, idk what parts this includes exactly
 
-        if STYLE_PARENTCLASS_SEPERATOR in owner:
-            owners = owner.split(STYLE_PARENTCLASS_SEPERATOR)
+        ##Will change the setup here:
+        ##styletuple can be larger than 3, BUT 0 and -1 are style and prop still.
+        # if STYLE_PARENTCLASS_SEPERATOR in owner:
+        if len(owner) > 1:
+            # owners = owner.split(STYLE_PARENTCLASS_SEPERATOR)
+            owners = owner
             # owner_name = owners[-1]
 
             ##Don't forget to check if this includes or excludes the last one
             cur_tree = cls.base_style_tree
-            for parent_owner in owners[:-1]:
+            for parent_owner_string in owners[:-1]:
+                styleclass, parent_owner = cls._split_style_class(parent_owner_string)
+                # if STYLE_PARENTCLASS_SEPERATOR in parent_owner_string:
+                #     styleclass, parent_owner = parent_owner_string.split(STYLE_PARENTCLASS_SEPERATOR)
+                # else:
+                #     styleclass, parent_owner = parent_owner_string, parent_owner_string
+
                 if parent_owner not in cls._knownowners:
                     raise KeyError(f"Unknown element class {parent_owner} in style string {style_value}")
                 
-                elif parent_owner not in cur_tree:
+                if styleclass in cur_tree:
+                    ##Honestly in here, need to have all things seperated already I think?
+                    ##Or at least be able to track the previous one, so its possible to take a step back to the class.
+
+                    ##Because: styleclass may not contain it but yada yada
+                    cur_tree = cur_tree[styleclass]
+                elif parent_owner in cur_tree:
+                    cur_tree = cur_tree[parent_owner]
+                else:
                     ##check for base tree? Or simply break here regardless.
                     ##Also, to make it easier to reference styles from other things: simply use style::Parent::Owner AS THE STYLE VALUE
                     _LOGGER.debug(f"Unable to fully traverse style tree for owners {owner}")
                     cur_tree = cls.base_style_tree
                     break
-                else:
-                    cur_tree = cur_tree[parent_owner]
-            owner = owners[-1]
-        elif owner in cls._knownowners:
-            cur_tree = cls.base_style_tree            
+                    
+            # owner = owners[-1]
+            style_class, owner = cls._split_style_class(owners[-1])
+            if owner not in cur_tree:   ##Do the fallback in here probably?
+                _LOGGER.warning(f"No child style for {owner} found after traversing owners {owners}, reverting to base tree")
+                cur_tree = cls.base_style_tree
+            elif not (prop in cur_tree[style_class] or prop in cur_tree[owner]):
+                ##This does mean the property is checked twice if it is in there, but it is probably the best way to do so.
+                cur_tree = cls.base_style_tree
+            else:
+                _LOGGER.info("Traversed style tree in full")
         else:
-            raise KeyError(f"Unknown element class {owner} in style string {style_value}") 
+            style_class, owner = cls._split_style_class(owner[0])
+            cur_tree = cls.base_style_tree
 
-        if prop in cls.base_style_tree.get(owner,{}):
-            val = cls.base_style_tree[owner][prop]
-            # return val
+        # if owner in cls._knownowners:
+        #     cur_tree = cls.base_style_tree
+        # elif STYLE_PARENTCLASS_SEPERATOR in owner:
+        #     ##Would this work? How to handle styleclass being default but then reverting to owner by default?
+        #     ##Or in the other case set both variables to owner?
+        #     styleclass, owner = owner.split(STYLE_PARENTCLASS_SEPERATOR)
+        # else:
+        #     styleclass, owner = owner, owner
+            # raise KeyError(f"Unknown element class {owner} in style string {style_value}") 
+
+        # if prop in cls.base_style_tree.get(owner,{}):
+        if prop in cur_tree.get(style_class,{}):
+            # val = cls.base_style_tree[owner][prop]
+            val = cur_tree[style_class][prop]
+        elif prop in cur_tree.get(owner,{}):
+            val = cur_tree[owner][prop]
         else:
             bases = inspect.getmro(styleproperty._element_classes[owner])
 
@@ -694,7 +747,79 @@ class styleproperty(customproperty):
         if element_cls.__name__ in cls._style_tree_root:
             return cls._style_tree_root[element_cls.__name__]
         return {}
+    
+    @classmethod
+    def child_styles(cls, style_tree : dict[Union[type["Element"],str],dict]):
+        """Add a style tree for elements with this element type as styleParent
 
+        Parameters
+        ----------
+        style_tree : dict[Union[type[&quot;Element&quot;],str],dict]
+            The style tree to add. Preferably add the class of the child elements, although a name can also be used.
+        """
+        
+        ##What to return here? Probably a new property, may a subclass of this one.
+        ##Mainly required when __set_name__ is being called.
+        ##But also: not a property though?
+        ##Idk just experiment and see what happens with this tbh
+        ##Decorator can be used but must be a function then?
+        ##So idk, can do so, and simply require a function to return a dict. I believe that should work at least
+        ##Other options would require setting an attribute anyways, so this should work too I think.
+
+        ##See python docs on descriptor. It says __set_name__ is always called?
+        ##check that, idk.
+        ##But can do it. It does not necessarily need a function, but does perhaps need a classvariable for itself.
+        return _childstyles(style_tree)
+        return "child_styles"
+
+class _childstyles(styleproperty):
+
+    # def __init__(self, fget=None, fset=None, fdel=None, doc=None, *, vdefault=Style.NONESTYLE, vsetraw=False):
+    #     super().__init__(fget, fset, fdel, doc, vdefault=vdefault, vsetraw=vsetraw)
+
+    def __init__(self, child_tree : dict):
+
+        d = {}
+        for k, v in child_tree.items():
+            if inspect.isclass(k) and issubclass(k, self._base_element_class):
+                k_new = k.__name__
+                d[k_new] = v
+            elif isinstance(k, str):
+                d[k] = v
+            else:
+                raise TypeError("Child tree keys must be a string or element class")
+                
+
+        self._child_tree = d
+        # super().__init__(fget=self._fget)
+
+    def getter(self, fget):
+        return type(self)(fget)
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        return self._child_tree
+    
+    def __set_name__(self, owner, name):
+        owner_elt = owner.__name__
+
+        if owner_elt not in styleproperty._style_tree_root:
+            styleproperty._style_tree_root[owner_elt] = {}
+
+        owner_tree = styleproperty._style_tree_root[owner_elt]
+        for child_owner, style_tree in self._child_tree.items():
+            owner_tree[child_owner] = style_tree
+
+        return
+        # return super().__set_name__(owner, name)
+    
+    def _validate_tree(self):
+        ##Validate if classes are valid?
+        ##Eh honestly. Consenting adults and whatnot.
+
+        ##Do I guess test if everything is a style property, but I guess that should also happen for most things. idk.
+        return
 
 
 class colorproperty(styleproperty):
