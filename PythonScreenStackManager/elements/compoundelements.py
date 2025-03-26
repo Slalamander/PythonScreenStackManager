@@ -516,59 +516,6 @@ class Tile(base.TileElement):
             layoutstr = value
         return layoutstr
 
-    # @property
-    # def vertical_sizes(self) -> 'Tile._EltSizeDict':
-    #     "Vertical sizes for the elements. Returns the default values when set to default, not 'default'"
-    #     if self._vertical_sizes != "default":
-    #         return self._vertical_sizes
-    #     else:
-    #         size_key = self.tile_layout if self.tile_layout in {"horizontal", "vertical"} else "custom"
-
-    #         return Tile.defaultVerticalSizes[size_key].copy()
-    
-    # @vertical_sizes.setter
-    # def vertical_sizes(self, value : dict):
-    #     if value == self._vertical_sizes:
-    #         return
-        
-    #     self._reparse_layout = True
-    #     if value == "default":
-    #         self._vertical_sizes = value
-    #         return
-        
-    #     if self._vertical_sizes == "default":
-    #         if self.__tile_layout in self.defaultVerticalSizes:
-    #             self._vertical_sizes = self.defaultVerticalSizes.get(self.__tile_layout, {})
-    #         else:
-    #             self._vertical_sizes = self.defaultVerticalSizes["custom"]
-    #     base.TileElement.vertical_sizes.fset(self,value)
-
-    # @property
-    # def horizontal_sizes(self) -> 'Tile._EltSizeDict':
-    #     "Horizontal sizes for the elements. Returns the default values when set to default, not 'default'"
-    #     if self._horizontal_sizes != "default":
-    #         return self._horizontal_sizes
-    #     else:
-    #         size_key = self.tile_layout if self.tile_layout in {"horizontal", "vertical"} else "custom"
-    #         return Tile.defaultHorizontalSizes[size_key].copy()
-
-    # @horizontal_sizes.setter
-    # def horizontal_sizes(self, value : dict):
-    #     if value == self._horizontal_sizes:
-    #         return
-    #     self._reparse_layout = True
-    #     if value == "default":
-    #         self._horizontal_sizes = value
-    #         return
-        
-    #     if self._horizontal_sizes == "default":
-    #         if self.__tile_layout in self.defaultHorizontalSizes:
-    #             self._horizontal_sizes = self.defaultHorizontalSizes.get(self.__tile_layout, {})
-    #         else:
-    #             self._horizontal_sizes = self.defaultHorizontalSizes["custom"]
-
-    #     base.TileElement.horizontal_sizes.fset(self,value)
-
     #region subelements
     @property
     def elements(self) -> MappingProxyType[Literal['icon', 'text', 'title'],base.Element]:
@@ -700,33 +647,6 @@ class Tile(base.TileElement):
         # if self.id == "debug-tile":
         #     self.imgData.show()
         return self.imgData
-
-    # async def async_generate(self, area = None, skipNonLayoutGen=False):
-
-    #     async with self._generatorLock:
-    #         if area==None:
-    #             area = self.area
-            
-    #         if area == None:
-    #             return
-
-    #         if self.__tile_layout in {"horizontal", "vertical"}:
-    #             if (l := self._build_tile_layout_str(self.__tile_layout)) != self._layoutstr:
-    #                 self._layoutstr = l
-    #                 self._reparse_layout = True
-
-    #         if self._layoutstr != None and self._reparse_layout:
-    #             old_layout = self.layout
-    #             new_layout = base.parse_layout_string(self._layoutstr, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
-    #             if new_layout != old_layout:
-    #                 self._layout = new_layout
-    #                 skipNonLayoutGen=False
-    #                 self.set_parent_layouts(old_layout,self._layout)
-    #                 self._rebuild_area_matrix = True
-
-    #             self._reparse_layout = False
-
-    #     return await super().async_generate(area, skipNonLayoutGen)
 
     async def pre_generate(self, area=None, skipNonLayoutGen=False):
         
