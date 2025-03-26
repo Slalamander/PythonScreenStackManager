@@ -116,21 +116,21 @@ class Tile(base.TileElement):
         outer: PSSMdimension
         inner: PSSMdimension
 
-    _default_horizontal_sizes = {"horizontal": _EltSizeDict(icon="h", text="?", title="?", outer="h*0.05", inner="h*0.1"),
+    defaultHorizontalSizes = {"horizontal": _EltSizeDict(icon="h", text="?", title="?", outer="h*0.05", inner="h*0.1"),
                 "vertical": _EltSizeDict(icon="?", text="?", title="?", outer="h*0.02", inner=0),
                 "custom": _EltSizeDict(icon="?", text="?", title="?", outer=0, inner=0)}
     
-    _default_vertical_sizes = {"horizontal": _EltSizeDict(icon="?", text="?/2", title="?/2", outer="h*0.15", inner=8),
+    defaultVerticalSizes = {"horizontal": _EltSizeDict(icon="?", text="?/2", title="?/2", outer="h*0.15", inner=8),
                 "vertical": _EltSizeDict(icon="?*5", text="?", title="?", outer="?", inner=8),
                 "custom": _EltSizeDict(icon="?", text="?", title="?", outer=0, inner=0)}
 
     def __init__(self, icon : Union[mdiType,str], text : str , title : str = None, 
                 tile_layout : Union[Literal["vertical", "horizontal"], PSSMLayoutString] = "vertical", hide : 'Tile._HideDict' = (),
-                horizontal_sizes : Union['Tile._EltSizeDict',Literal["default"]] = "default", vertical_sizes : Union['Tile._EltSizeDict',Literal["default"]] = "default",
+                horizontal_sizes : Union['Tile._EltSizeDict',Literal["default"]] = {}, vertical_sizes : Union['Tile._EltSizeDict',Literal["default"]] = {},
                 foreground_color : ColorType = DEFAULT_FOREGROUND_COLOR,  background_color : ColorType = DEFAULT_BACKGROUND_COLOR, outline_color : Optional[ColorType] = None,
                 background_shape : Optional[Union[DrawShapes.shapeTypes,Literal["default"]]]  = "default", shape_settings : dict = {},
                 badge_icon : Optional[Union[mdiType,str]] = None, badge_settings : dict = {}, badge_location : Optional[BadgeLocationType] = "UR",
-                element_properties : dict = {"icon": {"icon_color": 'foreground'}, "text": {"font_color": "foreground"}, "title": {"font": DEFAULT_FONT_HEADER, "font_color": "foreground"}},
+                element_properties : dict = {"icon": {}, "text": {}, "title": {}},
                 _IconElement : base.Icon = None, _TextElement : base.Button = None, _TitleElement : base.Button = None, 
                 
                 **kwargs):
@@ -142,7 +142,7 @@ class Tile(base.TileElement):
 
             if background_shape == "default": background_shape = None
 
-        self.__tile_layout = tile_layout
+        self.tile_layout = tile_layout
 
         self.background_shape = background_shape
         self.shape_settings = shape_settings
@@ -161,9 +161,11 @@ class Tile(base.TileElement):
             _IconElement._styleParent = self
 
         if _TextElement == None:
-            self.__TextElement = base.Button(text, text_x_position="m", _register = False)
+            # self.__TextElement = base.Button(text, text_x_position="m", _register = False, styleParent = self)
+            self.__TextElement = base.Button(text, _register = False, styleParent = self)
         else:
             self.__TextElement = _TextElement
+            _TextElement._styleParent = self
 
         if _TitleElement == None:
             if title == None:
@@ -171,13 +173,16 @@ class Tile(base.TileElement):
                 if "title" not in hide:
                     hide = list(hide)
                     hide.append("title")
-            self.__TitleElement = base.Button(title, text_x_position="m", _register = False)
+            self.__TitleElement = base.Button(title, _register = False, styleParent = self,  style_class = "Title")
         else:
             self.__TitleElement = _TitleElement
+            _TitleElement._styleParent = self
+            if not _TitleElement.style_class: _TitleElement.style_class = "Title"
 
         self.__elements = MappingProxyType({'icon': self.__IconElement, 'text': self.__TextElement, 'title': self.__TitleElement})
         
-        default_properties = {"icon": {"icon_color": 'foreground', 'background_color': 'accent', "background_shape": "circle"}, "text": {"font_color": "foreground"}, "title": {"font": DEFAULT_FONT_HEADER, "font_color": "foreground"}}
+        # default_properties = {"icon": {"icon_color": 'foreground', 'background_color': 'accent', "background_shape": "circle"}, "text": {"font_color": "foreground"}, "title": {"font": DEFAULT_FONT_HEADER, "font_color": "foreground"}}
+        default_properties = {"icon": {}, "text": {}, "title": {}}
 
         for elt in default_properties:
             set_props = element_properties.get(elt, {})
@@ -194,17 +199,21 @@ class Tile(base.TileElement):
         else:
             size_key = "custom"
 
-        element_properties["text"].setdefault("text_x_position", text_x_position)
-        element_properties["title"].setdefault("text_x_position", text_x_position)
+        ##Setting these via styling: Either change how styleClass works (by registering i.e. Vertical.Tile & Horizontal.Tile)
+        ##But that would again complicate how styletrees are traversed upon missing things I would say?
+        # element_properties["text"].setdefault("text_x_position", text_x_position)
+        # element_properties["title"].setdefault("text_x_position", text_x_position)
 
-        if horizontal_sizes != "default":
+        # if horizontal_sizes != "default" and not Style.is_style_string(horizontal_sizes):
+        if type(horizontal_sizes) == dict:
             horizontal_sizes = dict(horizontal_sizes)
-            for key, value in Tile._default_horizontal_sizes[size_key].items():
+            for key, value in Tile.defaultHorizontalSizes[size_key].items():
                 horizontal_sizes.setdefault(key, value)
 
-        if vertical_sizes != "default":
+        if isinstance(vertical_sizes, dict):
+            ##Check how styleprops are identified in the elementwindow
             vertical_sizes = dict(vertical_sizes)
-            for key, value in Tile._default_vertical_sizes[size_key].items():
+            for key, value in Tile.defaultVerticalSizes[size_key].items():
                 vertical_sizes.setdefault(key, value)
 
         ##background_color foreground_color etc are not set to style values
@@ -238,6 +247,56 @@ class Tile(base.TileElement):
         return
     
     #region
+
+    ##For additional styleClasses: determine how to identify childStyles in there, and handle it from there.
+    childStyles = styleproperty.child_styles(
+        {base.Icon : {"background_shape": "circle",
+                    "icon_color": "foreground",
+                    "background_color": "accent",
+                    },
+        base.Button : {"font_color": "green"},
+        ##Ok, so, here is already the case for allowing custom classes, since the title button should have a (slightly) different style
+        ##However, in determining a value here, I would like it to automatically take the font_color from the above base config for button.
+        ##Which means that, somehow, the class for Title should be included?
+        
+        ##So, have styleclass handle backups somehow -> yeah. But require the classes to be defined.?
+
+        ##How to: make styleClass settable (set to None for reset)
+        ##Have the logic for multiple owners handle the backup classing
+
+        ##More questions: how to handle styleParent with style_classes?
+        ##Other option would be seperating parents via the :: notation and style_class.class with the .
+        "Title": {
+                "Class": (base.Button,),
+                "font": DEFAULT_FONT_HEADER}
+                    })
+
+    styleClasses = styleproperty.style_classes({
+            "Horizontal": {
+                "background_shape": "rounded_rectangle",
+                "horizontal_sizes": _EltSizeDict(icon="h", text="?", title="?", outer="h*0.05", inner="h*0.1"),
+                "vertical_sizes": _EltSizeDict(icon="?", text="?/2", title="?/2", outer="h*0.15", inner=8),
+                "Button": {"text_x_position": "l"}},
+            "Vertical": {
+                "background_shape": "rounded_rectangle",
+                "horizontal_sizes": _EltSizeDict(icon="?", text="?", title="?", outer="h*0.02", inner=0),
+                "vertical_sizes": _EltSizeDict(icon="?*5", text="?", title="?", outer="?", inner=8),
+                "Button": {"text_x_position": "m"}}})
+
+    @base.Element.style_class.getter
+    def style_class(self):
+        sc = self._style_class
+        if sc is None:
+            tl = getattr(self, "tile_layout", None)
+            if tl == "horizontal":
+                return "Horizontal"
+            elif tl == "vertical":
+                return "Vertical"
+            else:
+                return None
+        else:
+            return sc
+
     @colorproperty
     def background_color(self) -> Union[ColorType,None]:
         "Background color of the element. Automatically set to None if background_shape is used."
@@ -411,7 +470,7 @@ class Tile(base.TileElement):
     def tile_layout(self, value : Union[Literal["horizontal", "vertical", "hor", "ver"],PSSMLayoutString]):
         if not isinstance(value,str):
             ##Maybe do allow for this but call the is_layout_valid
-            msg = f"tile_layout must be a string. Set the layout itself to alter it directly?"
+            msg = "tile_layout must be a string. Set the layout itself to alter it directly?"
             _LOGGER.error(TypeError(msg))
             return
         
@@ -424,7 +483,8 @@ class Tile(base.TileElement):
             else:
                 self.__tile_layout = "vertical"
             
-            self._layoutstr = self._build_tile_layout_str(value)
+            if hasattr(self, "_IconElement"):
+                self._layoutstr = self._build_tile_layout_str(value)
         self._reparse_layout = True
 
     def _build_tile_layout_str(self, value : str):
@@ -456,58 +516,58 @@ class Tile(base.TileElement):
             layoutstr = value
         return layoutstr
 
-    @property
-    def vertical_sizes(self) -> 'Tile._EltSizeDict':
-        "Vertical sizes for the elements. Returns the default values when set to default, not 'default'"
-        if self._vertical_sizes != "default":
-            return self._vertical_sizes
-        else:
-            size_key = self.tile_layout if self.tile_layout in {"horizontal", "vertical"} else "custom"
+    # @property
+    # def vertical_sizes(self) -> 'Tile._EltSizeDict':
+    #     "Vertical sizes for the elements. Returns the default values when set to default, not 'default'"
+    #     if self._vertical_sizes != "default":
+    #         return self._vertical_sizes
+    #     else:
+    #         size_key = self.tile_layout if self.tile_layout in {"horizontal", "vertical"} else "custom"
 
-            return Tile._default_vertical_sizes[size_key].copy()
+    #         return Tile.defaultVerticalSizes[size_key].copy()
     
-    @vertical_sizes.setter
-    def vertical_sizes(self, value : dict):
-        if value == self._vertical_sizes:
-            return
+    # @vertical_sizes.setter
+    # def vertical_sizes(self, value : dict):
+    #     if value == self._vertical_sizes:
+    #         return
         
-        self._reparse_layout = True
-        if value == "default":
-            self._vertical_sizes = value
-            return
+    #     self._reparse_layout = True
+    #     if value == "default":
+    #         self._vertical_sizes = value
+    #         return
         
-        if self._vertical_sizes == "default":
-            if self.__tile_layout in self._default_vertical_sizes:
-                self._vertical_sizes = self._default_vertical_sizes.get(self.__tile_layout, {})
-            else:
-                self._vertical_sizes = self._default_vertical_sizes["custom"]
-        base.TileElement.vertical_sizes.fset(self,value)
+    #     if self._vertical_sizes == "default":
+    #         if self.__tile_layout in self.defaultVerticalSizes:
+    #             self._vertical_sizes = self.defaultVerticalSizes.get(self.__tile_layout, {})
+    #         else:
+    #             self._vertical_sizes = self.defaultVerticalSizes["custom"]
+    #     base.TileElement.vertical_sizes.fset(self,value)
 
-    @property
-    def horizontal_sizes(self) -> 'Tile._EltSizeDict':
-        "Horizontal sizes for the elements. Returns the default values when set to default, not 'default'"
-        if self._horizontal_sizes != "default":
-            return self._horizontal_sizes
-        else:
-            size_key = self.tile_layout if self.tile_layout in {"horizontal", "vertical"} else "custom"
-            return Tile._default_horizontal_sizes[size_key].copy()
+    # @property
+    # def horizontal_sizes(self) -> 'Tile._EltSizeDict':
+    #     "Horizontal sizes for the elements. Returns the default values when set to default, not 'default'"
+    #     if self._horizontal_sizes != "default":
+    #         return self._horizontal_sizes
+    #     else:
+    #         size_key = self.tile_layout if self.tile_layout in {"horizontal", "vertical"} else "custom"
+    #         return Tile.defaultHorizontalSizes[size_key].copy()
 
-    @horizontal_sizes.setter
-    def horizontal_sizes(self, value : dict):
-        if value == self._horizontal_sizes:
-            return
-        self._reparse_layout = True
-        if value == "default":
-            self._horizontal_sizes = value
-            return
+    # @horizontal_sizes.setter
+    # def horizontal_sizes(self, value : dict):
+    #     if value == self._horizontal_sizes:
+    #         return
+    #     self._reparse_layout = True
+    #     if value == "default":
+    #         self._horizontal_sizes = value
+    #         return
         
-        if self._horizontal_sizes == "default":
-            if self.__tile_layout in self._default_horizontal_sizes:
-                self._horizontal_sizes = self._default_horizontal_sizes.get(self.__tile_layout, {})
-            else:
-                self._horizontal_sizes = self._default_horizontal_sizes["custom"]
+    #     if self._horizontal_sizes == "default":
+    #         if self.__tile_layout in self.defaultHorizontalSizes:
+    #             self._horizontal_sizes = self.defaultHorizontalSizes.get(self.__tile_layout, {})
+    #         else:
+    #             self._horizontal_sizes = self.defaultHorizontalSizes["custom"]
 
-        base.TileElement.horizontal_sizes.fset(self,value)
+    #     base.TileElement.horizontal_sizes.fset(self,value)
 
     #region subelements
     @property
@@ -586,27 +646,29 @@ class Tile(base.TileElement):
 
         [(x,y),(w,h)] = self.area
 
-        img = super().generator(area, skipNonLayoutGen)
-        
+
         self._feedbackImg = None
 
-        if self.background_shape is not None:
-            background_shape = self.background_shape
-            if self.background_shape == "default":
-                if self.tile_layout == "vertical": background_shape = "rounded_rectangle"
-                if self.tile_layout == "horizontal": background_shape = "rounded_rectangle"
-
-                if background_shape == "default": background_shape = None
+        background_shape = Tile.background_shape.value(self)
+        if background_shape is not None:
+            # if self.background_shape == "default":
+            #     if self.tile_layout == "vertical": background_shape = "rounded_rectangle"
+            #     if self.tile_layout == "horizontal": background_shape = "rounded_rectangle"
+            img = super().generator(area, skipNonLayoutGen, apply_background_color=False)
+        
+            if background_shape == "default": background_shape = None
 
             draw_func = DrawShapes.get_draw_function(background_shape)
-            draw_args = self.shape_settings
-            if self.background_shape == "ADVANCED":
+            draw_args = Tile.shape_settings.value(self)
+            if background_shape == "ADVANCED":
                 method = draw_args.pop("method")
                 shape_img, _ = DrawShapes.draw_advanced(img,method,draw_args, paste=False)
-            else:    
+            else:
+                draw_args.setdefault("fill", Tile.background_color.value(self))
                 shape_img, _ = draw_func(img, draw_args, paste=False)
+            
 
-            if self.show_feedback and self.background_shape != "ADVANCED":
+            if self.show_feedback and background_shape != "ADVANCED":
                 fb_scale = 0.85
                 fb_scaled = ImageOps.scale(img, fb_scale)
 
@@ -626,9 +688,15 @@ class Tile(base.TileElement):
 
                 self._feedbackImg = fb_shape
             
+            shape_alpha = shape_img.getchannel("A")
             shape_img.alpha_composite(img)
-            self._imgData = shape_img
-
+            shape_img.putalpha(shape_alpha)
+            img = shape_img
+        else:
+            img = super().generator(area, skipNonLayoutGen, apply_background_color=True)
+        
+        self._imgData = img
+        
         # if self.id == "debug-tile":
         #     self.imgData.show()
         return self.imgData
@@ -669,7 +737,10 @@ class Tile(base.TileElement):
 
         if self._layoutstr != None and self._reparse_layout:
             old_layout = self.layout
-            new_layout = base.parse_layout_string(self._layoutstr, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
+            new_layout = base.parse_layout_string(self._layoutstr, None, self.hide, 
+                                Tile.vertical_sizes.value(self), 
+                                Tile.horizontal_sizes.value(self),
+                                **self.elements)
             if new_layout != old_layout:
                 self._layout = new_layout
                 skipNonLayoutGen=False
