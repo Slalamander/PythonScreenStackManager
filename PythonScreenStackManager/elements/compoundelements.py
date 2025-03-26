@@ -89,7 +89,7 @@ class Tile(base.TileElement):
     def defaultLayouts(cls):
         return {"vertical": "icon;title;text", "horizontal": "icon,[title;text]"}
 
-    _restricted_element_properties : dict[str,set[str]] = {"icon": {"icon", "badge_icon", "badge_settings"}, "text": {"text"}, "title": {"text"}}
+    _restricted_element_properties : dict[str,set[str]] = {"icon": {"icon"}, "text": {"text"}, "title": {"text"}}
     "Properties of the elements that are not allowed to be set."
 
     emulator_icon = "mdi:image-text"
@@ -98,9 +98,6 @@ class Tile(base.TileElement):
         icon : base.Icon
         text : base.Button
         title : base.Button
-
-    _resricted_properties = {"icon": {"icon", "badge_icon", "badge_settings"}, "text": {"text"}, "title": {"text"}}
-    "Properties not allowed to be set in element_properties. Not in use, preferably use `_restricted_element_properties`"
 
     class _HideDict(TypedDict):
         "Type hint for the hide Dict"
@@ -128,19 +125,11 @@ class Tile(base.TileElement):
                 tile_layout : Union[Literal["vertical", "horizontal"], PSSMLayoutString] = "vertical", hide : 'Tile._HideDict' = (),
                 horizontal_sizes : Union['Tile._EltSizeDict',Literal["default"]] = {}, vertical_sizes : Union['Tile._EltSizeDict',Literal["default"]] = {},
                 foreground_color : ColorType = DEFAULT_FOREGROUND_COLOR,  background_color : ColorType = DEFAULT_BACKGROUND_COLOR, outline_color : Optional[ColorType] = None,
-                background_shape : Optional[Union[DrawShapes.shapeTypes,Literal["default"]]]  = "default", shape_settings : dict = {},
-                badge_icon : Optional[Union[mdiType,str]] = None, badge_settings : dict = {}, badge_location : Optional[BadgeLocationType] = "UR",
+                background_shape : Optional[Union[DrawShapes.shapeTypes]]  = None, shape_settings : dict = {},
                 element_properties : dict = {"icon": {}, "text": {}, "title": {}},
                 _IconElement : base.Icon = None, _TextElement : base.Button = None, _TitleElement : base.Button = None, 
                 
                 **kwargs):
-
-        if background_shape == "default":
-            if tile_layout == "vertical": 
-                background_shape = "rounded_rectangle"
-            if tile_layout == "horizontal": background_shape = "rounded_rectangle"
-
-            if background_shape == "default": background_shape = None
 
         self.tile_layout = tile_layout
 
@@ -161,7 +150,6 @@ class Tile(base.TileElement):
             _IconElement._styleParent = self
 
         if _TextElement == None:
-            # self.__TextElement = base.Button(text, text_x_position="m", _register = False, styleParent = self)
             self.__TextElement = base.Button(text, _register = False, styleParent = self)
         else:
             self.__TextElement = _TextElement
@@ -181,7 +169,6 @@ class Tile(base.TileElement):
 
         self.__elements = MappingProxyType({'icon': self.__IconElement, 'text': self.__TextElement, 'title': self.__TitleElement})
         
-        # default_properties = {"icon": {"icon_color": 'foreground', 'background_color': 'accent', "background_shape": "circle"}, "text": {"font_color": "foreground"}, "title": {"font": DEFAULT_FONT_HEADER, "font_color": "foreground"}}
         default_properties = {"icon": {}, "text": {}, "title": {}}
 
         for elt in default_properties:
@@ -190,22 +177,14 @@ class Tile(base.TileElement):
 
         element_properties = default_properties
 
-        text_x_position = "m"
         if tile_layout in ["vertical", "ver"]:
             size_key = "vertical"
         elif tile_layout in ["horizontal", "hor"]:
             size_key = "horizontal"
-            text_x_position = "l"
         else:
             size_key = "custom"
 
-        ##Setting these via styling: Either change how styleClass works (by registering i.e. Vertical.Tile & Horizontal.Tile)
-        ##But that would again complicate how styletrees are traversed upon missing things I would say?
-        # element_properties["text"].setdefault("text_x_position", text_x_position)
-        # element_properties["title"].setdefault("text_x_position", text_x_position)
-
-        # if horizontal_sizes != "default" and not Style.is_style_string(horizontal_sizes):
-        if type(horizontal_sizes) == dict:
+        if isinstance(horizontal_sizes, dict):
             horizontal_sizes = dict(horizontal_sizes)
             for key, value in Tile.defaultHorizontalSizes[size_key].items():
                 horizontal_sizes.setdefault(key, value)
@@ -230,10 +209,6 @@ class Tile(base.TileElement):
         if setList["setIcon"]:
             self.icon = icon
         
-        self.badge_icon = badge_icon
-        self.badge_settings = badge_settings
-        self.badge_location = badge_location
-
         if setList["setText"]:
             self.text = text
         
@@ -253,19 +228,9 @@ class Tile(base.TileElement):
         {base.Icon : {"background_shape": "circle",
                     "icon_color": "foreground",
                     "background_color": "accent",
+                    "badge_location": "UR",
                     },
         base.Button : {"font_color": "green"},
-        ##Ok, so, here is already the case for allowing custom classes, since the title button should have a (slightly) different style
-        ##However, in determining a value here, I would like it to automatically take the font_color from the above base config for button.
-        ##Which means that, somehow, the class for Title should be included?
-        
-        ##So, have styleclass handle backups somehow -> yeah. But require the classes to be defined.?
-
-        ##How to: make styleClass settable (set to None for reset)
-        ##Have the logic for multiple owners handle the backup classing
-
-        ##More questions: how to handle styleParent with style_classes?
-        ##Other option would be seperating parents via the :: notation and style_class.class with the .
         "Title": {
                 "Class": (base.Button,),
                 "font": DEFAULT_FONT_HEADER}
@@ -315,10 +280,6 @@ class Tile(base.TileElement):
         else:
             return self._radius
 
-    # @radius.setter
-    # def radius(self, value):
-    #     base.Layout.radius.fset(self, value)
-
     @styleproperty
     def background_shape(self) -> Optional[DrawShapes.shapeTypes]:
         """
@@ -335,8 +296,6 @@ class Tile(base.TileElement):
         elif value.lower() not in DrawShapes.shapeTypes.__args__ and value != "ADVANCED":
             msg = f"{value} is not recognised as a valid background shape"
             raise ValueError(msg)
-        
-        # self._background_shape = value
 
     @styleproperty
     def shape_settings(self) -> dict:
@@ -381,56 +340,6 @@ class Tile(base.TileElement):
         base.Icon._icon_setter(self, "_icon", value, allow_none=True)        
         
         self._IconElement.update({"icon": self.icon}, skipPrint=self.isUpdating, skipGen=self.isGenerating)
-
-    @property
-    def badge_icon(self) -> Optional[mdiType]:
-        """
-        Icon to use as a badge for the Tile's Icon element. Must be None or an mdi icon
-        """
-        return self._badge_icon
-
-    @badge_icon.setter
-    def badge_icon(self, value: Optional[str]):
-        if value != None and not isinstance(value, (str, Image.Image)):
-            _LOGGER.error(f"{value} cannot be used as a badge icon, setting to error icon.")
-            self._badge_icon = MISSING_ICON
-        else:
-            self._badge_icon = value
-            self._IconElement.badge_icon = value
-
-    @property
-    def badge_settings(self) -> dict:
-        """
-        Dict with settings to apply to the badge. background_color needs to be defined explicitly, otherwise it is automatically set to the background color or default color.
-        """
-        return self._badge_settings.copy()
-    
-    @badge_settings.setter
-    def badge_settings(self, value : dict):
-        value = value.copy()
-        for key in value:
-            if key not in base.ALLOWED_BADGE_SETTINGS: _LOGGER.warning(f"{key} is not an allowed badge setting")
-        
-        value.setdefault("background_color", self.background_color if self.background_color != None else DEFAULT_BACKGROUND_COLOR)
-        self._badge_settings = value
-        self.__IconElement.update({"badge_settings": value}, skipPrint=self.isUpdating)
-
-    ##Just remove these they're not really needed tbh
-    ##Butttt this raises the question: how to style default child elements?
-    ##Can think of two options: add style class property for child elements i.e. Tile.Icon
-    ##And then (try to) find options in style tree Tile -> Icon
-    @styleproperty(vsetraw=True).getter
-    def badge_location(self) -> BadgeLocationType:
-        """
-        The location of the badge. 
-        Can be Can be one of UR, LR, UL or LL (Upper Right, Lower Right, Upper Left, Lower Left). Also accepts the fully written strings, but will be set to  the abbreviated location.
-        """
-        return self._badge_location
-    
-    @badge_location.setter
-    def badge_location(self, value):
-        base.Icon.badge_location.fset(self._IconElement, value)
-        return
 
     @property
     def text(self) -> Optional[str]:
@@ -593,14 +502,9 @@ class Tile(base.TileElement):
 
         [(x,y),(w,h)] = self.area
 
-
         self._feedbackImg = None
-
         background_shape = Tile.background_shape.value(self)
         if background_shape is not None:
-            # if self.background_shape == "default":
-            #     if self.tile_layout == "vertical": background_shape = "rounded_rectangle"
-            #     if self.tile_layout == "horizontal": background_shape = "rounded_rectangle"
             img = super().generator(area, skipNonLayoutGen, apply_background_color=False)
         
             if background_shape == "default": background_shape = None
@@ -643,9 +547,6 @@ class Tile(base.TileElement):
             img = super().generator(area, skipNonLayoutGen, apply_background_color=True)
         
         self._imgData = img
-        
-        # if self.id == "debug-tile":
-        #     self.imgData.show()
         return self.imgData
 
     async def pre_generate(self, area=None, skipNonLayoutGen=False):
