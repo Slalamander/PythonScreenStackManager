@@ -4168,6 +4168,7 @@ class Button(Element):
         # font_size = self.get_style_value(self.font_size, self.__class__.font_size.property_name)
         resize = Button.resize.value(self)
         font_size = Button.font_size.value(self)
+
         if resize:
             min_size = self._convert_dimension(resize)
             start_size = self._convert_dimension(font_size)
@@ -4175,24 +4176,46 @@ class Button(Element):
             min_size = self._convert_dimension(font_size)
             start_size = floor(h*0.95)
 
-        min_size = max(min_size, 1)
-        text_height = max(start_size,1)
-
         if font is None:
             font = Button.font.value(self)
 
-        # loaded_font = ImageFont.truetype(font, text_height)
-        loaded_font = self.get_font(font, text_height)
-        text_length = loaded_font.getlength(text)
-        
-        if text_length > w*0.95:
-            text_height = int((text_height*w*0.95)/text_length)
-            if text_height < min_size:
-                _LOGGER.debug(f"Could not fit {text} without violating min size {min_size}, height required is {text_height}" )
-                text_height = int(min_size)
-            loaded_font = loaded_font.font_variant(size=text_height)
+        if Button.multiline.value(self):
+            text_lines = text.split("\n")
+            h_multiplier = len(text_lines)
+
+            # test_text = text_lines.sort(key=lambda x: len(x))[-1]
+            test_text = sorted(text_lines, key=lambda x: len(x))[-1]
+            min_size = max(int(min_size/h_multiplier), 1)
+            text_height = max(start_size,1)
+
+            if text_height*h_multiplier > h:
+                text_height = int(h/h_multiplier)
+
+            loaded_font = self.get_font(font, text_height)
+            text_length = loaded_font.getlength(test_text)
+
+            if text_length > w*0.95:
+                text_height = int((text_height*w*0.95)/text_length)
+                if text_height < min_size:
+                    _LOGGER.debug(f"Could not fit {text} without violating min size {min_size}, height required is {text_height}" )
+                    text_height = int(min_size)
+                loaded_font = loaded_font.font_variant(size=text_height)
+
+        else:
+            min_size = max(min_size, 1)
+            text_height = max(start_size,1)
+
+            loaded_font = self.get_font(font, text_height)
             text_length = loaded_font.getlength(text)
-            _LOGGER.verbose(f"Fitted text {text} with length {text_length} into area {area}")
+            
+            if text_length > w*0.95:
+                text_height = int((text_height*w*0.95)/text_length)
+                if text_height < min_size:
+                    _LOGGER.debug(f"Could not fit {text} without violating min size {min_size}, height required is {text_height}" )
+                    text_height = int(min_size)
+                loaded_font = loaded_font.font_variant(size=text_height)
+                text_length = loaded_font.getlength(text)
+                _LOGGER.verbose(f"Fitted text {text} with length {text_length} into area {area}")
         
         self._current_font_size = text_height
         if resize:
