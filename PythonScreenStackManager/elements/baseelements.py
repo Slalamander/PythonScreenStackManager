@@ -174,6 +174,7 @@ class Element(ABC):
         (instance.__id, instance.__unique_id) =  instance.__set_id(id)
 
         instance.style = kwargs.get("style","style")
+        instance.style_class = kwargs.get("style_class",None)
 
         styleParent = kwargs.get("styleParent",None)
         assert isinstance(styleParent, Element) or styleParent is None, "styleParent must be None or an element object"
@@ -244,9 +245,9 @@ class Element(ABC):
         self.hold_release_action_map = {}
         self.hold_release_action = hold_release_action
 
-        self._isInverted = self.get_style_value(inverted)
+        # self._isInverted = self.get_style_value(inverted)
         self.inverted = inverted
-        self._isInverted = self.inverted
+        self._isInverted = Element.inverted.value(self)
         
         # if Element.show_feedback.value(self) is None:
         #     show_feedback = True if tap_action != None else False
@@ -278,6 +279,7 @@ class Element(ABC):
         "Returns whether the element is a layout"
         return False
 
+    #region styling
     @property
     def style(self) -> str:
         "The style applied to the element"
@@ -289,8 +291,34 @@ class Element(ABC):
         self._style = value
 
     @property
+    def style_class(self) -> Optional[str]:
+        """Additional style class to apply to this element
+        """
+        return self._style_class
+    
+    @style_class.setter
+    def style_class(self, value: str):
+        if value is not None and type(value) is not str:
+            raise TypeError(f"{self}: style_class must be a string or None")
+        
+        if value is None or value.lower() == "none":
+            self._style_class = None
+        elif value[0].islower():
+            raise ValueError(f"{self}: first letter of a style_class must be upper case")
+        else:
+            self._style_class = value
+
+    @property
     def styleClass(self) -> str:
-        "style class of the element, i.e. it's class name"
+        "style class of the element, i.e. its style_class, if any, and its class name"
+        
+        ##Problem with making this a two part class: how to deal with it in the base style tree?
+        ##Or could that still work with the same logic?
+
+        ##I think so yes?
+
+        if v := self.style_class:
+            return f"{v}{const.STYLE_PARENTCLASS_SEPERATOR}{self.__class__.__name__}"
         return self.__class__.__name__
 
     @property
@@ -303,7 +331,8 @@ class Element(ABC):
     @property
     def styleOwnerString(self) -> str:
         if self.styleParent:
-            return f"{self.styleParentString}{const.STYLE_PARENTCLASS_SEPERATOR}{self.styleClass}"
+            # return f"{self.styleParentString}{const.STYLE_PARENTCLASS_SEPERATOR}{self.styleClass}"
+            return f"{self.styleParentString}{const.STYLE_SEPERATOR}{self.styleClass}"
         return self.styleClass
 
     @property
@@ -318,6 +347,7 @@ class Element(ABC):
         
         ##Check if this constructs a correct string. May cause .'s to be linked however
         return None
+    #endregion
 
     @colorproperty(vdefault = DEFAULT_BACKGROUND_COLOR).getter
     def background_color(self) -> Union[ColorType,None]:
@@ -386,7 +416,7 @@ class Element(ABC):
     @property
     def feedbackSeconds(self) -> Union[float,int]:
         "The time in seconds to show feedback for"
-        return tools.parse_duration_string(self.feedback_duration)
+        return tools.parse_duration_string(Element.feedback_duration.value(self))
 
     @property
     def feedbackTask(self) -> asyncio.Task:
@@ -1263,6 +1293,8 @@ class Element(ABC):
             return None
         except Exception as exce:
             _LOGGER.error(f"{self}: {type(exce).__name__} while generating: {exce}", exc_info=DEBUG)
+            if DEBUG:
+                raise exce
 
     async def _await_generator(self):
         "Helper coroutine that can be used to wait for an element's generator to finish."
