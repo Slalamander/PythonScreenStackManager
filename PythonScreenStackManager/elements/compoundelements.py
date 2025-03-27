@@ -26,7 +26,7 @@ from .. import tools
 from ..tools import DrawShapes, DummyTask
 
 from . import baseelements as base
-from .baseelements import _LOGGER, IMPLEMENTED_ICON_SHAPES, Style,\
+from .baseelements import IMPLEMENTED_ICON_SHAPES, Style,\
         colorproperty, styleproperty, elementaction, elementactionwrapper, trigger_condition, classproperty
 
 BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
@@ -608,7 +608,7 @@ class Tile(base.TileElement):
 class dateTimeElementInterval(base._IntervalUpdate):
     "A base class for constructing datetime related elements, provides some general properties for example"
     def __init__(self, date_format : str, timezone : str, update_every : Literal["hour", "minute", "second"]):
-        self.date_format = date_format
+        self.datetime_format = date_format
         self.timezone = timezone
         super().__init__(update_every=update_every)
 
@@ -641,16 +641,16 @@ class dateTimeElementInterval(base._IntervalUpdate):
         return self.__zoneInfo
 
     @property
-    def date_format(self) -> str:
+    def datetime_format(self) -> str:
         "The format string of the time"
-        return self.__date_format
+        return self._date_format
     
-    @date_format.setter
-    def date_format(self, value):
+    @datetime_format.setter
+    def datetime_format(self, value):
         try:
             dt.now().strftime(value)
-            self.__date_format = value
-        except ValueError as exce:
+            self._date_format = value
+        except ValueError:
             # _LOGGER.error(exce)
             raise
     
@@ -1039,40 +1039,65 @@ class DigitalClock(base.Button, dateTimeElementInterval):
 
     emulator_icon = "mdi:clock-digital"
 
-    def __init__(self, time_format="%H:%M", timezone=None, orientation: Literal["horizontal","vertical"] = "horizontal",
-                font=DEFAULT_FONT_CLOCK, font_size="h*0.9", resize=DEFAULT_FONT_SIZE, fit_text=True,  **kwargs):
+    def __init__(self, time_format = "%H:%M", timezone = None, orientation: Literal["horizontal","vertical"] = "horizontal",
+                font = DEFAULT_FONT_CLOCK, font_size="h*0.9", resize=DEFAULT_FONT_SIZE, fit_text=True,  **kwargs):
+
+        self.orientation = orientation
 
         base.Button.__init__(self, text=None, font=font, fit_text=fit_text, font_size=font_size, resize=resize, **kwargs)
         dateTimeElementInterval.__init__(self, date_format=time_format, timezone=timezone, update_every="minute")
 
-        self.orientation = orientation
         self.timezone = timezone
         self.time_format = time_format
         self._text = dt.now(self.zoneInfo).strftime(self.time_format)
         self.__added = False
 
     #region
+    styleClasses = styleproperty.style_classes({
+        "Vertical": {
+            "font_size": "h*0.75",
+            "resize": 1,
+            "fit_text": True,
+            "multiline": True}
+    })
+    
+
     @property
     def text(self) -> str:
         "The current time string being displayed on the clock"
         return self._text
     
-    @property
+    @base.Element.style_class.getter
+    def style_class(self):
+        sc = self._style_class
+        if sc is None:
+            tl = getattr(self, "orientation", None)
+            if tl == "horizontal":
+                return "Horizontal"
+            elif tl == "vertical":
+                return "Vertical"
+            else:
+                return None
+        else:
+            return sc
+
+    @styleproperty
     def time_format(self) -> str:
         """
         Datetime format string to apply to the digital time. Default to %a (abbreviated day of the week)
         """
+        return self._time_format
         if self.orientation == "horizontal":
-            return self.date_format
+            return self.datetime_format
         else:
-            new_str = self.date_format.replace(":","\n")
+            new_str = self.datetime_format.replace(":","\n")
             new_str = new_str.replace(" ", "\n")
             return new_str
     
     @time_format.setter
     def time_format(self, value):
         ##date_format is from the datetimeinterval class
-        self.date_format = value
+        self.validate_datetime_format(value)
 
     @property
     def orientation(self) -> Literal["horizontal","vertical"]:
@@ -1099,17 +1124,30 @@ class DigitalClock(base.Button, dateTimeElementInterval):
 
     #endregion
 
+    @staticmethod
+    def _convert_to_vertical_format(format : str):
+        "Converts a datetime format to the vertical equivalent"
+        new_str = format.replace(":","\n")
+        new_str = new_str.replace(" ", "\n")
+        return new_str
+
     async def callback(self):
+
+        fmt = DigitalClock.time_format.value(self)
+        if self.orientation == "vertical":
+            fmt = self._convert_to_vertical_format(fmt)
+
         if not self.__added:
             ##This ensures the font size should immediately a size that should fit all possible times
             dtime = dt.strptime("00:00","%H:%M")
-            text = dtime.strftime(self.time_format)
+            text = dtime.strftime(fmt)
 
             ##Call the fit function before generating the first time to set the (likely) correct font_size
-            self.fit_text_func(text=text,area=self.area,font=self.font)
+            # self.fit_text_func(text=text,area=self.area,
+            #         font=DigitalClock.font.value(self))
             self.__added = True
 
-        text = dt.now(self.zoneInfo).strftime(self.time_format)
+        text = dt.now(self.zoneInfo).strftime(fmt)
         await self.async_update({"_text": text})
 
         if self.parentPSSMScreen.device.screenType == "E-Ink" and dt.now().minute % 15 == 0:
@@ -1145,7 +1183,7 @@ class DateElement(base.Button, dateTimeElementInterval):
 
         self.timezone = timezone
         self.__added = False
-        self._text = dt.now(self.zoneInfo).strftime(self.date_format)
+        self._text = dt.now(self.zoneInfo).strftime(self.datetime_format)
 
     #region
     @property
@@ -1161,11 +1199,11 @@ class DateElement(base.Button, dateTimeElementInterval):
             ##Otherwise, in this case text changing size is not as much of a problem at least
             dtime = dt(year=1984,month=10,day=30)
             
-            text = dtime.strftime(self.date_format)
+            text = dtime.strftime(self.datetime_format)
             self.fit_text_func(text=text,area=self.area,font=self.font)
             self.__added = True
         # else:
-        text = dt.now(self.zoneInfo).strftime(self.date_format)
+        text = dt.now(self.zoneInfo).strftime(self.datetime_format)
         self.update({"_text": text})
 
 #endregion        
