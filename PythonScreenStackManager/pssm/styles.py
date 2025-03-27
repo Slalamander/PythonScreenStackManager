@@ -176,10 +176,7 @@ class Style:
             else:
                 d["prop"] = property_name
         
-        try:
-            return "::".join((d["style"],d["owner"],d["prop"]))
-        except Exception as exce:
-            print(exce)
+        return "::".join((d["style"],d["owner"],d["prop"]))
 
     @classmethod
     def _split_style_class(cls, style_class : str) -> tuple[str, str]:
@@ -356,7 +353,8 @@ class Style:
         if cls.is_style_string(val):
             ##handle this: go one step lower and pass those to construct?
             ##main issue: how to determine what to use from val
-            d = cls._construct_style_dict(val)
+            s = cls.construct_style_string(val, element=element, property_name=property_name)
+            d = cls._construct_style_dict(s)
 
             d.setdefault("style", "style")
             if property_name:
