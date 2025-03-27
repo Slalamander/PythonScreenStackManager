@@ -18,7 +18,9 @@ from mdi_pil import mdiType as MDItype, ALLOWED_MDI_IDENTIFIERS
 from ..pssm_types import *
 
 from . import constants as const
-from .constants import DEFAULT_FONT_CLOCK, DEFAULT_FONT_SIZE, MISSING_ICON, DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR,  DEFAULT_FONT_HEADER
+from .constants import DEFAULT_FONT_CLOCK, DEFAULT_FONT_SIZE,\
+    MISSING_ICON, DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR,  DEFAULT_FONT_HEADER,\
+    DEFAULT_ACCENT_COLOR
 
 from .. import tools
 from ..tools import DrawShapes, DummyTask
@@ -649,7 +651,15 @@ class dateTimeElementInterval(base._IntervalUpdate):
             dt.now().strftime(value)
             self.__date_format = value
         except ValueError as exce:
-            _LOGGER.error(exce)
+            # _LOGGER.error(exce)
+            raise
+    
+    @staticmethod
+    def validate_datetime_format(value : str):
+        """Validate a datetime format string.
+        Exceptions are thrown for invalid strings.
+        """
+        dt.now().strftime(value)
     #endregion
 
 class AnalogueClock(base.Element, dateTimeElementInterval):
@@ -694,11 +704,12 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
     emulator_icon = "mdi:clock"
 
     def __init__(self, timezone: str = None, minimum_resolution: int = DrawShapes.MINRESOLUTION, outline_width: PSSMdimension = 5, 
-                clock_fill_color : Optional[ColorType]=None, outline_color : Optional[ColorType] = "black", 
-                hour_hand_color : Optional[ColorType] =None, minute_hand_color : Optional[ColorType] =None, 
-                show_ticks : bool = True, tick_color : Optional[ColorType] =None, 
-                show_digital:bool=False, digital_format : str = "%a", digital_font : str = DEFAULT_FONT_CLOCK, digital_color : Optional[ColorType] =None, 
-                background_color : Optional[ColorType] =None, tap_action=None, **kwargs):
+                clock_fill_color : Optional[ColorType] = DEFAULT_BACKGROUND_COLOR, outline_color : Optional[ColorType] = DEFAULT_ACCENT_COLOR, 
+                hour_hand_color : Optional[ColorType] = DEFAULT_FOREGROUND_COLOR, minute_hand_color : Optional[ColorType] = DEFAULT_FOREGROUND_COLOR, 
+                center_color : Optional[ColorType] = DEFAULT_ACCENT_COLOR,
+                show_ticks : bool = True, tick_color : Optional[ColorType] = DEFAULT_ACCENT_COLOR, 
+                show_digital : bool = False, digital_format : str = "%a", digital_font : str = DEFAULT_FONT_CLOCK, digital_color : Optional[ColorType] = DEFAULT_ACCENT_COLOR, 
+                background_color : Optional[ColorType] = None, tap_action = None, **kwargs):
 
         base.Element.__init__(self, **kwargs)
         dateTimeElementInterval.__init__(self,digital_format,timezone=timezone, update_every="minute")
@@ -719,6 +730,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         self.hour_hand_color = hour_hand_color
         self.minute_hand_color = minute_hand_color
 
+        self.center_color = center_color
         self.show_ticks = show_ticks
         self.tick_color = tick_color
         self.outline_color = outline_color
@@ -727,18 +739,21 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
 
         self.tap_action = tap_action
 
+    def __set_clock_gen(self, value):
+        self._genClock = True
+
     #region
-    @colorproperty
+    @colorproperty(fset_post=__set_clock_gen).getter
     def clock_fill_color(self) -> Optional[ColorType]:
         "Background color of the clock"
         return self._clock_fill_color
 
-    @colorproperty
+    @colorproperty(fset_post=__set_clock_gen).getter
     def outline_color(self) -> Optional[ColorType]:
         "Color of the clock's outline"
         return self._outline_color
 
-    @property
+    @styleproperty
     def outline_width(self) -> PSSMdimension:
         "Width of the clock's outline"
         return self._outline_width
@@ -752,18 +767,14 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
     @colorproperty
     def hour_hand_color(self):
         "The color of the hour hand. Defaults to the outline color"
-        if self._hour_hand_color == None:
-            return self.outline_color
         return self._hour_hand_color
 
     @colorproperty
     def minute_hand_color(self):
         "The color of the minute hand. Defaults to the outline color"
-        if self._minute_hand_color == None:
-            return self.outline_color
         return self._minute_hand_color
 
-    @property
+    @styleproperty
     def show_ticks(self) -> bool:
         return self.__show_ticks
     
@@ -777,39 +788,48 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         self._genClock = True
         self.__show_ticks = value
 
-    @colorproperty
+    @colorproperty(fset_post=__set_clock_gen).getter
     def tick_color(self) -> ColorType:
         "The color of the hour ticks. If None, will return the outline color"
-        if self._tick_color == None:
-            return self.outline_color
         return self._tick_color
 
-    @property
+    @colorproperty
+    def center_color(self) -> ColorType:
+        "The color of the center circle. Not drawn if color is None"
+        return self._center_color
+
+    @styleproperty
     def show_digital(self) -> bool:
         "Show a text element on the clock showing a formatted time string based on the current time and date"
-        return self.__show_digital
+        return self._show_digital
     
     @show_digital.setter
     def show_digital(self, value):
         if not isinstance(value, bool):
             msg = "Show digital must be boolean"
-            _LOGGER.error(msg)
-            if const.RAISE: raise TypeError(msg)
+            # _LOGGER.error(msg)
+            raise TypeError(msg)
         
-        self.__show_digital = value    
+        self._show_digital = value    
 
-    @property
+    @styleproperty
     def digital_format(self) -> str:
         """
         Datetime format string to apply to the digital time. Default to %a (abbreviated day of the week)
         """
-        return self.date_format
+        # return self.date_format
+        return self._digital_format
     
     @digital_format.setter
     def digital_format(self, value):
-        self.date_format = value
+        # self.date_format = value
 
-    @property
+        ##Since this is a style property, this can be used anyways.
+        ##The setter raises an error for invalid dates.
+        # dateTimeElementInterval.date_format.fset(self, value)
+        self.validate_datetime_format(value)
+
+    @styleproperty
     def digital_font(self) -> str:
         "The font used for the digital time indicator"
         return self.__digital_font
@@ -821,7 +841,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             f = ImageFont.truetype(f)
         except OSError:
             msg = f"Could not open font from value {value}"
-            _LOGGER.exception(OSError(msg))
+            raise OSError(msg)
         else:
             self.__digital_font = value
 
@@ -844,10 +864,10 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         self._minimum_resolution = value
     #endregion
 
-    def _style_update(self, attribute: str, value):
-        "Called when a style property is updated"
-        if attribute in {"clock_fill_color", "outline_color", "tick_color"}:
-            self._genClock = True
+    # def _style_update(self, attribute: str, value):
+    #     "Called when a style property is updated"
+    #     if attribute in {"clock_fill_color", "outline_color", "tick_color"}:
+    #         self._genClock = True
 
     async def callback(self):
         await self.async_update(updated=True)
@@ -867,12 +887,13 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             scale = min_res/w
 
         colorMode = self.parentPSSMScreen.imgMode
-        img_background = Style.get_color(self.background_color,colorMode)
-        clock_fill = Style.get_color(self.clock_fill_color, colorMode)
-        clock_line = Style.get_color(self.outline_color, colorMode)
+        img_background = Style.get_color(AnalogueClock.background_color.value(self),colorMode)
+        clock_fill = Style.get_color(AnalogueClock.clock_fill_color.value(self), colorMode)
+        clock_line = Style.get_color(AnalogueClock.outline_color.value(self), colorMode)
         timedt = dt.now(self.zoneInfo)
 
-        outline_w = int(self._convert_dimension(self.outline_width)*scale)
+        outline_w = int(self._convert_dimension(
+                    AnalogueClock.outline_width.value(self))*scale)
 
         hour_width = round(outline_w*2.5)  ##Want to change these to be settable
         mnt_width = round(outline_w*1.5)
@@ -881,7 +902,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             img = Image.new(
                 colorMode,
                 (min_res, min_res),
-                color=img_background
+                color = img_background
             )
             (wc,hc) = img.size
             draw = ImageDraw.Draw(img)
@@ -901,23 +922,24 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
                 width=0,
             )
 
-            if self.show_ticks:
+            if (AnalogueClock.show_ticks.value(self) and 
+                (tick_color := AnalogueClock.tick_color.value(self))):
                 tick_length = floor(clock_radius*0.14)
                 tick_O = [(center[0], center[1]-clock_radius+tick_length),(center[0], center[1]-clock_radius)]
-        
+
                 for t in range(0,12):
                     th = 2*pi*(t/12)
                     tick_coords = tools.rotation_matrix(tick_O,th,center)
                     draw.line(
                         tick_coords, 
-                        fill=self.tick_color, 
-                        width=hour_width
+                        fill = Style.get_color(tick_color, colorMode), 
+                        width = hour_width,
                     )
 
             draw.pieslice(
                 coo,
                 start=0,end=360,
-                outline=clock_line,
+                outline= Style.get_color(clock_line),
                 width=outline_w,
             )
             self._clockImg = img
@@ -935,15 +957,17 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         coo = [center[0] - clock_radius, center[1] - clock_radius, center[0] + clock_radius, center[1] + clock_radius]
         coo = [ floor(elem) for elem in coo ]
 
-        if self.show_digital:
-            font = tools.parse_known_fonts(self.digital_font)
+        if AnalogueClock.show_digital.value(self):
+            font = tools.parse_known_fonts(
+                AnalogueClock.digital_font.value(self))
             font = ImageFont.truetype(font, int(clock_radius*0.2))
             
             t_coo = (center[0],center[1]+int((hour_length+clock_radius)/2))
 
-            txt = timedt.strftime(self.digital_format)
+            txt = timedt.strftime(AnalogueClock.digital_format.value(self))
             draw.text(
-                t_coo,text=txt, anchor="ms", font = font, fill=self.digital_color
+                t_coo,text=txt, anchor="ms", font = font, 
+                fill=AnalogueClock.digital_color.get_color(self)
             )
 
         
@@ -953,10 +977,9 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
 
         (mnt_x, mnt_y) = (sin(minute_angle)*minute_length, cos(minute_angle)*minute_length)
         minute_l = [center, round(mnt_x + center[0]), round(center[1] - mnt_y)]
-
         draw.line(
             minute_l,
-            fill=self.minute_hand_color,
+            fill=AnalogueClock.minute_hand_color.get_color(self),
             width=mnt_width
         )
         
@@ -970,18 +993,19 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
 
         draw.line(
             hour_coo,
-            fill=self.hour_hand_color,
+            fill=AnalogueClock.hour_hand_color.get_color(self),
             width=hour_width
         )
 
         md_r = int(hour_width*1)
         coo = [(center[0]-md_r,center[1]-md_r),(center[0]+md_r,center[1]+md_r)]
-        draw.pieslice(
-            coo,
-            fill=self.hour_hand_color,
-            start=0,
-            end=360
-        )
+        if (center_col := AnalogueClock.center_color.get_color(self)) is not None:
+            draw.pieslice(
+                coo,
+                fill = center_col,
+                start=0,
+                end=360
+            )
 
         _LOGGER.verbose(f"Clock updated for {timedt.strftime('%H:%M')}")
         self._imgData = ImageOps.pad(img, (w,h), Image.Resampling.LANCZOS, color=img_background, )
