@@ -1262,14 +1262,16 @@ class LineSlider(base._BaseSlider):
     
     emulator_icon = "mdi:vector-line"
 
-    def __init__(self, color : 'ColorType' = "black", width : PSSMdimension = None, orientation : Literal["horizontal", "vertical"] ="horizontal", tap_action : Optional[Callable[[base.Element,tuple[int,int]],None]]=None,
-                thumb : Literal["circle", "rectangle", "rounded_rectangle", None] ="rounded_rectangle", thumb_width : Optional[PSSMdimension] =None, thumb_height : Optional[PSSMdimension] = None, thumb_color : Optional[ColorType]=None, 
-                thumb_icon: MDItype=None, thumb_icon_color : Optional[ColorType] = None, end_points : Optional[Union[MDItype,tuple[str,str]]]=None, end_colors : Optional[ColorType]=None, end_point_size : PSSMdimension = None, **kwargs):
+    def __init__(self, color : 'ColorType' = DEFAULT_FOREGROUND_COLOR, width : PSSMdimension = None, orientation : Literal["horizontal", "vertical"] ="horizontal", tap_action : Optional[Callable[[base.Element,tuple[int,int]],None]]=None,
+                thumb : Literal["circle", "rectangle", "rounded_rectangle", None] = "rounded_rectangle", thumb_width : Optional[PSSMdimension] =None, thumb_height : Optional[PSSMdimension] = None, thumb_color : Optional[ColorType]=None, 
+                thumb_icon: MDItype=None, thumb_icon_color : Optional[ColorType] = None,
+                end_points : Optional[Union[MDItype,tuple[str,str]]]=None, end_colors : Optional[ColorType]=None,
+                end_point_size : PSSMdimension = None, **kwargs):
 
         
         super().__init__(orientation=orientation, tap_action=tap_action, **kwargs)
         self.color = color
-        if width != None:
+        if Style.get_value(width, self, "width") != None:
             self.width = width
         else:
             self.width = "h/4" if orientation == "horizontal" else "w/4"
@@ -1286,12 +1288,24 @@ class LineSlider(base._BaseSlider):
         self.end_point_size = end_point_size
 
     #region
+
+    styleClasses = styleproperty.style_classes({
+        "Horizontal": {
+            "width": "h/4",
+            "end_point_size": "h/2",
+        },
+        "Vertical": {
+            "width": "w/4",
+            "end_point_size": "w/2",
+        }
+    })
+
     @colorproperty
     def color(self) -> ColorType:
         "The color of the slider line"
         return self._color
     
-    @property
+    @styleproperty
     def width(self) -> PSSMdimension:
         "The width of the slider line"
         return self._width
@@ -1303,7 +1317,7 @@ class LineSlider(base._BaseSlider):
         else:
             self._width = value
 
-    @property
+    @styleproperty
     def thumb(self) -> str:
         "The type of thumb (slider handle)"
         return self._thumb
@@ -1317,20 +1331,22 @@ class LineSlider(base._BaseSlider):
         else:
             self._thumb = value
 
-    @property
+    @styleproperty
     def thumb_width(self) -> PSSMdimension:
         """
         The width of the slider thumb. Parameter l for the length of the slider is additionally passed for dimensional strings.
         Set to None for automatic sizing based on shape
         """
-        if self.__thumb_width != None:
-            return self.__thumb_width
+        return self._thumb_width
+        if self._thumb_width != None:
+            return self._thumb_width
         else:
             d = "h" if self.orientation == "horizontal" else "w"
 
-            if self.thumb == None:
+            thumb = LineSlider.thumb.value(self)
+            if thumb == None:
                 return 0
-            elif self.thumb == "circle":
+            elif thumb == "circle":
                 return f"{d}/3"
             else:
                 return f"{d}/6"
@@ -1338,18 +1354,19 @@ class LineSlider(base._BaseSlider):
     @thumb_width.setter
     def thumb_width(self, value):
         if value == None:
-            self.__thumb_width = value
+            self._thumb_width = value
         else:
             self._dimension_setter("__thumb_width",value,["l"])
 
-    @property
+    @styleproperty
     def thumb_height(self) -> PSSMdimension:
         """
         The height of the slider thumb. Parameter l for the length of the slider is additionally passed for dimensional strings.
         Set to None for automatic sizing based on shape
         """
-        if self.__thumb_height != None:
-            return self.__thumb_height
+        return self._thumb_height
+        if self._thumb_height != None:
+            return self._thumb_height
         else:
             d = "h" if self.orientation == "horizontal" else "w"
 
@@ -1363,7 +1380,7 @@ class LineSlider(base._BaseSlider):
     @thumb_height.setter
     def thumb_height(self, value):
         if value == None:
-            self.__thumb_height = value
+            self._thumb_height = value
         else:
             self._dimension_setter("__thumb_height",value,["l"])
 
@@ -1412,9 +1429,8 @@ class LineSlider(base._BaseSlider):
             points = (value,value)
         elif isinstance(value,(list,tuple)):
             if len(value) != 2:
-                msg = f"List with endpoints must be exactly of 2 length"
-                _LOGGER.error(msg,exc_info=ValueError(msg))
-                return
+                msg = "List with endpoints must be exactly of 2 length"
+                raise ValueError(msg)
             else:
                 points = value
 
@@ -1423,8 +1439,7 @@ class LineSlider(base._BaseSlider):
                 continue
             if point[:4] not in ALLOWED_MDI_IDENTIFIERS:
                 msg = f"endPoint icon must be an mdi icon. Cannot parse {value} as such"
-                _LOGGER.error(msg,exc_info=ValueError(msg))
-                return
+                raise ValueError(msg)
         self.__end_points = tuple(points)
     
     @colorproperty
@@ -1432,7 +1447,44 @@ class LineSlider(base._BaseSlider):
         "The colors applied to the end icons. If None, will use the same color as the slider."
         return self._end_colors
 
+    @styleproperty
+    def end_point_size(self) -> PSSMdimension:
+        "The size of the endpoint icons, if set"
+        return self._end_point_size
+    
+    @end_point_size.setter
+    def end_point_size(self, value):
+        if value is not None:
+            tools.is_valid_dimension(value)
     #endregion
+
+    def _get_thumb_size(self) -> tuple[int,int]:
+        """Returns the raw values of the thumb sizes, converted from their style values"
+        Returned as (thumb_width, thumb_height)
+        """
+
+
+        thumb = LineSlider.thumb.value(self)
+        t_w = LineSlider.thumb_width.value(self)
+        t_h = LineSlider.thumb_height.value(self)
+        d = "h" if self.orientation == "horizontal" else "w"
+
+        if t_w is None:
+            if thumb is None:
+                t_w = 0
+            elif thumb == "circle":
+                t_w = f"{d}/3"
+            else:
+                t_w = f"{d}/6"
+
+        if t_h is None:
+            if thumb is None:
+                t_h =  0
+            elif thumb == "circle":
+                t_h = f"{d}/3"
+            else:
+                t_h = f"{d}*0.45"
+        return t_w, t_h
 
     def generator(self, area=None, skipNonLayoutGen=False):
         if area is not None:
@@ -1444,7 +1496,7 @@ class LineSlider(base._BaseSlider):
         (x, y), (w, h) = self.area
         colorMode = self.parentPSSMScreen.imgMode
 
-        img_background = self.background_color
+        img_background = LineSlider.background_color.value(self)
         
         v_length = self.valueRange[1] - self.valueRange[0]
         if v_length == 0:
@@ -1452,26 +1504,36 @@ class LineSlider(base._BaseSlider):
         else:
             position_perc = (self.position - self.valueRange[0])/(v_length)
 
+        thumbsize = self._get_thumb_size()
+
         #Setting up relative line and circle coordinates
         ##Using w or h here as length for l, should be relatively close and regardless at most yield some margins
         if self.orientation == "horizontal":
-            half_tw = self._convert_dimension(self.thumb_width,{"l":w})/2
+            half_tw = self._convert_dimension(thumbsize[0],{"l":w})/2
             if self.end_points == None:
                 ##Icon size is set to half the height
                 coo = [(int(half_tw), int(h/2)), (int(w-half_tw), int(h/2))]
             else:
-                endP_size = int(h/2) if self.end_point_size == None else self._convert_dimension(self.end_point_size)
+                endP_size = LineSlider.end_point_size.value(self)
+                if endP_size is None:
+                    endP_size = int(h/2)
+                else:
+                    self._convert_dimension(endP_size)
                 coo = [(int(endP_size+half_tw), int(h/2)), (int(w-endP_size-half_tw), int(h/2))]
                 
             line_length = coo[1][0] - coo[0][0]
             thumb_center = (line_length*position_perc + coo[0][0], h/2)
 
         elif self.orientation == "vertical":
-            half_tw = self._convert_dimension(self.thumb_width,{"l":h})/2
+            half_tw = self._convert_dimension(thumbsize[0],{"l":h})/2
             if self.end_points == None:
                 coo = [(int(w/2),int(half_tw)),(int(w/2), int(h-half_tw))]
             else:
-                endP_size = int(w/2) if self.end_point_size == None else self._convert_dimension(self.end_point_size)
+                endP_size = LineSlider.end_point_size.value(self)
+                if endP_size is None:
+                    endP_size = int(w/2)
+                else:
+                    self._convert_dimension(endP_size)
                 coo = [(int(w/2),int(endP_size+half_tw)),(int(w/2), int(h-endP_size-half_tw))]
                 
             line_length = coo[1][1] - coo[0][1]
@@ -1482,8 +1544,8 @@ class LineSlider(base._BaseSlider):
 
         self._lineLength = line_length
         "Length of the line in pixels"
-
-        drawcolor = Style.get_color(self.color, colorMode)
+        c = LineSlider.color.value(self)
+        drawcolor = Style.get_color(LineSlider.color.value(self), colorMode)
         rectangle = Image.new(
             colorMode,
             (w, h),
@@ -1493,11 +1555,12 @@ class LineSlider(base._BaseSlider):
         draw.line(
             coo,
             fill=drawcolor,
-            width=self._convert_dimension(self.width,{"l":line_length})
+            width=self._convert_dimension(LineSlider.width.value(self),{"l":line_length})
         )
 
         if self.end_points != None:
-            col = drawcolor if self.end_colors == None else Style.get_color(self.end_colors)
+            end_colors = LineSlider.end_colors.value(self)
+            col = drawcolor if end_colors == None else Style.get_color(end_colors)
             for idx, icon in enumerate(self.end_points):
                 if icon == None:
                     continue
@@ -1512,17 +1575,18 @@ class LineSlider(base._BaseSlider):
 
         self._lineImage = rectangle.copy()
 
-
-        thumbsize = (self.thumb_width,self.thumb_height)
         ##Will probably need to check if this still functions with the drawing and parsing
-        shape = self.thumb
+        shape = LineSlider.thumb.value(self)
         if shape == "rectangle":
             _, relSize = IMPLEMENTED_ICON_SHAPES["rounded_rectangle"]
         else:
             drawFunc, relSize = IMPLEMENTED_ICON_SHAPES[shape]
         
         color = None
-        thumb_color = self.thumb_color if self.thumb_color != None else drawcolor
+        # thumb_color = self.thumb_color if self.thumb_color != None else drawcolor
+        thumb_color = LineSlider.thumb_color.value(self)
+        if thumb_color is None:
+            thumb_color = drawcolor
         thumb_color = Style.get_color(thumb_color,colorMode)
         if shape == "circle":
             drawArgs = {"fill":thumb_color}
@@ -1534,20 +1598,21 @@ class LineSlider(base._BaseSlider):
 
         ##Allow for more shapes
         if self.orientation == "vertical":
-            thumbsize = self._convert_dimension((self.thumb_height,self.thumb_width),{"l": line_length})
+            thumbsize_int = self._convert_dimension(thumbsize,{"l": line_length})
         else:
-            thumbsize = self._convert_dimension((self.thumb_width,self.thumb_height),{"l": line_length})
-        c = Image.new(colorMode,thumbsize,color)
+            thumbsize_int = self._convert_dimension(thumbsize,{"l": line_length})
+        c = Image.new(colorMode,thumbsize_int,color)
 
         if shape != "rectangle":
             (c, drawImg) = drawFunc(c, drawArgs=drawArgs, paste=False)
         
         if self.thumb_icon != None:
-            size = int(self._convert_dimension(self.thumb_height,{"l":line_length})*relSize)
-            if self.thumb_icon_color == None:
+            size = int(self._convert_dimension(thumbsize[1],{"l":line_length})*relSize)
+            thumb_col = LineSlider.thumb_icon_color.value(self)
+            if thumb_col == None:
                 iconCol = tools.invert_Color(thumb_color, colorMode)
             else:
-                iconCol = Style.get_color(self.thumb_icon_color)
+                iconCol = Style.get_value(thumb_col)
             c = mdi.draw_mdi_icon(c, self.thumb_icon, icon_size=size, icon_color=iconCol)
 
         self._thumbImage = c.copy()
@@ -1555,7 +1620,7 @@ class LineSlider(base._BaseSlider):
         paste_coords =(floor(thumb_center[0]-c.width/2), floor(thumb_center[1]-c.height/2))
         rectangle.alpha_composite(c,paste_coords)
 
-        if self.inverted:
+        if LineSlider.inverted.value(self):
             rectangle = tools.invert_Image(rectangle)
         self._imgData = rectangle
         return self.imgData
@@ -1571,7 +1636,6 @@ class LineSlider(base._BaseSlider):
             return
 
         [(x,y),(w,h)] = self.area
-
 
         coo = self._lineCoords
         line_length = self._lineLength
@@ -1604,6 +1668,9 @@ class LineSlider(base._BaseSlider):
 
         ##How to deal with endpoints?
         line.alpha_composite(thumb,paste_coords)
+
+        if LineSlider.inverted.value(self):
+            line = tools.invert_Image(line)
 
         self._imgData = line
 
