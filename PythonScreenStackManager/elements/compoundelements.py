@@ -20,7 +20,7 @@ from ..pssm_types import *
 from . import constants as const
 from .constants import DEFAULT_FONT_CLOCK, DEFAULT_FONT_SIZE,\
     MISSING_ICON, DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR,  DEFAULT_FONT_HEADER,\
-    DEFAULT_ACCENT_COLOR
+    DEFAULT_ACCENT_COLOR, DEFAULT_FONT_BOLD
 
 from .. import tools
 from ..tools import DrawShapes, DummyTask
@@ -607,8 +607,8 @@ class Tile(base.TileElement):
 #region datetime element
 class dateTimeElementInterval(base._IntervalUpdate):
     "A base class for constructing datetime related elements, provides some general properties for example"
-    def __init__(self, date_format : str, timezone : str, update_every : Literal["hour", "minute", "second"]):
-        self.datetime_format = date_format
+    def __init__(self, datetime_format : str, timezone : str, update_every : Literal["hour", "minute", "second"]):
+        self.datetime_format = datetime_format
         self.timezone = timezone
         super().__init__(update_every=update_every)
 
@@ -709,10 +709,12 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
                 center_color : Optional[ColorType] = DEFAULT_ACCENT_COLOR,
                 show_ticks : bool = True, tick_color : Optional[ColorType] = DEFAULT_ACCENT_COLOR, 
                 show_digital : bool = False, digital_format : str = "%a", digital_font : str = DEFAULT_FONT_CLOCK, digital_color : Optional[ColorType] = DEFAULT_ACCENT_COLOR, 
-                background_color : Optional[ColorType] = None, tap_action = None, **kwargs):
+                background_color : Optional[ColorType] = None, tap_action = None,
+                update_every : Literal["hour", "minute", "second"] = "minute", 
+                **kwargs):
 
         base.Element.__init__(self, **kwargs)
-        dateTimeElementInterval.__init__(self,digital_format,timezone=timezone, update_every="minute")
+        dateTimeElementInterval.__init__(self,digital_format,timezone=timezone, update_every=update_every)
 
         self._genClock = True
         "Generates the entire clock image upon the next call to the generator, instead of just the hands (and possible time text). Is always reset to False after regenerating the clock image."
@@ -1040,13 +1042,15 @@ class DigitalClock(base.Button, dateTimeElementInterval):
     emulator_icon = "mdi:clock-digital"
 
     def __init__(self, time_format = "%H:%M", timezone = None, orientation: Literal["horizontal","vertical"] = "horizontal",
-                font = DEFAULT_FONT_CLOCK, font_size="h*0.9", resize=DEFAULT_FONT_SIZE, fit_text=True,  **kwargs):
+                font = DEFAULT_FONT_CLOCK, font_size="h*0.9", resize=DEFAULT_FONT_SIZE, fit_text=True, update_every : Literal["hour", "minute", "second"] = "minute",
+                **kwargs):
 
         self.orientation = orientation
 
+        dateTimeElementInterval.__init__(self, datetime_format=time_format, timezone=timezone, update_every=update_every)
         base.Button.__init__(self, text=None, font=font, fit_text=fit_text, font_size=font_size, resize=resize, **kwargs)
-        dateTimeElementInterval.__init__(self, date_format=time_format, timezone=timezone, update_every="minute")
 
+        # self.update_every = "second"
         self.timezone = timezone
         self.time_format = time_format
         self._text = dt.now(self.zoneInfo).strftime(self.time_format)
@@ -1087,13 +1091,7 @@ class DigitalClock(base.Button, dateTimeElementInterval):
         Datetime format string to apply to the digital time. Default to %a (abbreviated day of the week)
         """
         return self._time_format
-        if self.orientation == "horizontal":
-            return self.datetime_format
-        else:
-            new_str = self.datetime_format.replace(":","\n")
-            new_str = new_str.replace(" ", "\n")
-            return new_str
-    
+
     @time_format.setter
     def time_format(self, value):
         ##date_format is from the datetimeinterval class
@@ -1143,8 +1141,8 @@ class DigitalClock(base.Button, dateTimeElementInterval):
             text = dtime.strftime(fmt)
 
             ##Call the fit function before generating the first time to set the (likely) correct font_size
-            # self.fit_text_func(text=text,area=self.area,
-            #         font=DigitalClock.font.value(self))
+            self.fit_text_func(text=text,area=self.area,
+                    font=DigitalClock.font.value(self))
             self.__added = True
 
         text = dt.now(self.zoneInfo).strftime(fmt)
@@ -1176,11 +1174,14 @@ class DateElement(base.Button, dateTimeElementInterval):
 
     emulator_icon = "mdi:calendar-week"
 
-    def __init__(self, date_format="%Y-%m-%-d", timezone=None, font='default-bold', font_size: PSSMdimension ="h*0.9", resize: PSSMdimension=DEFAULT_FONT_SIZE, fit_text: bool = True,  **kwargs):
+    def __init__(self, date_format="%Y-%m-%-d", timezone=None, font = DEFAULT_FONT_BOLD, font_size: PSSMdimension ="h*0.9", resize: PSSMdimension=DEFAULT_FONT_SIZE, fit_text: bool = True,  
+                update_every : Literal["hour", "minute", "second"] = "hour",                
+                **kwargs):
 
         base.Button.__init__(self, text=None, font=font, fit_text=fit_text, font_size=font_size, resize=resize, **kwargs)
-        dateTimeElementInterval.__init__(self, date_format=date_format, timezone=timezone, update_every="hour")
+        dateTimeElementInterval.__init__(self, datetime_format=date_format, timezone=timezone, update_every=update_every)
 
+        self.date_format = date_format
         self.timezone = timezone
         self.__added = False
         self._text = dt.now(self.zoneInfo).strftime(self.datetime_format)
@@ -1189,21 +1190,36 @@ class DateElement(base.Button, dateTimeElementInterval):
     @property
     def text(self) -> str:
         "The current time string being displayed on the clock"
-        return self._text    
+        return self._text
+
+    @styleproperty
+    def date_format(self) -> str:
+        """
+        Datetime format string to apply to the digital time. Default to %a (abbreviated day of the week)
+        """
+        return self._date_format
+
+    @date_format.setter
+    def date_format(self, value):
+        ##date_format is from the datetimeinterval class
+        self.validate_datetime_format(value)
+        if "%S" in value:
+            return    
     #endregion
 
     async def callback(self):
+        fmt = DateElement.date_format.value(self)
         if not self.__added and self.area != None:
             ##This ensures the font size should immediately a size that should fit all possible times
             ##Hopefully. October is a pretty long month letter wise at least?
             ##Otherwise, in this case text changing size is not as much of a problem at least
             dtime = dt(year=1984,month=10,day=30)
             
-            text = dtime.strftime(self.datetime_format)
-            self.fit_text_func(text=text,area=self.area,font=self.font)
+            text = dtime.strftime(fmt)
+            self.fit_text_func(text=text,area=self.area,font=DateElement.font.value(self))
             self.__added = True
-        # else:
-        text = dt.now(self.zoneInfo).strftime(self.datetime_format)
+
+        text = dt.now(self.zoneInfo).strftime(fmt)
         self.update({"_text": text})
 
 #endregion        
