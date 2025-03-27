@@ -1271,10 +1271,12 @@ class LineSlider(base._BaseSlider):
         
         super().__init__(orientation=orientation, tap_action=tap_action, **kwargs)
         self.color = color
-        if Style.get_value(width, self, "width") != None:
-            self.width = width
-        else:
-            self.width = "h/4" if orientation == "horizontal" else "w/4"
+
+        # if Style.get_value(width, self, "width") != None:
+        #     self.width = width
+        # else:
+        #     self.width = "h/4" if orientation == "horizontal" else "w/4"
+        self.width = width
 
         self.thumb = thumb
         self.thumb_color = thumb_color
@@ -1312,10 +1314,8 @@ class LineSlider(base._BaseSlider):
     
     @width.setter
     def width(self, value):
-        if v := isinstance(tools.is_valid_dimension(value), Exception):
-            _LOGGER.error("Invalid width value", exc_info=v)
-        else:
-            self._width = value
+        if value is not None:
+            tools.test_dimension_string(value)
 
     @styleproperty
     def thumb(self) -> str:
@@ -1544,7 +1544,7 @@ class LineSlider(base._BaseSlider):
 
         self._lineLength = line_length
         "Length of the line in pixels"
-        c = LineSlider.color.value(self)
+
         drawcolor = Style.get_color(LineSlider.color.value(self), colorMode)
         rectangle = Image.new(
             colorMode,
@@ -1552,10 +1552,13 @@ class LineSlider(base._BaseSlider):
             color=Style.get_color(img_background, colorMode)
         )
         draw = ImageDraw.Draw(rectangle)
+        line_w = LineSlider.width.value(self)
+        if line_w is None:
+            line_w = "h/4" if self.orientation == "horizontal" else "w/4"
         draw.line(
             coo,
             fill=drawcolor,
-            width=self._convert_dimension(LineSlider.width.value(self),{"l":line_length})
+            width=self._convert_dimension(line_w,{"l":line_length})
         )
 
         if self.end_points != None:
@@ -1716,18 +1719,20 @@ class BoxSlider(base._BaseSlider):
             end_points : Optional[Union[MDItype,tuple[str,str]]]=None, end_colors : Optional[ColorType]=None, end_point_size : PSSMdimension = None, **kwargs):
 
         
-        super().__init__(orientation=orientation, tap_action=tap_action, **kwargs)
+        super().__init__(orientation=orientation, tap_action=tap_action,  **kwargs)
         
         
         self.outline_color = outline_color
         self.active_color = active_color
         self.inactive_color = inactive_color
-        
-        if width != None:
-            self.width = width
-        else:
-            self.width = "h/4" if self. orientation == "horizontal" else "w/4"
-        
+
+        self.width = width
+
+        # if Style.get_value(width, self, "width") != None:
+        #     self.width = width
+        # else:
+        #     self.width = "h/4" if orientation == "horizontal" else "w/4"
+
         self.radius = radius
         self.outline_width = outline_width
 
@@ -1738,6 +1743,17 @@ class BoxSlider(base._BaseSlider):
         self.end_point_size = end_point_size
     
     #region
+    styleClasses = styleproperty.style_classes({
+        "Horizontal": {
+            "width": "h/4",
+            "end_point_size": "h/2",
+        },
+        "Vertical": {
+            "width": "w/4",
+            "end_point_size": "w/2",
+        }
+    })
+
     @colorproperty
     def active_color(self) -> ColorType:
         "The color of the bar indicating the value"
@@ -1763,7 +1779,21 @@ class BoxSlider(base._BaseSlider):
         "Colors of the icons at the box's end"
         return self._end_colors
 
-    @property
+    @styleproperty
+    def width(self) -> PSSMdimension:
+        "The width of the slider line"
+        return self._width
+    
+    @width.setter
+    def width(self, value):
+        tools.test_dimension_string(value)
+        # if v := isinstance(tools.is_valid_dimension(value), Exception):
+        #     # _LOGGER.error("Invalid width value", exc_info=v)
+        #     raise v
+        # else:
+        #     self._width = value
+
+    @styleproperty
     def outline_width(self) -> PSSMdimension:
         "Width of the box's outline"
         return self._outline_width
@@ -1772,27 +1802,30 @@ class BoxSlider(base._BaseSlider):
     def outline_width(self, value : PSSMdimension):
         self._dimension_setter("_outline_width", value=value)
 
-    @property
+    @styleproperty
     def radius(self) -> ColorType:
         "Corner radius of the box"
         return self._radius
     
     @radius.setter
     def radius(self, value : ColorType):
-        self._dimension_setter("_radius", value=value)
+        tools.test_dimension_string(value)
+        # self._dimension_setter("_radius", value=value)
 
-    @property
+    @styleproperty
     def end_point_size(self) -> ColorType:
         "Size  of the end point icons"
         return self._end_point_size
     
     @end_point_size.setter
     def end_point_size(self, value : ColorType):
-        if value == None:
-            self._end_point_size = value
-            return
+        if value is not None:
+            tools.test_dimension_string(value)
+        # if value == None:
+        #     self._end_point_size = value
+        #     return
         
-        self._dimension_setter("_end_point_size", value=value)
+        # self._dimension_setter("_end_point_size", value=value)
 
     @property
     def end_points(self) -> Optional[Union[str,tuple[str,str]]]:
@@ -1809,9 +1842,9 @@ class BoxSlider(base._BaseSlider):
             points = (value,value)
         elif isinstance(value,(list,tuple)):
             if len(value) != 2:
-                msg = f"List with endpoints must be exactly of 2 length"
-                _LOGGER.error(msg,exc_info=ValueError(msg))
-                return
+                msg = f"{self}: List with endpoints must be exactly of 2 length"
+                raise ValueError(msg)
+
             else:
                 points = value
 
@@ -1819,9 +1852,8 @@ class BoxSlider(base._BaseSlider):
             if point == None:
                 continue
             if point[:4] not in ALLOWED_MDI_IDENTIFIERS:
-                msg = f"endPoint icon must be an mdi icon. Cannot parse {value} as such"
-                _LOGGER.error(msg,exc_info=ValueError(msg))
-                return
+                msg = f"{self}: endPoint icon must be an mdi icon. Cannot parse {value} as such"
+                raise ValueError(msg)
         self.__end_points = tuple(points)
     #endregion
 
@@ -1835,7 +1867,7 @@ class BoxSlider(base._BaseSlider):
         (x, y), (w, h) = self.area
         colorMode = self.parentPSSMScreen.imgMode
         
-        img_background = self.background_color
+        img_background = BoxSlider.background_color.value(self)
 
         v_length = self.valueRange[1] - self.valueRange[0]
         if v_length == 0:
@@ -1843,8 +1875,12 @@ class BoxSlider(base._BaseSlider):
         else:
             position_perc = (self.position - self.valueRange[0])/(v_length)
 
-        boxW = self._convert_dimension(self.width)
-        endP_size = boxW if self.end_point_size == None else self._convert_dimension(self.end_point_size)
+        boxW = self._convert_dimension(BoxSlider.width.value(self))
+        endP_size = BoxSlider.end_point_size.value(self)
+        if endP_size is None:
+            endP_size = boxW
+        else:
+            endP_size = self._convert_dimension(endP_size)
         margin = int(boxW/6)
         if self.orientation == "horizontal":            
             if self.end_points == None:
@@ -1874,15 +1910,21 @@ class BoxSlider(base._BaseSlider):
             (w, h),
             color=Style.get_color(img_background, colorMode)
         )
-        radius = self._convert_dimension(self.radius,{"l":line_length})
+
+        radius = self._convert_dimension(
+            BoxSlider.radius.value(self),{"l":line_length})
         drawArgs = {"xy": coo,
                     "radius": radius,
-                    "fill": Style.get_color(self.inactive_color,colorMode)
+                    "fill": BoxSlider.inactive_color.get_color(self, colorMode)
                     }
         (rectangle, _) = DrawShapes.draw_rounded_rectangle(rectangle,drawArgs,rescale=["xy","radius","width"])
 
         if self.end_points != None:
-            col = Style.get_color(self.active_color,colorMode) if self.end_colors == None else Style.get_color(self.end_colors, colorMode)
+            col = BoxSlider.end_colors.value(self)
+            if col is None:
+                col = BoxSlider.active_color.get_color(self,colorMode)
+            else:
+                col = Style.get_color(col, colorMode)
             for idx, icon in enumerate(self.end_points):
                 if icon == None:
                     continue
@@ -1898,7 +1940,7 @@ class BoxSlider(base._BaseSlider):
         if active_length > 0:
             actArgs = {"xy": act_coo,
                         "radius": radius,
-                        "fill": Style.get_color(self.active_color,colorMode),
+                        "fill": BoxSlider.active_color.get_color(self,colorMode),
                         "outline": None,
                         "width": 0
                         }
@@ -1906,7 +1948,8 @@ class BoxSlider(base._BaseSlider):
             rectangle.alpha_composite(paste_rectangle)
 
             thumb_width = margin
-            if self.thumb_color != None:
+            thumb_col = BoxSlider.thumb_color.value(self)
+            if thumb_col != None:
                 if self.orientation == "horizontal":
                     thumbX = (act_coo[1][0] - margin - thumb_width,)*2
                     thumbY = (act_coo[0][1] + margin, act_coo[1][1] - margin)
@@ -1914,7 +1957,7 @@ class BoxSlider(base._BaseSlider):
                     thumbX = (act_coo[0][0] + margin, act_coo[1][0] - margin)
                     thumbY = (act_coo[0][1] + margin + thumb_width,)*2
                 xy=[(thumbX[0],thumbY[0]),(thumbX[1],thumbY[1])]
-                col = Style.get_color(self.thumb_color,colorMode)
+                col = Style.get_color(thumb_col,colorMode)
                 draw = ImageDraw.Draw(rectangle)
                 draw.line(
                     xy=xy,
@@ -1926,14 +1969,15 @@ class BoxSlider(base._BaseSlider):
         ##Draws the outline
         drawArgs = {"xy": coo,
                     "radius": radius,
-                    "outline": Style.get_color(self.outline_color,colorMode),
-                    "width": self._convert_dimension(self.outline_width,{"l":line_length})
+                    "outline": BoxSlider.outline_color.get_color(self,colorMode),
+                    "width": self._convert_dimension(
+                        BoxSlider.outline_width.value(self),{"l":line_length})
                     }
         (paste_rectangle, _) = DrawShapes.draw_rounded_rectangle(rectangle,drawArgs,rescale=["xy","radius","width"],paste=False)
         
         rectangle.alpha_composite(paste_rectangle)
 
-        if self.inverted:
+        if BoxSlider.inverted.value(self):
             rectangle = tools.invert_Image(rectangle)
         self._imgData = rectangle
         return self.imgData
@@ -1978,20 +2022,20 @@ class BoxSlider(base._BaseSlider):
         colorMode = self.parentPSSMScreen.imgMode
         baseImg = self._sliderBaseImg.copy()
 
-        radius = self._convert_dimension(self.radius,{"l":line_length})
+        radius = self._convert_dimension(BoxSlider.radius.value(self),{"l":line_length})
         
         if active_length > 0:
             actArgs = {"xy": act_coo,
                 "radius": radius,
-                "fill": Style.get_color(self.active_color,colorMode),
+                "fill": BoxSlider.active_color.value(self,colorMode),
                 "outline": None,
                 "width": 0
                 }
             (img, _) = DrawShapes.draw_rounded_rectangle(baseImg,actArgs,rescale=["xy","radius","width"], paste=False)
             
-
-            if self.thumb_color != None:
-                margin = int(self._convert_dimension(self.width)/6)
+            thumb_color = BoxSlider.thumb_color.value(self)
+            if thumb_color != None:
+                margin = int(self._convert_dimension(BoxSlider.width.value(self))/6)
                 thumb_width = margin
                 if self.orientation == "horizontal":
                     thumbX = (act_coo[1][0] - margin - thumb_width,)*2
@@ -2003,18 +2047,19 @@ class BoxSlider(base._BaseSlider):
                 draw = ImageDraw.Draw(img)
                 draw.line(
                     xy=xy,
-                    fill=Style.get_color(self.thumb_color,colorMode),
+                    fill=Style.get_color(thumb_color,colorMode),
                     width=thumb_width,
                 )
 
             baseImg.paste(img,mask=img)
         img = baseImg
 
-        if self.outline_color != None:
+        outline_color = BoxSlider.outline_color.value(self)
+        if outline_color != None:
             drawArgs = {"xy": coo,
             "radius": radius,
-            "outline": Style.get_color(self.outline_color,colorMode),
-            "width": self._convert_dimension(self.outline_width,{"l":line_length})
+            "outline": Style.get_color(outline_color,colorMode),
+            "width": self._convert_dimension(BoxSlider.outline_width.value(self),{"l":line_length})
             }
             (outl_img, _) = DrawShapes.draw_rounded_rectangle(img,drawArgs,rescale=["xy","radius","width"])
             img.paste(outl_img, mask=outl_img)
