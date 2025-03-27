@@ -1661,15 +1661,17 @@ class Layout(Element):
         for elt in self.create_element_list():
             elt._update_parent_colors(*update_list)
 
-    def generator(self, area=None, skipNonLayoutGen=False):
+    def generator(self, area=None, skipNonLayoutGen=False, apply_background_color : bool = True):
         """Creates a full image with all its child elements.
         Builds one img out of all the Elements it is being given
         """
 
         colorMode = self.parentPSSMScreen.imgMode
-        # color = Style.get_color(self.background_color, colorMode)
-        color = Layout.background_color.value(self)
-        color = Style.get_color(color, colorMode)
+        if apply_background_color or "A" not in colorMode:
+            color = Layout.background_color.value(self)
+            color = Style.get_color(color, colorMode)
+        else:
+            color = None
         
         if area is not None:
             self._area = area
@@ -1702,7 +1704,7 @@ class Layout(Element):
                         placeholder.alpha_composite(elt_img, pos)
                     elif "A" in elt_img.mode and "A" not in colorMode:
                         placeholder.paste(self.imgMatrix[i][j], pos)
-                    elif self.background_color != None and "A" in elt_img.mode:
+                    elif color != None and "A" in elt_img.mode:
                         placeholder.paste(elt_img, pos, mask=elt_img)
                     else:
                         placeholder.paste(elt_img, pos)
@@ -1835,8 +1837,13 @@ class Layout(Element):
             elif self.area == None:
                 _LOGGER.error(f"{self}: Cannot generate before an area is assigned")
                 return
-
-            await self.pre_generate(area, skipNonLayoutGen)
+            try:
+                await self.pre_generate(area, skipNonLayoutGen)
+            except Exception as exce:
+                msg = f"{self}: error during pre-generating: {exce}"
+                _LOGGER.error(msg, exc_info=DEBUG)
+                if DEBUG:
+                    raise
 
             if self.area == None or self._rebuild_area_matrix:
                 self.create_area_matrix()
@@ -2299,6 +2306,9 @@ class TileElement(Layout):
 
     emulator_icon = "mdi:layers-triple"
 
+    defaultHorizontalSizes = {}
+    defaultVerticalSizes = {}
+
     def __init__(self, tile_layout : Union[str,PSSMLayout], vertical_sizes = {"inner": 0, "outer": 0}, horizontal_sizes = {"inner": 0, "outer": 0},
                 foreground_color : Optional[ColorType] = DEFAULT_FOREGROUND_COLOR, accent_color : Optional[ColorType] = DEFAULT_ACCENT_COLOR, background_color : Optional[ColorType] = None, 
                 outline_color : Optional[ColorType] = None, element_properties = {},
@@ -2312,8 +2322,15 @@ class TileElement(Layout):
         self._color_setter("_outline_color",outline_color,True, cls=TileElement)
         self._color_setter("_accent_color",accent_color,True, cls=TileElement)
 
-        self._vertical_sizes = {"inner": 0, "outer": 0}
-        self._horizontal_sizes = {"inner": 0, "outer": 0}
+        if not Style.is_style_string(vertical_sizes):
+            self._vertical_sizes = {"inner": 0, "outer": 0}
+        else:
+            self._vertical_sizes = {}
+
+        if not Style.is_style_string(horizontal_sizes):
+            self._horizontal_sizes = {"inner": 0, "outer": 0}
+        else:
+            self._horizontal_sizes = {}
 
         self.vertical_sizes = vertical_sizes
         self.horizontal_sizes = horizontal_sizes
@@ -2322,7 +2339,10 @@ class TileElement(Layout):
         self._element_properties = {}
         
         if isinstance (tile_layout, str):
-            layout = parse_layout_string(tile_layout, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
+            layout = parse_layout_string(tile_layout, None, self.hide, 
+                                        TileElement.vertical_sizes.value(self),
+                                        TileElement.horizontal_sizes.value(self),
+                                        **self.elements)
         else:
             layout = tile_layout
         super().__init__(layout, background_color=background_color, outline_color=outline_color, foreground_color=foreground_color, accent_color=accent_color,  **kwargs)
@@ -2345,9 +2365,8 @@ class TileElement(Layout):
         """String used to set the layout. 
         None if the layout was set directly"""
         if self._tile_layout in self.__class__.defaultLayouts:
-            l = self.__class__.defaultLayouts[self._tile_layout]
-            return l
-        
+            return self.__class__.defaultLayouts[self._tile_layout]
+
         return self._tile_layout
     
     @tile_layout.setter
@@ -2432,6 +2451,9 @@ class TileElement(Layout):
         else:
             set_value = value
 
+        if isinstance(value, str) and value in self.defaultVerticalSizes:
+            value = self.defaultVerticalSizes[value]
+
         allowed_keys = {"inner", "outer"} | set(self.elements.keys())
         val_keys = set(value.keys()) | allowed_keys
         if val_keys != allowed_keys:
@@ -2463,14 +2485,16 @@ class TileElement(Layout):
             value = TileElement.horizontal_sizes.value(self)
         else:
             set_value = value
-            # self._horizontal_sizes = value
+
+        if isinstance(value, str) and value in self.defaultHorizontalSizes:
+            value = self.defaultHorizontalSizes[value]
 
         allowed_keys = {"inner", "outer"} | set(self.elements.keys())
         val_keys = set(value.keys()) | allowed_keys
         if val_keys != allowed_keys:
             msg = f"{self.id} horizontal sizes only allows {allowed_keys}. {value.keys()} has at least 1 not allowed. Don't forget to add new elements before setting vertical and horizontal sizes."
-            _LOGGER.exception(KeyError(msg))
-            return
+            raise KeyError(msg)
+            
 
         if Style.is_style_string(set_value):
             self._horizontal_sizes = set_value
@@ -2584,39 +2608,44 @@ class TileElement(Layout):
         
         return updating
 
-    def generator(self, area=None, skipNonLayoutGen=False):
+    # def generator(self, area=None, skipNonLayoutGen=False):
         
-        # if self.tile_layout != None and self._reparse_layout:
-        #     old_layout = self.layout.copy()
-        #     new_layout = parse_layout_string(self.tile_layout, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
-        #     if new_layout != old_layout: ##This doesn't quite work since sublayouts are a thing
-        #         self.set_parent_layouts(old_layout,new_layout)
-        #         self._layout = new_layout
-        #         skipNonLayoutGen=False
-        #         self._rebuild_area_matrix = True
+    #     # if self.tile_layout != None and self._reparse_layout:
+    #     #     old_layout = self.layout.copy()
+    #     #     new_layout = parse_layout_string(self.tile_layout, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
+    #     #     if new_layout != old_layout: ##This doesn't quite work since sublayouts are a thing
+    #     #         self.set_parent_layouts(old_layout,new_layout)
+    #     #         self._layout = new_layout
+    #     #         skipNonLayoutGen=False
+    #     #         self._rebuild_area_matrix = True
 
-        #     self._reparse_layout = False
+    #     #     self._reparse_layout = False
 
-        # if self._reparse_colors:
-        #     skipNonLayoutGen = False
-        #     self._reparse_element_colors()
+    #     # if self._reparse_colors:
+    #     #     skipNonLayoutGen = False
+    #     #     self._reparse_element_colors()
 
-        ##Check what to do with regenerating layouts, mainly for when colors change.
-        ##May be doable by overwriting async update and checking if a color property is in it.
-        i = super().generator(area, skipNonLayoutGen)
-        return i
+    #     ##Check what to do with regenerating layouts, mainly for when colors change.
+    #     ##May be doable by overwriting async update and checking if a color property is in it.
+    #     i = super().generator(area, skipNonLayoutGen)
+    #     return i
 
     async def pre_generate(self, area = None, skipNonLayoutGen = False):
         
         if self.tile_layout != None and self._reparse_layout:
             old_layout = self.layout.copy()
             vertical_sizes = TileElement.vertical_sizes.value(self)
+            # if vertical_sizes in self.defaultVerticalSizes:
+            #     vertical_sizes = self.defaultVerticalSizes[vertical_sizes]
+
             horizontal_sizes = TileElement.horizontal_sizes.value(self)
+            # if horizontal_sizes in self.defaultHorizontalSizes:
+            #     horizontal_sizes = self.defaultHorizontalSizes[horizontal_sizes]
+
             new_layout = parse_layout_string(self.tile_layout, None, self.hide, vertical_sizes, horizontal_sizes, **self.elements)
             if new_layout != old_layout: ##This doesn't quite work since sublayouts are a thing
                 self.set_parent_layouts(old_layout,new_layout)
                 self._layout = new_layout
-                # skipNonLayoutGen=False
                 self._rebuild_area_matrix = True
 
             self._reparse_layout = False
@@ -4859,6 +4888,10 @@ class Icon(ImageElement):
     
     @badge_location.setter
     def badge_location(self, value: BadgeLocationType):
+        if Style.is_style_string(value):
+            # value = Style.get_value(value)
+            value = Icon.badge_location.value(self)
+        
         if value == None:
             self._badge_location = value
             return
@@ -4990,7 +5023,7 @@ class Icon(ImageElement):
                 (loadedImg, drawImg) = drawFunc(loadedImg, drawArgs=drawArgs, paste=False)
             else:
                 ##This should not happen since the check happens (or will happen) when setting the value
-                _LOGGER.error(f"{bg_shape} is not a recognised valid value for background shape.")
+                _LOGGER.error(f"{self}: {bg_shape} is not a recognised valid value for background shape.")
         else:
             if bg_color is not None:
                 img_background = Style.get_color(bg_color, imgMode)
