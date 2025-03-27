@@ -6481,7 +6481,7 @@ class _IntervalUpdate(ABC):
     def update_every(self) -> str:
         """Update at the top of the [hour/minute/second].
         Can be one of hour, minute or second. If setting it to None, _update_interval will be used to set the wait time between updates."""
-        return self.__update_every
+        return self._update_every
     
     @update_every.setter
     def update_every(self, value:str):
@@ -6489,7 +6489,7 @@ class _IntervalUpdate(ABC):
         value = shorthands.get(value,value)
         allowed = ["hour","minute","second"]
         if value == None:
-            self.__update_every = None
+            self._update_every = None
             return
         elif value not in allowed:
             msg = "Updateinterval must be one of hour, minute or second"
@@ -6499,7 +6499,7 @@ class _IntervalUpdate(ABC):
             k = f"{value}s" 
             self._delta_dict = {k:1}
             self._replace_dict = {key: 0 for key in allowed[allowed.index(value):] if key != value}
-            self.__update_every = value
+            self._update_every = value
 
     @property
     def _waitTime(self) -> float:
