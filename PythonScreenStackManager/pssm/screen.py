@@ -1706,6 +1706,7 @@ class PSSMScreen:
         x,y, action = interaction
 
         elt_action = elt._get_action(action)
+        show_elt_fb = Element.show_feedback.value(elt)
         if isinstance(elt,elements.Layout):
             if elt_action:
                 func, kwargs = elt_action
@@ -1716,8 +1717,8 @@ class PSSMScreen:
                     coro_list.append(
                         asyncio.to_thread(
                             func,elt, interaction,**kwargs))
-                    
-            if elt.show_feedback or (elt_action and elt.show_feedback == const.FEEDBACK_ON_ACTION):
+
+            if show_elt_fb or (elt_action and show_elt_fb == const.FEEDBACK_ON_ACTION):
                 coro_list.append(
                     elt.feedback_function())
 
@@ -1725,7 +1726,7 @@ class PSSMScreen:
                 await elt._dispatch_click(interaction))
 
         else:
-            if elt.show_feedback:
+            if show_elt_fb:
                 coro_list.append(
                     elt.feedback_function())
             
