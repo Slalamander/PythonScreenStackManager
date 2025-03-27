@@ -536,6 +536,26 @@ def intersect_element_area(elt : "Element", intersect_area : PSSMarea) -> Image.
     else:
         return img_cropped
 
+def test_dimension_string(dimStr: Union[PSSMdimension,list[PSSMdimension]], variables : list[str] =[]):
+    """Tests if a dimension string is valid. Throws an error if not.
+
+    Parameters
+    ----------
+    dimStr : Union[PSSMdimension,list[PSSMdimension]]
+        The string to test
+    variables : list[str], optional
+        Any additional variables, by default []
+
+    Raises
+    ------
+    Exception
+        Relevant exception
+    """
+
+    res = is_valid_dimension(dimStr,variables)
+    if isinstance(res, Exception):
+        raise res
+
 def is_valid_dimension(dimStr: Union[PSSMdimension,list[PSSMdimension]], variables : list[str] =[]) -> Union[bool,Exception]:
     """
     Checks if the given dimensional string is a valid pssm dimension string i.e. can be converted into an integer or float when for pixel values when needed. 
