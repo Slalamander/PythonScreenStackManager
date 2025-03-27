@@ -5750,6 +5750,11 @@ class _BaseSlider(Element):
             return
         await tools.wrap_to_coroutine(self._tap_action,elt,coords, **kwargs)
 
+    async def feedback_function(self):
+        
+        if not self.interactive:
+            await super().feedback_function()
+
     async def _slider_interact(self, elt, coords):
         """Function that handles the slider being clicked on. Performs logic checks and then executes onTap"""
 
