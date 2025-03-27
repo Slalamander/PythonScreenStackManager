@@ -146,8 +146,12 @@ class Style:
                 elif val in styleproperty._base_styles:
                     d["prop"] = val
                 else:
-                    msg = f"Unknown style specifier {val}"
-                    raise ValueError(msg)
+                    styleclass, owner = cls._split_style_class(val)
+                    if styleclass in cls.base_style_tree:
+                        d["owner"] = val
+                    else:
+                        msg = f"Unknown style specifier {val}"
+                        raise ValueError(msg)
         else:
             raise ValueError("Invalid style tuple length")
         
@@ -183,7 +187,8 @@ class Style:
         If not style_class is set, it simply returns a tuple with two duplicate values
         """
         if STYLE_PARENTCLASS_SEPERATOR in style_class:
-            return tuple(style_class.split(STYLE_PARENTCLASS_SEPERATOR, 1))
+            _, owner = style_class.split(STYLE_PARENTCLASS_SEPERATOR, 1)
+            return style_class, owner
         else:
             return style_class, style_class
 
@@ -241,6 +246,7 @@ class Style:
 
     @classmethod
     def get_value(cls, style_value : str, element: "Element" = None, property_name : str = None):
+        
         if not cls.base_style_tree:
             cls.setup_style_tree()
 
@@ -272,7 +278,8 @@ class Style:
 
             ##Don't forget to check if this includes or excludes the last one
             cur_tree = cls.base_style_tree
-            for parent_owner_string in owners[:-1]:
+            traversed_trees = []
+            for i, parent_owner_string in enumerate(owners[:-1]):
                 styleclass, parent_owner = cls._split_style_class(parent_owner_string)
                 # if STYLE_PARENTCLASS_SEPERATOR in parent_owner_string:
                 #     styleclass, parent_owner = parent_owner_string.split(STYLE_PARENTCLASS_SEPERATOR)
@@ -282,12 +289,16 @@ class Style:
                 if parent_owner not in cls._knownowners:
                     raise KeyError(f"Unknown element class {parent_owner} in style string {style_value}")
                 
-                if styleclass in cur_tree:
+                if styleclass in cur_tree and styleclass != parent_owner:
                     ##Honestly in here, need to have all things seperated already I think?
                     ##Or at least be able to track the previous one, so its possible to take a step back to the class.
 
                     ##Because: styleclass may not contain it but yada yada
-                    cur_tree = cur_tree[styleclass]
+                    stylecls_tree = cur_tree[styleclass]
+                    owner_tree = cur_tree.get(parent_owner,{})
+                    # cur_tree = owner_tree | stylecls_tree
+                    cur_tree = tools.update_nested_dict(stylecls_tree, owner_tree)
+                    _LOGGER.debug(f"Combined trees for {styleclass} and {parent_owner}")                    
                 elif parent_owner in cur_tree:
                     cur_tree = cur_tree[parent_owner]
                 else:
@@ -296,6 +307,8 @@ class Style:
                     _LOGGER.debug(f"Unable to fully traverse style tree for owners {owner}")
                     cur_tree = cls.base_style_tree
                     break
+                
+                traversed_trees.append(cur_tree)
                     
             # owner = owners[-1]
             style_class, owner = cls._split_style_class(owners[-1])
@@ -306,7 +319,8 @@ class Style:
                 ##This does mean the property is checked twice if it is in there, but it is probably the best way to do so.
                 cur_tree = cls.base_style_tree
             else:
-                _LOGGER.info("Traversed style tree in full")
+                _LOGGER.debug(f"Fully traversed style tree for {owners}")
+
         else:
             style_class, owner = cls._split_style_class(owner[0])
             cur_tree = cls.base_style_tree
@@ -336,7 +350,7 @@ class Style:
                     # return val
                     break
                 if base == Element:
-                    val = cls.base_style_tree[prop]
+                    val = styleproperty._base_styles[prop]
                     break
         
         if cls.is_style_string(val):
@@ -536,7 +550,8 @@ class styleproperty(customproperty):
 
     _found_properties = set()
 
-    _element_classes : dict[str,type["Element"]] = {}
+    _element_classes : dict[str,type["Element"]] = {}   ##Maps strings to appropriate class
+    _all_owners : set["Element"] = set()    ##All elements with styleproperties defined
     _base_element_class: "Element"
     
     _style_tree_root = {}
@@ -646,6 +661,8 @@ class styleproperty(customproperty):
 
         if cls._base_styles.get(name, Style.NONESTYLE) is Style.NONESTYLE:
             cls._base_styles[name] = self.vdefault
+        
+        cls._all_owners.add(owner_elt)
         return
 
     def __get__(self, obj, objtype=None):
@@ -655,8 +672,11 @@ class styleproperty(customproperty):
             raise AttributeError("unreadable attribute")
 
         val = self.fget(obj)
+        if isinstance(val, str) and val.lower() == "none":
+            val = None
 
-        if obj.__class__ is self.owner:
+        # if obj.__class__ is self.owner:
+        if obj.__class__.__name__ in self._all_owners:
             return val
         if isinstance(val,str) and "::" in val:
             style_val = Style.get_value(val, obj)
@@ -678,6 +698,8 @@ class styleproperty(customproperty):
                     self.fset(obj, style_value)
                     setattr(obj,f"_{self._style_attribute}", style_string)
                 else:
+                    if isinstance(value, str) and value.lower() == 'none':
+                        value = None
                     self.fset(obj, value)
                     setattr(obj,f"_{self.property_name}", value)
                 return
@@ -692,7 +714,9 @@ class styleproperty(customproperty):
         """Returns the value of this property for the given element
 
         Conversion of style strings is handled in this function.
-        """        
+        """
+        if not isinstance(getattr(element.__class__, self.property_name, None), styleproperty):
+            return getattr(element, self.property_name)
         val = element.get_style_value(getattr(element, f"_{self.property_name}"), self.property_name)
         if isinstance(val, dict):
             return val.copy()
@@ -749,13 +773,47 @@ class styleproperty(customproperty):
         return {}
     
     @classmethod
+    def style_classes(cls, style_tree : dict):
+        """Add a style tree for specific styleclasses of this element
+
+        Parameters
+        ----------
+        style_tree : dict[Union[type[&quot;Element&quot;],str],dict]
+            The style tree to add. The element class is added automatically.
+
+        Example
+        ---------
+        ```
+        class Tile:
+            ....
+
+            styleClasses = styleproperty.style_classes({"Horizontal": {"background_color": "green"})
+        ```
+        This example will have the background color for a Tile with style_class "Horizontal" be styled to green.
+        """
+        return _styleclasses(style_tree)
+
+    @classmethod
     def child_styles(cls, style_tree : dict[Union[type["Element"],str],dict]):
         """Add a style tree for elements with this element type as styleParent
 
         Parameters
         ----------
         style_tree : dict[Union[type[&quot;Element&quot;],str],dict]
-            The style tree to add. Preferably add the class of the child elements, although a name can also be used.
+            The style tree to add. If a key is not an element class, the value dict should contain the key "Class", with a tuple of applicable classes.
+
+        ```
+        class Tile:
+            ....
+
+            childStyles = styleproperty.style_classes(
+                    Button : {"font_color": "green"},
+                    "Title": {
+                            "Class": (Button,),
+                            "font": DEFAULT_FONT_HEADER}
+                                }))
+        ```
+        This will add the child style classes "Button" and "Title.Button". For the latter, the "Class" key is removed from the dict.
         """
         
         ##What to return here? Probably a new property, may a subclass of this one.
@@ -770,28 +828,46 @@ class styleproperty(customproperty):
         ##check that, idk.
         ##But can do it. It does not necessarily need a function, but does perhaps need a classvariable for itself.
         return _childstyles(style_tree)
-        return "child_styles"
-
+    
 class _childstyles(styleproperty):
-
-    # def __init__(self, fget=None, fset=None, fdel=None, doc=None, *, vdefault=Style.NONESTYLE, vsetraw=False):
-    #     super().__init__(fget, fset, fdel, doc, vdefault=vdefault, vsetraw=vsetraw)
 
     def __init__(self, child_tree : dict):
 
+        self._child_tree = self._process_dict(child_tree)
+        return
+    
+    @classmethod
+    def _process_dict(cls, d_proc : dict):
+        #Process a style_tree dict recursively, applying keys from Class etc. automatically
+
         d = {}
-        for k, v in child_tree.items():
-            if inspect.isclass(k) and issubclass(k, self._base_element_class):
+        for k, v in d_proc.items():
+            if inspect.isclass(k) and issubclass(k, styleproperty._base_element_class):
                 k_new = k.__name__
-                d[k_new] = v
+                if isinstance(v, dict):
+                    d[k_new] = cls._process_dict(v)
+                else:
+                    d[k_new] = v
             elif isinstance(k, str):
-                d[k] = v
+                if not isinstance(v, dict):
+                    v_new = v
+                    d[k] = v
+                elif "Class" in v:
+                    v_new : dict = v.copy()
+                    v_classes = v_new.pop("Class")
+                    assert isinstance(v_classes,(list,tuple)), "Class key must be a list or tuple"
+                    for k_class in v_classes:
+                        if type(k_class) is str:
+                            key = f"{k}{STYLE_PARENTCLASS_SEPERATOR}{k_class}"
+                        else:
+                            assert issubclass(k_class,styleproperty._base_element_class), "Items in 'Class' must be a subclass of element"
+                            key = f"{k}{STYLE_PARENTCLASS_SEPERATOR}{k_class.__name__}"
+                        d[key] = cls._process_dict(v_new)
+                else:
+                    d[k] = cls._process_dict(v)
             else:
                 raise TypeError("Child tree keys must be a string or element class")
-                
-
-        self._child_tree = d
-        # super().__init__(fget=self._fget)
+        return d
 
     def getter(self, fget):
         return type(self)(fget)
@@ -820,6 +896,32 @@ class _childstyles(styleproperty):
 
         ##Do I guess test if everything is a style property, but I guess that should also happen for most things. idk.
         return
+
+class _styleclasses(_childstyles):
+
+    def __init__(self, style_tree : dict):
+        
+        d = {}
+        for k, v in style_tree.items():
+            d[k] = self._process_dict(v)
+
+        self._class_tree = d
+
+    def __set_name__(self, owner, name):
+        d = {}
+        owner_elt = owner.__name__
+
+        for k,v in self._class_tree.items():
+            k_new = f"{k}{STYLE_PARENTCLASS_SEPERATOR}{owner_elt}"
+            d[k_new] = v
+            styleproperty._style_tree_root[k_new] = v
+
+        self._class_tree = d
+    
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        return self._class_tree
 
 
 class colorproperty(styleproperty):
