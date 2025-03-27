@@ -952,8 +952,10 @@ class colorproperty(styleproperty):
                 fset=None, 
                 fdel=None, 
                 doc=None,
+                *,
                 vdefault = Style.NONESTYLE,
-                vallowsnone = True
+                vallowsnone = True,
+                fset_post = None,
                 ):
         """Attributes of 'our_decorator'
         fget
@@ -973,6 +975,7 @@ class colorproperty(styleproperty):
             fset = self._color_setter
         super().__init__(fget, fset, fdel, doc, vdefault=vdefault)
         self._allows_none = vallowsnone
+        self._fset_post = fset_post
         return
 
     class NOT_NONE(customproperty):
@@ -988,6 +991,12 @@ class colorproperty(styleproperty):
         if self.fget is None:
             raise AttributeError("unreadable attribute")
         return self._get_element_color(obj)
+
+    def __set__(self, obj, value):
+        v = super().__set__(obj, value)
+        if self._fset_post:
+            self._fset_post(obj, value)
+        return v
 
     # def __set__(self, obj, value):
         
@@ -1065,10 +1074,11 @@ class colorproperty(styleproperty):
             msg = f"{element}: {value} is not identified as a valid color"
 
         if msg:
-            _LOGGER.error(msg, exc_info=ValueError(msg))
+            # _LOGGER.error(msg, exc_info=ValueError(msg))
+            raise ValueError(msg)
         elif hasattr(element, "_style_update"):
             element._style_update(attribute, value)
-
+        
     def _get_element_color(self, element: "Element"):
         val = self.fget(element)
         if Style.is_style_string(val):
@@ -1117,14 +1127,22 @@ class colorproperty(styleproperty):
 
     def getter(self, fget):
         fset = None if self.fset == self._color_setter else self.fset
-        return type(self)(fget, fset, self.fdel, self.__doc__, vdefault=self.vdefault, vallowsnone=self._allows_none)
+        return type(self)(fget, fset, self.fdel, self.__doc__, 
+                        vdefault=self.vdefault, vallowsnone=self._allows_none, fset_post=self._fset_post)
 
     def setter(self, fset):
-        return type(self)(self.fget, fset, self.fdel, self.__doc__, vdefault=self.vdefault, vallowsnone=self._allows_none)
+        return type(self)(self.fget, fset, self.fdel, self.__doc__, 
+                        vdefault=self.vdefault, vallowsnone=self._allows_none, fset_post=self._fset_post)
+
+    def post_setter(self, fset_post):
+        fset = None if self.fset == self._color_setter else self.fset
+        return type(self)(self.fget, fset, self.fdel, self.__doc__, 
+                        vdefault=self.vdefault, vallowsnone=self._allows_none, fset_post=fset_post)
 
     def deleter(self, fdel):
         fset = None if self.fset == self._color_setter else self.fset
-        return type(self)(self.fget, fset, fdel, self.__doc__, vdefault=self.vdefault, vallowsnone=self._allows_none)
+        return type(self)(self.fget, fset, fdel, self.__doc__,
+                        vdefault=self.vdefault, vallowsnone=self._allows_none, fset_post=self._fset_post)
 
 
 decorators.colorproperty = colorproperty
