@@ -5604,9 +5604,10 @@ class _BaseSlider(Element):
     def __init__(self, orientation : Literal["horizontal","vertical"], position : Union[int,float]=None, 
                 minimum : float = 0, maximum : float = 100, value_type : Union[type[float],type[int],Literal["int","float"]] = float, 
                 show_feedback : bool = False, interactive : bool = True, tap_action=None, on_position_set: dict = None,
+                background_color : ColorType = None,
                 **kwargs):
 
-        super().__init__(tap_action=tap_action, show_feedback=show_feedback, **kwargs)
+        super().__init__(tap_action=tap_action, background_color=background_color, show_feedback=show_feedback, **kwargs)
 
         self.interactive=interactive
         self.orientation = orientation
@@ -5622,6 +5623,20 @@ class _BaseSlider(Element):
         self.on_position_set = on_position_set
 
     #region
+    @Element.style_class.getter
+    def style_class(self):
+        sc = self._style_class
+        if sc is None:
+            tl = getattr(self, "orientation", None)
+            if tl == "horizontal":
+                return "Horizontal"
+            elif tl == "vertical":
+                return "Vertical"
+            else:
+                return None
+        else:
+            return sc
+        
     @property
     def orientation(self) -> Literal["horizontal","vertical"]:
         "The orientation of the slider. Horizontal or Vertical."
