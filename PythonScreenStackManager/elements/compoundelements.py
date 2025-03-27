@@ -2086,58 +2086,58 @@ class Slider(LineSlider, BoxSlider):
 
     emulator_icon = "mdi:tune-variant"
 
-    def __init__(self, style : Literal["line", "box"] = "line", orientation : Literal["horizontal", "vertical"] ="horizontal", **kwargs):
+    def __init__(self, slider_style : Literal["line", "box"] = "line", orientation : Literal["horizontal", "vertical"] ="horizontal", **kwargs):
 
-        self.style = style
+        self.slider_style = slider_style
 
         ##This may work in at least having everything working?
-        if self.style == "box":
+        if self.slider_style == "box":
             LineSlider.__init__(self, orientation=orientation,_register=False)
             BoxSlider.__init__(self, orientation=orientation,**kwargs)
-        elif self.style == "line":
+        elif self.slider_style == "line":
             BoxSlider.__init__(self, orientation=orientation, _register=False)
             LineSlider.__init__(self, orientation=orientation, **kwargs)
 
     #region
     @property
-    def style(self) -> Literal["line", "box"]:
+    def slider_style(self) -> Literal["line", "box"]:
         """
         The style of the slider, i.e. whether it displays a box or line slider. 
         When changing this after initiating the instance object, it should work out of the box, but be mindful things may work wonky.
         """
-        return self.__style
+        return self._slider_style
     
-    @style.setter
-    def style(self, value : Literal["line", "box"]):
+    @slider_style.setter
+    def slider_style(self, value : Literal["line", "box"]):
         styles = ["line", "box"]
         if value not in styles:
             msg = f"Slider style must be one of {styles}, not {value}"
             _LOGGER.exception(ValueError(msg))
         else:
-            self.__style = value
+            self._slider_style = value
 
         return
 
     @colorproperty
     def thumb_color(self):
-        if self.style == "line":
+        if self.slider_style == "line":
             return LineSlider.thumb_color.fget(self)
-        elif self.style == "box":
+        elif self.slider_style == "box":
             return BoxSlider.thumb_color.fget(self)
 
     @property
     def SliderClass(self) -> Union[type[LineSlider], type[BoxSlider]]:
         "Quickhand function to get the correct class"
-        if self.style == "line":
+        if self.slider_style == "line":
             return LineSlider
-        elif self.style == "box":
+        elif self.slider_style == "box":
             return BoxSlider
     #endregion
 
     def generator(self, area=None, skipNonLayoutGen=False):
-        if self.style == "box":
+        if self.slider_style == "box":
             img = BoxSlider.generator(self, area, skipNonLayoutGen)
-        elif self.style == "line":
+        elif self.slider_style == "line":
             img = LineSlider.generator(self, area, skipNonLayoutGen)
         return img
 
