@@ -183,6 +183,7 @@ def update_nested_dict(update_dict: dict, old_dict: dict) -> dict:
         The dict to update
     """
 
+    ##Should I rename this to update_dict_recusive?
     new_dict = old_dict.copy()
 
     for key, value in update_dict.items():
