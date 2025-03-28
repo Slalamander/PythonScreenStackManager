@@ -5867,7 +5867,7 @@ class _BoolElement(Element):
         "Shorthand values mapping to element specific functions. Use by setting the function string as element:{function}"
         return Element.action_shorthands | {"set-state": "set_state_async", "toggle-state": "async_toggle_state"}
 
-    def __init__(self, state : bool = False, on_set : Callable[["_BoolElement", bool],Any] = None, state_attributes : CheckStateDict = {True:{},False: {}}, interactive : bool = True):
+    def __init__(self, state : bool = False, on_set : Callable[["_BoolElement", bool],Any] = None, state_attributes : CheckStateDict = {"True":{},"False": {}}, interactive : bool = True):
         self.__state = bool(state)
         self.interactive = interactive
 
@@ -5877,7 +5877,8 @@ class _BoolElement(Element):
         self.on_set = on_set
         self.state_attributes = state_attributes
 
-        for param,value in self.state_attributes[str(self.state)].items():
+        stateattr = _BoolElement.state_attributes.value(self)
+        for param,value in stateattr.get(str(self.state),{}).items():
             setattr(self,param,value)
 
     #region
@@ -5895,10 +5896,10 @@ class _BoolElement(Element):
     def interactive(self, value : bool):
         self.__interactive = bool(value)
     
-    @property
+    @styleproperty
     def state_attributes(self) -> CheckStateDict:
         "Element attributes to change depending on the checked state"
-        return self.__state_attributes
+        return self._state_attributes
 
     @state_attributes.setter
     def state_attributes(self, value : CheckStateDict):
@@ -5910,7 +5911,7 @@ class _BoolElement(Element):
             if key in val_dict:
                 val_dict[key] = v
 
-        self.__state_attributes = val_dict
+        self._state_attributes = val_dict
 
     @Element.tap_action.getter
     def tap_action(self) -> list[Callable[["_BoolElement",tuple[int,int]],Any]]:
@@ -5959,7 +5960,8 @@ class _BoolElement(Element):
             if self.on_set != None:
                 coro_list.append(tools.wrap_to_coroutine(self.on_set,self,new_state, **self.on_set_kwargs))
             if self.onScreen:
-                coro_list.append(self.async_update(updateAttributes=self.state_attributes[new_state],forceGen=True))
+                newattr = _BoolElement.state_attributes.value(self)
+                coro_list.append(self.async_update(updateAttributes=newattr[new_state],forceGen=True))
             
             await asyncio.gather(*coro_list)
 
