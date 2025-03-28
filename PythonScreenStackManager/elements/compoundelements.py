@@ -2440,8 +2440,8 @@ class CheckBox(base._BoolElement, base.Icon):
     emulator_icon = "mdi:checkbox-multiple-outline"
 
     def __init__(self, checked : bool = False, checked_icon : Optional[MDItype] = "mdi:check", unchecked_icon : Optional[MDItype] = None, 
-                on_set : Callable[["CheckBox", bool],Any] = None, state_attributes : base.CheckStateDict ={True:{},False: {}},
-                background_shape = "rounded_rectangle", background_color : ColorType= "white", show_feedback : bool = True, **kwargs):
+                on_set : Callable[["CheckBox", bool],Any] = None, state_attributes : base.CheckStateDict ={"True":{"icon_color": DEFAULT_FOREGROUND_COLOR},"False": {"icon_color": DEFAULT_ACCENT_COLOR}},
+                background_shape = "rounded_rectangle", background_color : ColorType= DEFAULT_BACKGROUND_COLOR, show_feedback : bool = True, **kwargs):
 
         base.Icon.__init__(self, icon=None, show_feedback=show_feedback, background_color = background_color, background_shape=background_shape, **kwargs)
         base._BoolElement.__init__(self, checked,on_set,state_attributes)
@@ -2454,9 +2454,9 @@ class CheckBox(base._BoolElement, base.Icon):
     def icon(self) -> Union[MDItype, str]:
         "The current icon of the element"
         if self.state:
-            return self.checked_icon
+            return CheckBox.checked_icon.value(self)
         else:
-            return self.unchecked_icon
+            return CheckBox.unchecked_icon.value(self)
     
     @icon.setter
     def icon(self, value):
@@ -2469,31 +2469,31 @@ class CheckBox(base._BoolElement, base.Icon):
         "True if the box is considered checked. Returns the elements state."
         return self.state
 
-    @property
+    @styleproperty
     def checked_icon(self) -> Optional[Union[MDItype,str]]:
         "The icon that indicates the CheckBox is checked"
-        return self.__checked_icon
+        return self._checked_icon
     
     @checked_icon.setter
     def checked_icon(self, value):
-        self._icon_setter("__checked_icon",value,allow_none=True)
+        self._icon_setter("_checked_icon",value,allow_none=True)
     
-    @property
+    @styleproperty
     def unchecked_icon(self) -> Optional[Union[MDItype,str]]:
         "The icon that indicates the CheckBox is not checked"
-        return self.__unchecked_icon
+        return self._unchecked_icon
     
     @unchecked_icon.setter
     def unchecked_icon(self, value):
-        self._icon_setter("__unchecked_icon",value,allow_none=True)
+        self._icon_setter("_unchecked_icon",value,allow_none=True)
     #endregion
 
     def generate_feedback_icon(self, img: Image.Image, background_color: ColorType, size: tuple[wType, hType]) -> Optional[Image.Image]:
         
         if self.state:
-            fb_icon = self.unchecked_icon
+            fb_icon = CheckBox.unchecked_icon.value(self)
         else:
-            fb_icon = self.checked_icon
+            fb_icon = CheckBox.checked_icon.value(self)
         
         if fb_icon == None:
             return None
@@ -2501,26 +2501,27 @@ class CheckBox(base._BoolElement, base.Icon):
         imgMode = img.mode
 
         
-        if self.background_color == None:
+        if (bg_col := CheckBox.background_color.get_color(self, imgMode)) == None:
             bg = self.parentBackground
         else:
-            bg = self.background_color
+            bg = bg_col
         
         icon_size = None
         icon_coords = None
 
-        if self.background_shape != None:
+        if (bg_shape := CheckBox.background_shape.value(self)) != None:
 
             ##Can't use the bg from the else statement since the sizing would get messed up
-            fb_img = Image.new(img.mode,img.size,self.background_color)
+            fb_img = Image.new(img.mode,img.size, bg_col)
             fb_img.putalpha(img.getchannel("A"))
 
             draw_size = min(img.size)
-            relSize = DrawShapes.get_relative_size(self.background_shape)
-            icon_size = self.shape_settings.get("icon_size",floor(draw_size*relSize))
+            relSize = DrawShapes.get_relative_size(bg_shape)
+            shape_settings = CheckBox.shape_settings.value(self)
+            icon_size = shape_settings.get("icon_size",floor(draw_size*relSize))
 
-            if "icon_coords" in self.shape_settings:
-                icon_coords = self.shape_settings["icon_coords"]
+            if "icon_coords" in shape_settings:
+                icon_coords = shape_settings["icon_coords"]
 
         else:
             fb_img = Image.new(img.mode, img.size, None)
@@ -2536,7 +2537,7 @@ class CheckBox(base._BoolElement, base.Icon):
         fb_img = mdi.draw_mdi_icon(fb_img,fb_icon, icon_coords, icon_size, self._iconColorValue)
         fb_img = ImageOps.pad(fb_img,size)
         
-        if self.background_shape != None:
+        if bg_shape != None:
             ##Don't need to paste if there is a background
             return fb_img
         else:
