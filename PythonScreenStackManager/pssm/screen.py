@@ -1683,8 +1683,9 @@ class PSSMScreen:
             L = await asyncio.gather(*coro_list, return_exceptions=True)
             for i, res in enumerate(L):
                 if isinstance(res,Exception): 
-                    _LOGGER.error(f"{coro_list[i]} returned an exception: {res}", exc_info=DEBUG)
-                    if const.RAISE: raise res
+                    _LOGGER.error(f"{coro_list[i]} returned an exception: {res}", exc_info=res)
+                    if const.RAISE: 
+                        raise res
             _LOGGER.verbose(f"Click  {x,y} coroutine gather returned with {L}")
             
     def __stop_printing(self):
