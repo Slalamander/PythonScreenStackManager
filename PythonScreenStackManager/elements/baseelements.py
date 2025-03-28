@@ -864,6 +864,8 @@ class Element(ABC):
         """
 
         if Style.is_style_string(dimension):
+            ##Can this be handled with substituting etc?
+            ##Problem kinda is that the math operators should be removed from it etc.
             dimension = self.get_style_value(dimension)
 
         if isinstance(dimension,(list,tuple)):
@@ -4089,11 +4091,12 @@ class Button(Element):
 
         if not isinstance(x,int):
             x = self._convert_dimension(x, variables={"w": textArea[1][0], "h": textArea[1][1]})        
-        x = x + abs(textArea[1][0] - area[1][0])
+        # x = x + abs(textArea[1][0] - area[1][0])
+        x = x + abs(textArea[0][0] - area[0][0])
 
         if not isinstance(y,int):
             y = self._convert_dimension(y, variables={"w": textArea[1][0], "h": textArea[1][1]})
-        y = y + abs(textArea[1][1] - area[1][1])
+        y = y + abs(textArea[0][1] - area[0][1])
     
         # font_color = self.get_style_value(self.font_color, self.__class__.font_color.property_name)
         font_color = Button.font_color.value(self)
