@@ -238,6 +238,8 @@ class Tile(base.TileElement):
                 "font": DEFAULT_FONT_HEADER}
                     })
 
+    
+
     styleClasses = styleproperty.style_classes({
             "Horizontal": {
                 "background_shape": "rounded_rectangle",
@@ -2995,8 +2997,10 @@ class Counter(base.TileElement):
 
     def __init__(self, tile_layout : Union[Literal["default", "horizontal"], PSSMLayoutString] = "default", value : float = 0, step : float = 1, roundDigits : int = None, minimum : float = None, maximum : float = None, 
                 on_count : Callable[["Counter",Union[float,int]],Any] = None,  downIcon : MDItype = "mdi:minus-box", upIcon : MDItype = "mdi:plus-box", 
-                horizontal_sizes : dict[str,PSSMdimension] = None, vertical_sizes : dict[str,PSSMdimension] = None, 
-                element_properties : dict[str,dict[str,str]] = {"count": {}, "up": {"icon_color": "foreground"},"down": {"icon_color": "foreground"}},
+                background_color : ColorType = DEFAULT_BACKGROUND_COLOR,
+                radius : PSSMdimension = 10,
+                horizontal_sizes : dict[str,PSSMdimension] = {}, vertical_sizes : dict[str,PSSMdimension] = {}, 
+                element_properties : dict[str,dict[str,str]] = {"count": {}, "up": {},"down": {}},
                 **kwargs):     
 
         self._tile_layout = None
@@ -3009,37 +3013,40 @@ class Counter(base.TileElement):
         self.downIcon = downIcon
         self.upIcon = upIcon
 
-        downButton = base.Icon(self.downIcon, tap_action=self.decrement)
-        upButton = base.Icon(self.upIcon, tap_action=self.increment)
-        countButton = base.Button(str(value))
+        downButton = base.Icon(self.downIcon, tap_action=self.decrement, styleParent = self, style_class = "Decrement")
+        upButton = base.Icon(self.upIcon, tap_action=self.increment, styleParent = self, style_class = "Increment")
+        countButton = base.Button(str(value), styleParent = self)
 
         self.__elements = MappingProxyType({"count": countButton, "up": upButton, "down": downButton})
 
-        default_properties = {"count": {"font_color": "foreground"}, "up": {"icon_color": "foreground"},"down": {"icon_color": "foreground"}}
+        # default_properties = {"count": {"font_color": "foreground"}, "up": {"icon_color": "foreground"},"down": {"icon_color": "foreground"}}
+        # default_properties = {"count": {}, "up": {},"down": {}}
 
-        for elt in default_properties:
-            set_props = element_properties.get(elt, {})
-            default_properties[elt].update(set_props)
+        # for elt in default_properties:
+        #     set_props = element_properties.get(elt, {})
+        #     default_properties[elt].update(set_props)
 
-        element_properties = default_properties
+        # element_properties = default_properties
 
-        if not isinstance(vertical_sizes, dict):
-            if tile_layout == "default":
-                vertical_sizes = {"outer": "h*0.1", "up": "?", "down": "?"}
-            elif tile_layout == "horizontal":
-                vertical_sizes = {"up": "?", "down": "?", "outer": "h*0.05"}
-            else:
-                vertical_sizes = {}
+        # if not isinstance(vertical_sizes, dict):
+        #     if tile_layout == "default":
+        #         vertical_sizes = {"outer": "h*0.1", "up": "?", "down": "?"}
+        #     elif tile_layout == "horizontal":
+        #         vertical_sizes = {"up": "?", "down": "?", "outer": "h*0.05"}
+        #     else:
+        #         vertical_sizes = {}
 
-        if not isinstance(horizontal_sizes, dict):
-            if tile_layout == "default":
-                horizontal_sizes = {"count": "w*0.6", "up": "r", "down": "r"}
-            elif tile_layout == "horizontal":
-                horizontal_sizes = {"up": "?", "down": "?"}
-            else:
-                horizontal_sizes = {}
+        # if not isinstance(horizontal_sizes, dict):
+        #     if tile_layout == "default":
+        #         horizontal_sizes = {"count": "w*0.6", "up": "r", "down": "r"}
+        #     elif tile_layout == "horizontal":
+        #         horizontal_sizes = {"up": "?", "down": "?"}
+        #     else:
+        #         horizontal_sizes = {}
 
-        super().__init__(tile_layout, element_properties=element_properties, horizontal_sizes=horizontal_sizes, vertical_sizes= vertical_sizes,  **kwargs)
+        super().__init__(tile_layout, element_properties=element_properties, horizontal_sizes=horizontal_sizes, vertical_sizes= vertical_sizes, 
+                        background_color=background_color, radius=radius,
+                        **kwargs)
 
         self.minimum = minimum
         self.maximum = maximum
@@ -3051,7 +3058,48 @@ class Counter(base.TileElement):
 
         self.tile_layout
 
+        return
+
     #region
+    childStyles = styleproperty.child_styles({
+        base.Button: {
+            "font_color": "foreground",
+            "background_color": None,
+            "font_size": "h*0.9"
+        },
+        base.Icon : {
+            "background_shape": None,
+            "background_color": None,
+            "icon_color": "foreground"
+        },
+        "Increment.Icon" : {},
+        "Decrement.Icon": {}
+    })
+
+    styleClasses = styleproperty.style_classes({
+            "Default": {
+                "horizontal_sizes": {"count": "w*0.6", "up": "r", "down": "r"},
+                "vertical_sizes": {"up": "?", "down": "?", "outer": "h*0.05"},
+            },
+            "Horizontal": {
+                "horizontal_sizes": {"up": "?", "down": "?"},
+                "vertical_sizes": {"outer": "h*0.1", "up": "?", "down": "?"},
+                }})
+
+    @base.Element.style_class.getter
+    def style_class(self):
+        sc = self._style_class
+        if sc is None:
+            tl = getattr(self, "_tile_layout", None)
+            if tl == "horizontal":
+                return "Horizontal"
+            elif tl == "default":
+                return "Default"
+            else:
+                return None
+        else:
+            return sc
+
     @property
     def elements(self) -> MappingProxyType[Literal["count","up","down"],base.Element]:
         "The elements in the counter"
