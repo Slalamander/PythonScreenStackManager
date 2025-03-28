@@ -2569,9 +2569,21 @@ class Toggle(CheckBox):
 
     emulator_icon = "mdi:toggle-switch"
 
-    def __init__(self, state : bool =False, on_set : Callable[["CheckBox", bool],Any] =None, state_attributes : base.CheckStateDict = {True:{},False: {}}, show_feedback : bool = True, **kwargs):
+    def __init__(self, state : bool = False, on_set : Callable[["CheckBox", bool],Any] =None, 
+                show_feedback : bool = True, **kwargs):
+
+        b_kw = {}
+        if "state_attributes" in kwargs:
+            b_kw["state_attributes"] = kwargs.pop("state_attributes")
         base.Icon.__init__(self, icon=None, show_feedback=show_feedback, **kwargs)
-        base._BoolElement.__init__(self, state,on_set,state_attributes)
+        base._BoolElement.__init__(self, state, on_set, **b_kw)
+
+    @CheckBox.icon.getter
+    def icon(self):
+        if self.state:
+            return self.checked_icon
+        else:
+            return self.unchecked_icon
 
     @property
     def checked_icon(self) -> Optional[Union[MDItype,str]]:
