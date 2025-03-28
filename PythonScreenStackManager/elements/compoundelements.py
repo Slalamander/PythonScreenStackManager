@@ -980,9 +980,12 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             t_coo = (center[0],center[1]+int((hour_length+clock_radius)/2))
 
             txt = timedt.strftime(AnalogueClock.digital_format.value(self))
+            t_color = AnalogueClock.digital_color.get_color(self, colorMode)
+            if t_color is None: 
+                t_color = clock_line
             draw.text(
                 t_coo,text=txt, anchor="ms", font = font, 
-                fill=self.get_color_value(self, colorMode, AnalogueClock.digital_color)
+                fill= t_color,
             )
 
         
@@ -994,7 +997,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         minute_l = [center, round(mnt_x + center[0]), round(center[1] - mnt_y)]
         draw.line(
             minute_l,
-            fill=self.get_color_value(self, colorMode, AnalogueClock.minute_hand_color),
+            fill= AnalogueClock.minute_hand_color.get_color(self, colorMode),
             width=mnt_width
         )
         
