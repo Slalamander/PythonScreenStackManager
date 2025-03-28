@@ -517,7 +517,7 @@ class Tile(base.TileElement):
                 method = draw_args.pop("method")
                 shape_img, _ = DrawShapes.draw_advanced(img,method,draw_args, paste=False)
             else:
-                draw_args.setdefault("fill", Tile.background_color.value(self))
+                draw_args.setdefault("fill", Tile.background_color.get_color(self))
                 shape_img, _ = draw_func(img, draw_args, paste=False)
             
 
@@ -613,6 +613,14 @@ class dateTimeElementInterval(base._IntervalUpdate):
         super().__init__(update_every=update_every)
 
     #region
+    @styleproperty
+    def update_every(self) -> str:
+        return self._update_every
+    
+    @update_every.setter
+    def update_every(self, value):
+        return base._IntervalUpdate.update_every.fset(self, value)
+    
     @property
     def timezone(self) -> Union[str,None]:
         "The timezone attached to this clock"
@@ -653,7 +661,11 @@ class dateTimeElementInterval(base._IntervalUpdate):
         except ValueError:
             # _LOGGER.error(exce)
             raise
-    
+
+    def get_wait_time(self) -> float:
+        update_every = dateTimeElementInterval.update_every.value(self)
+        return super().get_wait_time(update_every)
+
     @staticmethod
     def validate_datetime_format(value : str):
         """Validate a datetime format string.
@@ -745,6 +757,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         self._genClock = True
 
     #region
+
     @colorproperty(fset_post=__set_clock_gen).getter
     def clock_fill_color(self) -> Optional[ColorType]:
         "Background color of the clock"
@@ -889,9 +902,9 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             scale = min_res/w
 
         colorMode = self.parentPSSMScreen.imgMode
-        img_background = Style.get_color(AnalogueClock.background_color.value(self),colorMode)
-        clock_fill = Style.get_color(AnalogueClock.clock_fill_color.value(self), colorMode)
-        clock_line = Style.get_color(AnalogueClock.outline_color.value(self), colorMode)
+        img_background = AnalogueClock.background_color.get_color(self,colorMode)
+        clock_fill = AnalogueClock.clock_fill_color.get_color(self, colorMode)
+        clock_line = AnalogueClock.outline_color.get_color(self, colorMode)
         timedt = dt.now(self.zoneInfo)
 
         outline_w = int(self._convert_dimension(
@@ -934,14 +947,14 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
                     tick_coords = tools.rotation_matrix(tick_O,th,center)
                     draw.line(
                         tick_coords, 
-                        fill = Style.get_color(tick_color, colorMode), 
+                        fill = self.get_color_value(tick_color, colorMode, AnalogueClock.tick_color), 
                         width = hour_width,
                     )
 
             draw.pieslice(
                 coo,
                 start=0,end=360,
-                outline= Style.get_color(clock_line),
+                outline = clock_line,
                 width=outline_w,
             )
             self._clockImg = img
@@ -969,7 +982,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
             txt = timedt.strftime(AnalogueClock.digital_format.value(self))
             draw.text(
                 t_coo,text=txt, anchor="ms", font = font, 
-                fill=AnalogueClock.digital_color.get_color(self)
+                fill=self.get_color_value(self, colorMode, AnalogueClock.digital_color)
             )
 
         
@@ -981,7 +994,7 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
         minute_l = [center, round(mnt_x + center[0]), round(center[1] - mnt_y)]
         draw.line(
             minute_l,
-            fill=AnalogueClock.minute_hand_color.get_color(self),
+            fill=self.get_color_value(self, colorMode, AnalogueClock.minute_hand_color),
             width=mnt_width
         )
         
@@ -995,13 +1008,13 @@ class AnalogueClock(base.Element, dateTimeElementInterval):
 
         draw.line(
             hour_coo,
-            fill=AnalogueClock.hour_hand_color.get_color(self),
+            fill=AnalogueClock.hour_hand_color.get_color(self, colorMode),
             width=hour_width
         )
 
         md_r = int(hour_width*1)
         coo = [(center[0]-md_r,center[1]-md_r),(center[0]+md_r,center[1]+md_r)]
-        if (center_col := AnalogueClock.center_color.get_color(self)) is not None:
+        if (center_col := AnalogueClock.center_color.get_color(self, colorMode)) is not None:
             draw.pieslice(
                 coo,
                 fill = center_col,
@@ -2027,7 +2040,7 @@ class BoxSlider(base._BaseSlider):
         if active_length > 0:
             actArgs = {"xy": act_coo,
                 "radius": radius,
-                "fill": BoxSlider.active_color.value(self,colorMode),
+                "fill": BoxSlider.active_color.get_color(self,colorMode),
                 "outline": None,
                 "width": 0
                 }
@@ -2436,8 +2449,8 @@ class CheckBox(base._BoolElement, base.Icon):
     @icon.setter
     def icon(self, value):
         if self.onScreen:
-            msg = f"CheckButton does not allow icon to be set directly."
-            _LOGGER.error(AttributeError(msg))
+            msg = f"{self}: CheckButton does not allow icon to be set directly."
+            raise AttributeError(msg)
 
     @property
     def checked(self) -> bool:
