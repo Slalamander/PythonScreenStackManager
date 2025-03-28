@@ -2618,6 +2618,8 @@ class DropDown(base.Button):
         Icon shown when the menu is closed. Set to None to hide, by default "mdi:menu-down"
     opened_icon : MDIicon, optional
         Icon shown when the menu is opened. Set to None to hide, by default "mdi:menu-up"
+    icon_color : ColorType
+        The color of the opened/closed icon. If None, takes on the font color.
     margins : PSSMdimension, optional
         margins to apply, same as button margins. By default None, which will automatically set them to correctly align the text and the icon.
     radius : PSSMdimension, optional
@@ -2636,9 +2638,11 @@ class DropDown(base.Button):
     emulator_icon = "mdi:form-select"
 
     def __init__(self, options : list[str] = [], selected : int=0, on_select : Callable[[base.Element,str],Any] = None,
-                closed_icon : MDItype = "mdi:menu-down", opened_icon : MDItype = "mdi:menu-up", 
-                margins : PSSMdimension = None, radius : PSSMdimension="h*0.2",
-                background_color : ColorType = DEFAULT_BACKGROUND_COLOR,  outline_color : ColorType = None, outline_width : PSSMdimension = 5, **kwargs):
+                closed_icon : MDItype = "mdi:menu-down", opened_icon : MDItype = "mdi:menu-up", icon_color : Union[ColorType, None] = None,
+                margins : PSSMdimension = (0, 0, -5), radius : PSSMdimension="h*0.2",
+                background_color : ColorType = DEFAULT_BACKGROUND_COLOR,  outline_color : ColorType = None, outline_width : PSSMdimension = 5, 
+                menu_popup_properties : dict = {}, menu_button_properties : dict = {},
+                **kwargs):
         
         set_margins = True if Style.get_value(margins, self, "margins") is None else False
             
@@ -2658,6 +2662,7 @@ class DropDown(base.Button):
         self.options = options
         "The options that can be chosen from"
 
+        self.icon_color = icon_color
         self.closed_icon = closed_icon
         self.opened_icon = opened_icon
 
@@ -2676,18 +2681,38 @@ class DropDown(base.Button):
         self._on_select_map = {}
         self.on_select = on_select
 
-        if set_margins and self.outline_width != 0:
-            if isinstance(self.outline_width,str):
-                bottom_margin = f"-1*({self.outline_width})"
-            else:
-                bottom_margin = -1*self.outline_width
+        self.menu_popup_properties = menu_popup_properties
+        self.menu_button_properties = menu_button_properties
 
-            self.margins = (0,0,bottom_margin)
+        if set_margins and (outW := DropDown.outline_width.value(self)) != 0:
+            if isinstance(outW,str):
+                bottom_margin = f"-1*({outW})"
+            else:
+                bottom_margin = -1*outW
+
+            self.margins = (0,0, bottom_margin)
         else:
             self.margins = margins
         self.__menuOpen = False
 
     #region
+    childStyles = styleproperty.child_styles({
+        base.Popup: {
+            "outline_width": 0,
+            "outline_color": None,
+            "radius": 5,
+            "blur_background": False,
+            },
+        base.Button : {
+            "font": "DropDown::font",
+            "font_size": "DropDown::font_size",
+            "font_color": "DropDown::font_color",
+            "text_anchor_alignment": ("l", "m"),
+            "margins": (0,0,0,15),
+            "show_feedback": True,
+        }
+    })
+
     @property
     def text(self) -> str:
         "The text shown on the main button. Cannot be changed, instead set selected to the right integer, or call the select method"
@@ -2728,31 +2753,75 @@ class DropDown(base.Button):
         """
         return self._on_select
 
-    @property
+    @styleproperty
     def closed_icon(self) -> MDItype:
         "The icon shown at the right hand of the element when the dropdown menu is not open"
-        return self.__closed_icon
+        return self._closed_icon
     
     @closed_icon.setter
     def closed_icon(self, value : MDItype):
-        if value != None:
-            if not mdi.is_mdi(value):
+        if value != None and not mdi.is_mdi(value):
+                raise ValueError(f"closed_icon must be an mdi icon, not {value}")
                 _LOGGER.error(f"Could not set closed_icon to {value}")
                 return
-        self.__closed_icon = value
+        # self._closed_icon = value
 
-    @property
+    @styleproperty
     def opened_icon(self) -> MDItype:
         "The icon shown at the right hand of the element when the dropdown menu is open"
-        return self.__opened_icon
+        return self._opened_icon
     
     @opened_icon.setter
     def opened_icon(self, value : MDItype):
-        if value != None:
-            if not mdi.is_mdi(value):
-                _LOGGER.error(f"Could not set opened_icon to {value}")
+        if value != None and not mdi.is_mdi(value):
+                raise ValueError(f"opened_icon must be an mdi icon, not {value}")
                 return
-        self.__opened_icon = value
+        self._opened_icon = value
+    
+    @colorproperty
+    def icon_color(self):
+        """Color of the open/closed icon. Set to None to use the font_color.
+        """
+        return self._icon_color
+    
+    @property
+    def menu_popup_properties(self) -> dict:
+        "properties to apply to the options menu popup"
+        return self._menu_popup_properties.copy()
+    
+    @menu_popup_properties.setter
+    def menu_popup_properties(self, value):
+        if not isinstance(value, (dict,MappingProxyType)):
+            raise TypeError(f"{self}: menu_popup_properties must be a dict of mappingproxy")
+        not_allowed = ("layout", "width", "height", "horizontal_position", "vertical_position",
+                    "on_remove", "popupID", "styleParent")
+        msg_list = []
+        for k in not_allowed:
+            if k in value:
+                msg_list.append(k)
+        if msg_list:
+            msg = f"{self}: menu_popup_properties does not allow setting properties " + ", ".join(msg_list)
+            raise KeyError(msg)
+        self._menu_popup_properties = value
+
+    @property
+    def menu_button_properties(self) -> dict:
+        "Properties to apply to all buttons in the options menu"
+        return self._menu_button_properties.copy()
+    
+    @menu_button_properties.setter
+    def menu_button_properties(self, value):
+        if not isinstance(value, (dict,MappingProxyType)):
+            raise TypeError(f"{self}: menu_button_properties must be a dict of mappingproxy")
+        not_allowed = ("text", "tap_action", "feedback_duration", "_register", "styleParent")
+        msg_list = []
+        for k in not_allowed:
+            if k in value:
+                msg_list.append(k)
+        if msg_list:
+            msg = f"{self}: menu_popup_properties does not allow setting properties " + ", ".join(msg_list)
+            raise KeyError(msg)
+        self._menu_button_properties = value
     #endregion
 
     def generator(self, area=None, skipNonLayoutGen=False):
@@ -2760,12 +2829,18 @@ class DropDown(base.Button):
         if img == None:
             return
         
-        if self.closed_icon != None and not self.menuOpen:
+        if not self.menuOpen and (cl_icon := DropDown.closed_icon.value(self)):
             icon_coords = (int(img.width-img.height/2),int(img.height/2))
-            img = mdi.draw_mdi_icon(img, self.closed_icon, icon_coords=icon_coords, icon_color=self.font_color)
-        elif self.opened_icon and self.menuOpen:
+            icon_col = DropDown.icon_color.get_color(self)
+            if icon_col is None:
+                icon_col = DropDown.font_color.get_color(self)
+            img = mdi.draw_mdi_icon(img, cl_icon, icon_coords=icon_coords, icon_color=icon_col)
+        elif self.menuOpen and (op_icon := DropDown.opened_icon.value(self)):
             icon_coords = (int(img.width-img.height/2),int(img.height/2))
-            img = mdi.draw_mdi_icon(img,self.opened_icon, icon_coords=icon_coords, icon_color=self.font_color)
+            icon_col = DropDown.icon_color.get_color(self)
+            if icon_col is None:
+                icon_col = DropDown.font_color.get_color(self)
+            img = mdi.draw_mdi_icon(img, op_icon, icon_coords=icon_coords, icon_color=icon_col)
         self._imgData = img
         
         return img
@@ -2832,8 +2907,8 @@ class DropDown(base.Button):
         ##Pass it by converting the radius to an integer btw.
         [(x,y),(w,h)] = self.area
         yPop = y + h
-        outW = self._convert_dimension(self.outline_width)
-        r = self._convert_dimension(self.radius)
+        outW = self._convert_dimension(DropDown.outline_width.value(self))
+        # r = self._convert_dimension(DropDown.menu_radius.value(self))
 
         hPop = len(self.options)*(self._convert_dimension(self.font_size))*1.5 + outW
         if yPop+hPop > self.parentPSSMScreen.height:
@@ -2842,20 +2917,22 @@ class DropDown(base.Button):
         menu_layout = []
         margins = (0,0,0,"w*0.05")
         bHeight = f"h/{len(self.options)*1.025}"
+        button_ops = self.menu_button_properties
         for op in self.options:
-            button = base.Button(op, self.font, self.font_size,self.font_color, 
-                                text_anchor_alignment=("l","m"), margins=margins,
-                                tap_action=self._select_from_menu, show_feedback=True, feedback_duration=self._menuInvertTime, _register=False)
+            button = base.Button(op, tap_action=self._select_from_menu, feedback_duration=self._menuInvertTime, _register=False,
+                                styleParent = self, **button_ops)
             row = [bHeight,(button,"w")]
             menu_layout.append(row)
         self.__menuOpen = True 
         
-        popupbg = self.background_color
+        popupbg = DropDown.background_color.get_color(self)
         if popupbg == None:
             popupbg = DEFAULT_BACKGROUND_COLOR
+
+        popup_ops = self.menu_popup_properties
         self._menuPopup = base.Popup(menu_layout,w,hPop,x,yPop,
-                                    outline_width=outW, outline_color=self.outline_color, radius=r,
-                                    on_remove=self._menu_closed, popupID=None, background_color=popupbg, blur_background=False)
+                                    on_remove=self._menu_closed, popupID=None,
+                                    styleParent = self, **popup_ops)
 
         await asyncio.gather(
             self._menuPopup.async_show(),
