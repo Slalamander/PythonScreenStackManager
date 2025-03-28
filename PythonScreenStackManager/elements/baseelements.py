@@ -6536,28 +6536,12 @@ class _IntervalUpdate(ABC):
             return
         elif value not in allowed:
             msg = "Updateinterval must be one of hour, minute or second"
-            _LOGGER.error(msg)
-            if const.RAISE: raise ValueError(msg)
+            raise ValueError(msg)
         else:
             k = f"{value}s" 
             self._delta_dict = {k:1}
             self._replace_dict = {key: 0 for key in allowed[allowed.index(value):] if key != value}
             self._update_every = value
-
-    @property
-    def _waitTime(self) -> float:
-        "Automatically returns the amount of time to wait for the next update in seconds, taking into account if update_every is None or not."
-        if self.update_every == None:
-            return self.update_intervalSeconds
-        else:
-            if self.update_every == "second":
-                return 1 - dt.now().microsecond*10**-6
-            else:
-                t = dt.now() +  timedelta(**self._delta_dict)
-                t = t.replace(**self._replace_dict)
-                difft = t - dt.now()
-                return difft.seconds + difft.microseconds*10**-6    ##Added microseconds for extra precision, so the > 0 while loop condition holds.
-                ##convert from microseconds like t.microsecond*10**-6
 
     @property
     def update_interval(self) -> Union[DurationType,int, float, None]:
@@ -6586,11 +6570,11 @@ class _IntervalUpdate(ABC):
         "The unique id of the element"
         pass    
     #endregion
-
     @abstractmethod
     async def callback(self):
         "The function to callback on after updating"
         pass
+
 
     def on_add(self):
         if not self.start_on_add:
@@ -6607,12 +6591,27 @@ class _IntervalUpdate(ABC):
         if self.stop_on_remove:
             self.updateTask.cancel()
 
+    def get_wait_time(self, update_every : Union[str,None] = Style.NONESTYLE) -> float:
+        "Returns the amount of time to wait for the next update in seconds, taking into account if update_every is None or not."
+        if update_every is Style.NONESTYLE:
+            update_every = self.update_every
+        if update_every is None:
+            return self.update_intervalSeconds
+        else:
+            if update_every == "second":
+                return 1 - dt.now().microsecond*10**-6
+            else:
+                t = dt.now() +  timedelta(**self._delta_dict)
+                t = t.replace(**self._replace_dict)
+                difft = t - dt.now()
+                return difft.seconds + difft.microseconds*10**-6    ##Added microseconds for extra precision, so the > 0 while loop condition holds.
+                ##convert from microseconds like t.microsecond*10**-6
+
     async def _wait(self):
         
         asyncio.create_task(
                 self.callback())
-        while self._waitTime > 0:
-            w = self._waitTime
+        while (w := self.get_wait_time()) > 0:
             _LOGGER.verbose(f"{self} waiting for {w} seconds to call {self.callback}")
             await asyncio.sleep(w)
             asyncio.create_task(
