@@ -791,8 +791,11 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
     """    
 
     if color is None:
-        colorList = [0]*len(colorMode)
-        return tuple(colorList)
+        return None
+        # if "A" in colorMode:
+        #     return None
+        # colorList = [0]*len(colorMode)
+        # return tuple(colorList)
     if isinstance(color,int):
         if color < 0:
             color = 0
@@ -806,6 +809,8 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
     
     if isinstance(color,(list,tuple)):
         if len(color) == len(colorMode):
+            if "A" in colorMode and color[-1] == 0:
+                return None
             return tuple(color)
         else:
             color = tuple(color)
@@ -824,6 +829,8 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
             if "A" in colorMode:
                 ##Setting the alpha channel to be non transparent if not specified, or to the predefined value
                 colorList[-1] = color[-1] if len(color) in [2,4] else 255
+                if colorList[-1] == 0:
+                    return None
             
             return tuple(colorList)
     
@@ -842,11 +849,11 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
         try:
             colorTup = PILgetcolor(color,colorMode)
         except ValueError:
-            _LOGGER.error(f"Could not recognise {color} as a valid color.")
+            _LOGGER.error(f"Could not recognise {color} as a valid color.", exc_info=const.DEBUG)
             raise
         else:
             if isinstance(colorTup,int): 
-                colorTup = tuple([colorTup])
+                colorTup = (colorTup,)
             return colorTup
 
     #Code should not get here (And can't, apparently), but leaving it just in case.
