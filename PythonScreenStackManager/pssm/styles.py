@@ -1,6 +1,6 @@
 
 import logging
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, Callable
 import inspect
 import sys
 from copy import deepcopy
@@ -133,29 +133,8 @@ class Style:
         """
 
         assert "::" in base_string, "style_string must contain '::'"
-
-        style_tuple = base_string.split("::")
-        # d = {}
         d = cls._construct_style_dict(base_string)
 
-        # if style_tuple and len(style_tuple) <= 3:
-        #     for val in style_tuple:
-        #         if val in Style.registered_styles:
-        #             d["style"] = val
-        #         elif val in styleproperty._element_classes:
-        #             d["owner"] = val
-        #         elif val in styleproperty._base_styles:
-        #             d["prop"] = val
-        #         else:
-        #             styleclass, owner = cls._split_style_class(val)
-        #             if styleclass in cls.base_style_tree:
-        #                 d["owner"] = val
-        #             else:
-        #                 msg = f"Unknown style specifier {val}"
-        #                 raise ValueError(msg)
-        # else:
-        #     raise ValueError("Invalid style tuple length")
-        
         if "style" not in d:
             if isinstance(element, Element):
                 style = element.style
@@ -685,7 +664,12 @@ class styleproperty(customproperty):
 
     def __get__(self, obj, objtype=None):
         if obj is None:
-            return self
+            # if objtype is None:
+            #     return self
+            # else:
+                ##Idea here was to return a new type with the defaults etc. set, but that seems rather superfluous tbh
+                ##That would also cause a new one to be returned each time value etc. is called
+                return self
         if self.fget is None:
             raise AttributeError("unreadable attribute")
 
@@ -1006,7 +990,7 @@ class colorproperty(styleproperty):
     #         obj = colorproperty(fget, fset,fdel, doc, allows_none=False)
     #         return obj
 
-    def __get__(self, obj: "Element", objtype=None) -> Any:
+    def __get__(self, obj: "Element", objtype=None) -> Union["colorproperty", Any]:
         if obj is None:
             return self
         if self.fget is None:
@@ -1152,7 +1136,7 @@ class colorproperty(styleproperty):
             self._allows_none = allows_none
         return super().configure(default=default)
 
-    def getter(self, fget : Any):
+    def getter(self, fget: Callable[[Any], Any]):
         fset = None if self.fset == self._color_setter else self.fset
         return type(self)(fget, fset, self.fdel, self.__doc__, 
                         vdefault=self.vdefault, vallowsnone=self._allows_none, fset_post=self._fset_post)
