@@ -542,7 +542,8 @@ class Element(ABC):
         If the element is a layout itself, and the background is set, will return that value.
         """
         for parent in reversed(self.parentLayouts):
-            if (v:= parent.get_style_value(parent.background_color, "background_color")) is not None:
+            # if (v:= parent.get_style_value(parent.background_color, "background_color")) is not None:
+            if (v:= Element.background_color.get_color(parent)) is not None:
                 return v
         else:
             return None
@@ -936,11 +937,48 @@ class Element(ABC):
             if update:
                 self.update()
 
-    def get_style_value(self, style_value : str, property_name : str = None):
+    def get_style_value(self, style_value : str, property_name : Union[styleproperty,str] = None):
         "Returns the appropriate value for the given style string"
         if isinstance(style_value, str) and Style.is_style_string(style_value):
             return Style.get_value(style_value, self, property_name)
         return style_value
+    
+    def get_color_value(self, color : ColorType, colormode : str = None, property_name : Union[str, colorproperty] = None):
+        """Processes a color value into a value usable by PIL
+
+        This also handles values that reference the color of a parent, i.e. ``'foreground'``.
+
+        Parameters
+        ----------
+        color : ColorType
+            The color to process
+        colormode : str, optional
+            colormode to get the value in, by default None
+        property_name : str, optional
+            optional property to use, if the value is a style string, by default None
+            Can be a string or a colorproperty object
+        """
+
+        if isinstance(property_name, colorproperty):
+            property_name = property_name.name
+
+        if Style.is_style_string(color):
+            color = Style.get_value(color, self, property_name)
+        
+        if isinstance(color, str) and self.parentLayout is not None:
+            if color in getattr(self.parentLayout,"_color_shorthands",{}):
+                prop = self.parentLayout._color_shorthands[color]
+                par_color = getattr(self.parentLayout, prop)
+                color = self.parentLayout.get_color_value(par_color, colormode, prop)
+            else:
+                color = Style.get_color(color, colormode)
+                ##This returns raw values, i.e. style strings etc.
+        else:
+            color = Style.get_color(color, colormode)
+            ##Also in here: fallback for when parent color does not exist?
+            ##I.e. if it fails, returns the default property value or something.
+
+        return color
 
     def _color_setter(self,attribute:str, value : ColorType, allows_None : bool = True, cls : type = None):
         """
@@ -1668,8 +1706,8 @@ class Layout(Element):
 
         colorMode = self.parentPSSMScreen.imgMode
         if apply_background_color or "A" not in colorMode:
-            color = Layout.background_color.value(self)
-            color = Style.get_color(color, colorMode)
+            color = Layout.background_color.get_color(self, colorMode)
+            # color = Style.get_color(color, colorMode)
         else:
             color = None
         
@@ -1704,7 +1742,7 @@ class Layout(Element):
                         placeholder.alpha_composite(elt_img, pos)
                     elif "A" in elt_img.mode and "A" not in colorMode:
                         placeholder.paste(self.imgMatrix[i][j], pos)
-                    elif color != None and "A" in elt_img.mode:
+                    elif color is not None and "A" in elt_img.mode:
                         placeholder.paste(elt_img, pos, mask=elt_img)
                     else:
                         placeholder.paste(elt_img, pos)
@@ -2572,6 +2610,9 @@ class TileElement(Layout):
 
         ##Idk if this works fill figure it out later when actually using this.
         
+        ##So, this logic seems to not be required anymore, since it is expected that these values are not hard set?
+        ##Leave the function for now though, as it does seem to be useful when identifying properties/element that need updating
+
         if elt_name == None:
             prop_loop = self.element_properties.items()
         else:
@@ -2607,28 +2648,6 @@ class TileElement(Layout):
             self._reparse_colors = False
         
         return updating
-
-    # def generator(self, area=None, skipNonLayoutGen=False):
-        
-    #     # if self.tile_layout != None and self._reparse_layout:
-    #     #     old_layout = self.layout.copy()
-    #     #     new_layout = parse_layout_string(self.tile_layout, None, self.hide, self.vertical_sizes, self.horizontal_sizes, **self.elements)
-    #     #     if new_layout != old_layout: ##This doesn't quite work since sublayouts are a thing
-    #     #         self.set_parent_layouts(old_layout,new_layout)
-    #     #         self._layout = new_layout
-    #     #         skipNonLayoutGen=False
-    #     #         self._rebuild_area_matrix = True
-
-    #     #     self._reparse_layout = False
-
-    #     # if self._reparse_colors:
-    #     #     skipNonLayoutGen = False
-    #     #     self._reparse_element_colors()
-
-    #     ##Check what to do with regenerating layouts, mainly for when colors change.
-    #     ##May be doable by overwriting async update and checking if a color property is in it.
-    #     i = super().generator(area, skipNonLayoutGen)
-    #     return i
 
     async def pre_generate(self, area = None, skipNonLayoutGen = False):
         
@@ -2845,8 +2864,8 @@ class Popup(Layout):
         super().__init__(layout=layout, background_color=background_color, id=id,
                          outline_color=outline_color, outline_width=outline_width, radius=radius, **kwargs)
 
-        self._width = width
-        self._height = height
+        self.width = width
+        self.height = height
         self.horizontal_position = horizontal_position
         self.vertical_position = vertical_position
         self._isPopup = True
@@ -3255,7 +3274,8 @@ class PopupMenu(Popup):
             title_H = 50
         
         button_args = {"font": PopupMenu.title_font.value(self),
-                    "font_color": PopupMenu.title_color.get_color(self),
+                    # "font_color": PopupMenu.title_color.get_color(self),
+                    "font_color": PopupMenu.title_color.value(self),
                     }
         icon_args = {"icon": PopupMenu.close_icon.value(self),
                     "icon_color": PopupMenu.close_icon_color.value(self),
@@ -3998,23 +4018,24 @@ class Button(Element):
 
         ##Handle this one a bit differently. First get own color from style. Parent background should be converted in the getter.
         # elt_bg = self.get_style_value(self.background_color, self.__class__.background_color.property_name)
-        elt_bg = Button.background_color.value(self)
+
         # if elt_bg is None:
         #     img_background = self.parentBackgroundColor
         # else:
         #     img_background = elt_bg
 
         img_mode = self.parentPSSMScreen.imgMode
-        if self.parentPSSMScreen.imgMode != 'RGBA':
+        elt_bg = Button.background_color.get_color(self, img_mode)
+        if img_mode != 'RGBA':
             img_background = self.parentBackgroundColor if elt_bg is None else elt_bg
         else:
             img_background = elt_bg
 
         radius = Button.radius.value(self)
         outline_w = Button.outline_width.value(self)
-        outline_c = Button.outline_color.value(self)
+        outline_c = Button.outline_color.get_color(self, img_mode)
         if radius != 0 or (outline_w != 0 and outline_c is not None):
-            img = Image.new(self.parentPSSMScreen.imgMode,(w,h),color=None)
+            img = Image.new(img_mode,(w,h),color=None)
             r = self._convert_dimension(radius)
             outW = self._convert_dimension(outline_w)
             yOff = outW
@@ -4023,8 +4044,8 @@ class Button(Element):
             drawArgs = {
                 "xy": [(0,0),(w,h)],
                 "radius": r,
-                "fill": Style.get_color(elt_bg, img_mode),
-                "outline": Style.get_color(outline_c, img_mode),
+                "fill": self.get_color_value(elt_bg, img_mode),
+                "outline": self.get_color_value(outline_c, img_mode),
                 "width": self._convert_dimension(outline_w)
                 }
 
@@ -4032,10 +4053,10 @@ class Button(Element):
             
             ##drawImg from drawShapes is returned in the higher resolution. Create a new one since it otherwise it messes up the fitting functions and parsers
             ##Luckily textdraw does not suffer from resolution loss
-            imgDraw = ImageDraw.Draw(img, self.parentPSSMScreen.imgMode)
+            imgDraw = ImageDraw.Draw(img, img_mode)
         else:
-            col = Style.get_color(img_background,self.parentPSSMScreen.imgMode)
-            img = Image.new(self.parentPSSMScreen.imgMode,(w,h),color=col)
+            # col = self.get_color_value(img_background, self.parentPSSMScreen.imgMode)
+            img = Image.new(self.parentPSSMScreen.imgMode,(w,h),color=img_background)
             imgDraw = ImageDraw.Draw(img, self.parentPSSMScreen.imgMode)
 
         self._imgDraw = imgDraw
@@ -4085,7 +4106,7 @@ class Button(Element):
 
             textCol = Style.contrast_color(text_bg, img_mode)
         else:
-            textCol = Style.get_color(font_color, self.parentPSSMScreen.imgMode)
+            textCol = self.get_color_value(font_color, img_mode, "font_color")
         
         if multiline:
             alignment = "left"
@@ -4520,7 +4541,7 @@ class Picture(ImageElement):
             self._pictureImage = img
 
         bg_shape = Picture.background_shape.value(self)
-        bg_color = Picture.background_color.value(self)
+        bg_color = Picture.background_color.get_color(self)
         if bg_shape is not None:
 
             ##Add in the shape_settings, and a way to automatically set a background color
@@ -5013,9 +5034,9 @@ class Icon(ImageElement):
             img_background = Style.get_color(layoutBackgroundColor, imgMode)
             ##Currently only implemented for L/LA colortype
             if bg_color != True:
-                shape_color = Style.get_color(bg_color, imgMode)
+                shape_color = self.get_color_value(bg_color, imgMode, Icon.background_color.name)
             else: 
-                shape_color = Style.contrast_color(layoutBackgroundColor,imgMode)
+                shape_color = Style.contrast_color(layoutBackgroundColor, imgMode)
                 if "L" in imgMode:
                     if shape_color[0] > 110 and shape_color[0] < 175: shape_color = Style.get_color("white",imgMode)
 
@@ -5040,9 +5061,9 @@ class Icon(ImageElement):
                 drawFunc, relSize = IMPLEMENTED_ICON_SHAPES[shape]
                 icon_size = shape_settings.get("icon_size",floor(min(draw_size)*relSize))
                 
-                drawArgs = shape_settings.get("drawArgs",{})
-                if not "fill" in drawArgs:
-                    drawArgs["fill"] = shape_color
+                drawArgs : dict = shape_settings.get("drawArgs",{})
+                # if  "fill" in drawArgs:
+                drawArgs.setdefault("fill", shape_color)
                 (loadedImg, drawImg) = drawFunc(loadedImg, drawArgs=drawArgs, paste=False)
             else:
                 ##This should not happen since the check happens (or will happen) when setting the value
@@ -5061,7 +5082,7 @@ class Icon(ImageElement):
                 icon_bg = self.parentPSSMScreen.device.defaultColor
                 loadedImg = Image.new(imgMode, (draw_size[0],draw_size[1]),None)
 
-            img_background = Style.get_color(img_background,imgMode)
+            # img_background = Style.get_color(img_background,imgMode)
 
         self._fileError = False
 
@@ -5073,7 +5094,7 @@ class Icon(ImageElement):
             if isinstance(icon_color, bool):
                 icon_color_value = Style.contrast_color(icon_bg, imgMode)
             else:
-                icon_color_value = Style.get_color(icon_color,imgMode)
+                icon_color_value = self.get_color_value(icon_color,imgMode, Icon.icon_color.name)
 
             if mdistr[0]: 
                 self._iconData = mdistr
@@ -5130,7 +5151,7 @@ class Icon(ImageElement):
                     if icon_color == True:
                         icon_color_value = Style.contrast_color(icon_bg, imgMode)
                     else:
-                        icon_color_value = Style.get_color(icon_color,imgMode)
+                        icon_color_value = self.get_color_value(icon_color,imgMode, Icon.icon_color)
                     icondraw = ImageDraw.Draw(iconImg)
                     icondraw.bitmap((0,0),iconImg.getchannel("A"),icon_color_value)
                 else:
@@ -5146,7 +5167,7 @@ class Icon(ImageElement):
                 _LOGGER.verbose(f"Pasting an icon image with size {iconImg.size} onto an image with size {loadedImg.size} onto origin {iconOriging}")
                 if iconImg.mode == "RGBA" and loadedImg.mode == "RGBA":
                     loadedImg.alpha_composite(iconImg, iconOriging)
-                elif "A" in iconImg.mode and not "A" in loadedImg.mode:
+                elif "A" in iconImg.mode and "A" not in loadedImg.mode:
                     loadedImg.paste(iconImg,iconOriging, iconImg.getchannel("A"))
                 else:
                     ##Did not find any during testing, but this may yield odd results? 
@@ -5192,7 +5213,7 @@ class Icon(ImageElement):
                 else:
                     badge_settings["background_color"] = shape_color
 
-            badge_settings.setdefault("icon_color", Icon.badge_color.value(self))
+            badge_settings.setdefault("icon_color", Icon.badge_color.get_color(self))
 
             if Icon.badge_location.value(self) != None:
                 badge_settings.setdefault("location", Icon.badge_location.value(self))
@@ -5202,7 +5223,7 @@ class Icon(ImageElement):
 
             try:
                 loadedImg = self.add_badge(loadedImg, parentIconSize=draw_size, **badge_settings)
-            except:
+            except FuncExceptions:
                 _LOGGER.error(f"{self} Could not add badge", exc_info=True)
 
         if Icon.invert_icon.value(self):
@@ -5278,8 +5299,10 @@ class Icon(ImageElement):
         else:
             background_color_tuple = Style.get_color(None, colorMode)
 
-        if icon_color == None: icon_color = Icon.icon_color.value(self)          
-        icon_color = Style.get_color(icon_color,"RGBA")
+        if icon_color == None: 
+            icon_color = Icon.icon_color.get_color(self)
+        else:
+            icon_color = self.get_color_value(icon_color,"RGBA")
         
         relSize = floor(IMPLEMENTED_ICON_SHAPES["circle"][1]*DrawShapes.MINRESOLUTION)
         
@@ -5509,7 +5532,7 @@ class Line(Element):
         (x, y), (w, h) = area
         colorMode = self.parentPSSMScreen.imgMode
 
-        line_w = self._convert_dimension(self.width)
+        line_w = self._convert_dimension(Line.width.value(self))
 
         if self.orientation == "horizontal":
 
@@ -5543,12 +5566,12 @@ class Line(Element):
         rectangle = Image.new(
             colorMode,
             (w, h),
-            color=Style.get_color(self.background_color, colorMode)
+            color=Line.background_color.get_color(self, colorMode)
         )
         draw = ImageDraw.Draw(rectangle)
         draw.line(
             coo,
-            fill=Style.get_color(self.line_color, colorMode),
+            fill=Line.line_color.get_color(self, colorMode),
             width=line_w
         )
         self._imgData = rectangle
