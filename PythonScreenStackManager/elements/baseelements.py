@@ -5875,6 +5875,8 @@ class _BoolElement(Element):
         self._on_set_map = {}
 
         self.on_set = on_set
+
+        self._state_attributes = {}
         self.state_attributes = state_attributes
 
         stateattr = _BoolElement.state_attributes.value(self)
@@ -5896,22 +5898,35 @@ class _BoolElement(Element):
     def interactive(self, value : bool):
         self.__interactive = bool(value)
     
-    @styleproperty
+    @styleproperty(vsetraw=True).getter
     def state_attributes(self) -> CheckStateDict:
         "Element attributes to change depending on the checked state"
         return self._state_attributes
 
     @state_attributes.setter
     def state_attributes(self, value : CheckStateDict):
-        value : CheckStateDict
+        
+        if Style.is_style_string(value):
+            # set_value = _BoolElement.state_attributes.value(self)
+            set_value = self.get_style_value(value, _BoolElement.state_attributes)
+        else:
+            set_value = value
+        
+        set_value : CheckStateDict
         val_dict = {"True": {}, "False": {}}
         
-        for k, v in value.items():
+        for k, v in set_value.items():
             key = str(k).title()
             if key in val_dict:
                 val_dict[key] = v
 
-        self._state_attributes = val_dict
+        if Style.is_style_string(value):
+            self._state_attributes = value
+        elif Style.is_style_string(self._state_attributes):
+            state_old = self.get_style_value(self._state_attributes, _BoolElement.state_attributes)
+            self._state_attributes = state_old | val_dict
+        else:
+            self._state_attributes = self._state_attributes | val_dict
 
     @Element.tap_action.getter
     def tap_action(self) -> list[Callable[["_BoolElement",tuple[int,int]],Any]]:
