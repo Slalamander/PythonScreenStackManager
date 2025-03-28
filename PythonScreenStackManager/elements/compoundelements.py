@@ -1190,7 +1190,7 @@ class DateElement(base.Button, dateTimeElementInterval):
 
     emulator_icon = "mdi:calendar-week"
 
-    def __init__(self, date_format="%Y-%m-%-d", timezone=None, font = DEFAULT_FONT_BOLD, font_size: PSSMdimension ="h*0.9", resize: PSSMdimension=DEFAULT_FONT_SIZE, fit_text: bool = True,  
+    def __init__(self, date_format="%a %d %B", timezone=None, font = DEFAULT_FONT_BOLD, font_size: PSSMdimension ="h*0.9", resize: PSSMdimension=DEFAULT_FONT_SIZE, fit_text: bool = True,  
                 update_every : Literal["hour", "minute", "second"] = "hour",                
                 **kwargs):
 
