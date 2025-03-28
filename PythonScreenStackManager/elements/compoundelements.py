@@ -1512,7 +1512,7 @@ class LineSlider(base._BaseSlider):
         (x, y), (w, h) = self.area
         colorMode = self.parentPSSMScreen.imgMode
 
-        img_background = LineSlider.background_color.value(self)
+        img_background = LineSlider.background_color.get_color(self, colorMode)
         
         v_length = self.valueRange[1] - self.valueRange[0]
         if v_length == 0:
@@ -1561,11 +1561,11 @@ class LineSlider(base._BaseSlider):
         self._lineLength = line_length
         "Length of the line in pixels"
 
-        drawcolor = Style.get_color(LineSlider.color.value(self), colorMode)
+        drawcolor = LineSlider.color.get_color(self, colorMode)
         rectangle = Image.new(
             colorMode,
             (w, h),
-            color=Style.get_color(img_background, colorMode)
+            color= img_background
         )
         draw = ImageDraw.Draw(rectangle)
         line_w = LineSlider.width.value(self)
@@ -1578,8 +1578,8 @@ class LineSlider(base._BaseSlider):
         )
 
         if self.end_points != None:
-            end_colors = LineSlider.end_colors.value(self)
-            col = drawcolor if end_colors == None else Style.get_color(end_colors)
+            end_colors = LineSlider.end_colors.get_color(self, colorMode)
+            col = drawcolor if end_colors == None else end_colors
             for idx, icon in enumerate(self.end_points):
                 if icon == None:
                     continue
@@ -1603,10 +1603,10 @@ class LineSlider(base._BaseSlider):
         
         color = None
         # thumb_color = self.thumb_color if self.thumb_color != None else drawcolor
-        thumb_color = LineSlider.thumb_color.value(self)
+        thumb_color = LineSlider.thumb_color.get_color(self, colorMode)
         if thumb_color is None:
             thumb_color = drawcolor
-        thumb_color = Style.get_color(thumb_color,colorMode)
+        # thumb_color = Style.get_color(thumb_color,colorMode)
         if shape == "circle":
             drawArgs = {"fill":thumb_color}
         elif shape == "rounded_rectangle":
@@ -1627,11 +1627,12 @@ class LineSlider(base._BaseSlider):
         
         if self.thumb_icon != None:
             size = int(self._convert_dimension(thumbsize[1],{"l":line_length})*relSize)
-            thumb_col = LineSlider.thumb_icon_color.value(self)
+            thumb_col = LineSlider.thumb_icon_color.get_color(self, colorMode)
             if thumb_col == None:
                 iconCol = tools.invert_Color(thumb_color, colorMode)
             else:
-                iconCol = Style.get_value(thumb_col)
+                # iconCol = Style.get_value(thumb_col)
+                iconCol = thumb_col
             c = mdi.draw_mdi_icon(c, self.thumb_icon, icon_size=size, icon_color=iconCol)
 
         self._thumbImage = c.copy()
@@ -1883,7 +1884,7 @@ class BoxSlider(base._BaseSlider):
         (x, y), (w, h) = self.area
         colorMode = self.parentPSSMScreen.imgMode
         
-        img_background = BoxSlider.background_color.value(self)
+        img_background = BoxSlider.background_color.get_color(self, colorMode)
 
         v_length = self.valueRange[1] - self.valueRange[0]
         if v_length == 0:
@@ -1891,7 +1892,12 @@ class BoxSlider(base._BaseSlider):
         else:
             position_perc = (self.position - self.valueRange[0])/(v_length)
 
-        boxW = self._convert_dimension(BoxSlider.width.value(self))
+        boxW = BoxSlider.width.value(self)
+        if boxW is None:
+            # boxW = Style.get_value(BoxSlider.width.stylestring, BoxSlider.__name__, BoxSlider.width)
+            boxW = "h/4" if self.orientation == "horizontal" else "w/4"
+        
+        boxW = self._convert_dimension(boxW)
         endP_size = BoxSlider.end_point_size.value(self)
         if endP_size is None:
             endP_size = boxW
@@ -1924,7 +1930,7 @@ class BoxSlider(base._BaseSlider):
         rectangle = Image.new(
             colorMode,
             (w, h),
-            color=Style.get_color(img_background, colorMode)
+            color= img_background
         )
 
         radius = self._convert_dimension(
@@ -1936,11 +1942,12 @@ class BoxSlider(base._BaseSlider):
         (rectangle, _) = DrawShapes.draw_rounded_rectangle(rectangle,drawArgs,rescale=["xy","radius","width"])
 
         if self.end_points != None:
-            col = BoxSlider.end_colors.value(self)
+            col = BoxSlider.end_colors.get_color(self, colorMode)
             if col is None:
-                col = BoxSlider.active_color.get_color(self,colorMode)
-            else:
-                col = Style.get_color(col, colorMode)
+                col = BoxSlider.active_color.get_color(self, colorMode)
+            # else:
+            #     col = Style.get_color(col, colorMode)
+
             for idx, icon in enumerate(self.end_points):
                 if icon == None:
                     continue
@@ -1964,7 +1971,7 @@ class BoxSlider(base._BaseSlider):
             rectangle.alpha_composite(paste_rectangle)
 
             thumb_width = margin
-            thumb_col = BoxSlider.thumb_color.value(self)
+            thumb_col = BoxSlider.thumb_color.get_color(self, colorMode)
             if thumb_col != None:
                 if self.orientation == "horizontal":
                     thumbX = (act_coo[1][0] - margin - thumb_width,)*2
@@ -1973,11 +1980,11 @@ class BoxSlider(base._BaseSlider):
                     thumbX = (act_coo[0][0] + margin, act_coo[1][0] - margin)
                     thumbY = (act_coo[0][1] + margin + thumb_width,)*2
                 xy=[(thumbX[0],thumbY[0]),(thumbX[1],thumbY[1])]
-                col = Style.get_color(thumb_col,colorMode)
+                # col = Style.get_color(thumb_col,colorMode)
                 draw = ImageDraw.Draw(rectangle)
                 draw.line(
                     xy=xy,
-                    fill= col,
+                    fill= thumb_col,
                     width= thumb_width,
                     joint="curve"
                 )
@@ -2049,7 +2056,7 @@ class BoxSlider(base._BaseSlider):
                 }
             (img, _) = DrawShapes.draw_rounded_rectangle(baseImg,actArgs,rescale=["xy","radius","width"], paste=False)
             
-            thumb_color = BoxSlider.thumb_color.value(self)
+            thumb_color = BoxSlider.thumb_color.get_color(self, colorMode)
             if thumb_color != None:
                 margin = int(self._convert_dimension(BoxSlider.width.value(self))/6)
                 thumb_width = margin
@@ -2063,18 +2070,18 @@ class BoxSlider(base._BaseSlider):
                 draw = ImageDraw.Draw(img)
                 draw.line(
                     xy=xy,
-                    fill=Style.get_color(thumb_color,colorMode),
+                    fill=thumb_color,
                     width=thumb_width,
                 )
 
             baseImg.paste(img,mask=img)
         img = baseImg
 
-        outline_color = BoxSlider.outline_color.value(self)
+        outline_color = BoxSlider.outline_color.get_color(self, colorMode)
         if outline_color != None:
             drawArgs = {"xy": coo,
             "radius": radius,
-            "outline": Style.get_color(outline_color,colorMode),
+            "outline": outline_color,
             "width": self._convert_dimension(BoxSlider.outline_width.value(self),{"l":line_length})
             }
             (outl_img, _) = DrawShapes.draw_rounded_rectangle(img,drawArgs,rescale=["xy","radius","width"])
@@ -2113,6 +2120,8 @@ class Slider(LineSlider, BoxSlider):
         elif self.slider_style == "line":
             BoxSlider.__init__(self, orientation=orientation, _register=False)
             LineSlider.__init__(self, orientation=orientation, **kwargs)
+
+        Slider.width
 
     #region
     @property
