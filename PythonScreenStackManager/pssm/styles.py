@@ -150,7 +150,7 @@ class Style:
             Raised when an unknown specifier is found in base_string, if base_string consists of more than 3 parts, or if no property name can be applied.
         """
 
-        assert "::" in base_string, "style_string must contain '::'"
+        assert STYLE_SEPERATOR in base_string, f"style_string must contain '{STYLE_SEPERATOR}'"
         d = cls._construct_style_dict(base_string)
 
         if "style" not in d:
@@ -462,13 +462,25 @@ class Style:
                 return True
         
         if isinstance(value, str) and "::" in value:
+            ##This needs to be edited to actually get the value related to the style and check if that is a color
             return True
 
-        if isinstance(value,str) and value.lower() in cls.shorthand_colors:
-            return True
-        else:
-            return tools.is_valid_Color(value)
-        return
+        if isinstance(value,str): #and value.lower() in cls.shorthand_colors:
+            if value.lower() in cls.shorthand_colors:
+                return True
+            elif value.endswith(ROOT_STYLE_SUFFIX) or value + "_color" in cls.root_styles:
+                if value.endswith(ROOT_STYLE_SUFFIX):
+                    if "_color" in value:
+                        repl = ""
+                    else:
+                        repl = "_color"
+                    root_val = value.replace(ROOT_STYLE_SUFFIX, repl)
+                else:
+                    root_val = value + "_color"
+                col = cls.root_styles[root_val]
+                return cls.is_valid_color(col, element)
+
+        return tools.is_valid_Color(value)
 
     @classmethod
     def add_color_shorthand(cls, **kwargs: ColorType):
