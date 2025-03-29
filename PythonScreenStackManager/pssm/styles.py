@@ -11,7 +11,7 @@ from .. import tools
 from ..util import classproperty
 from ..pssm_types import ColorType, StyleStringDict
 from ..constants import PSSM_COLORS, DEBUG, STYLE_SEPERATOR,  STYLE_PARENTCLASS_SEPERATOR,\
-        SHORTHAND_FONTS, DEFAULT_FONT
+        SHORTHAND_FONTS, FALLBACK_COLOR, ROOT_STYLE_SUFFIX
 
 from . import decorators
 from .decorators import customproperty, elementaction, trigger_condition
@@ -51,6 +51,7 @@ class Style:
     _color_shorthands: dict[str,ColorType] = {}
     default_style = "style"
     base_style_tree : dict[str,dict[str,Any]] = {}
+    _root_styles = {}
     
     registered_styles = ("style")
 
@@ -86,19 +87,36 @@ class Style:
     def _knownowners(cls) -> dict[str,"Element"]:
         return styleproperty._element_classes
 
+    @classproperty
+    def root_styles(cls) -> dict[str,Any]:
+
+        return styleproperty._base_styles | cls._root_styles
+
     @classmethod
     def setup_style_tree(cls, user_tree : dict = {}):
+
+        user_tree = dict(user_tree)
+        root = user_tree.pop("root", {})
         new_tree = deepcopy(styleproperty._style_tree_root)
 
-        # new_tree["Button"]["font_color"] = "green"
-        # new_tree["Layout"]["outline_color"] = "blue"
-        # new_tree["Layout"]["outline_width"] = 10
 
-        # new_tree["Tile"]["outline_color"] = "yellow"
+        msgs = []
+        for k in root:
+            if k not in styleproperty._base_styles:
+                msgs.append(k)
+        if msgs:
+            if len(msgs) == 1:
+                msg = f"styleproperty from the root entry {k} is not known"
+            else:
+                s = ", ".join(k)
+                msg = f"styleproperties from the root entry {s} are not known"
+            raise KeyError(msg)
+        cls._root_styles = root
 
         new_tree = tools.update_nested_dict(user_tree, new_tree)
-
+        
         cls.base_style_tree = new_tree
+        cls.root_styles
         return
 
     @classmethod
@@ -380,17 +398,31 @@ class Style:
         elif colormode == "screen":
             colormode = cls.screen.colorMode
         
-        if isinstance(value,str) and (value.lower() in cls.shorthand_colors or "::" in value):
+        if isinstance(value,str):
             if value.lower() in cls.shorthand_colors:
                 return cls.shorthand_colors[value.lower()]
-            elif "::" in value:
+            elif STYLE_SEPERATOR in value:
                 return cls.get_value(value)
-
-        else:
-            try:
-                return tools.get_Color(value,colormode)
-            except (ValueError,TypeError):
-                return "black"
+            elif value.endswith(ROOT_STYLE_SUFFIX) or value + "_color" in cls.root_styles:
+                if value.endswith(ROOT_STYLE_SUFFIX):
+                    if "_color" in value:
+                        repl = ""
+                    else:
+                        repl = "_color"
+                    root_val = value.replace(ROOT_STYLE_SUFFIX, repl)
+                else:
+                    root_val = value + "_color"
+                col = cls.root_styles[root_val]
+                return cls.get_color(col, colormode)
+                # if not tools.is_valid_Color(col):
+                #     return FALLBACK_COLOR
+                # else:
+                #     return col
+            
+        try:
+            return tools.get_Color(value, colormode)
+        except (ValueError,TypeError):
+            return FALLBACK_COLOR
             
     @classmethod
     def contrast_color(cls, value, mode):
@@ -595,6 +627,7 @@ class styleproperty(customproperty):
                 *,
                 vdefault=Style.NONESTYLE,
                 vsetraw=False,
+                vroot=Style.NONESTYLE,
                 ):
         """Attributes of 'our_decorator'
         fget
@@ -617,6 +650,7 @@ class styleproperty(customproperty):
         super().__init__(fget,fset,fdel,doc)
         self.vdefault = vdefault
         self.vsetraw = vsetraw
+        self._vroot = vroot
         return
 
     # def __call__(self, element):
@@ -633,21 +667,24 @@ class styleproperty(customproperty):
         self.owner = owner
 
         ##Do not use __elt_init__ here, __set_name__ is called before __init_subclass__ (so before __init__ is overwritten)
-        init_func = owner.__init__
-        base_args = inspect.signature(init_func)
-        
-        default_val = Style.NONESTYLE
-        for param in base_args.parameters.values():
-            if param.name == name:
-                default_val = param.default
-                break
-
-        if default_val is Style.NONESTYLE:
-            if name not in cls._base_styles:
-                cls._base_styles[name] = default_val
-            return
-
         if getattr(self, "vdefault", Style.NONESTYLE) is Style.NONESTYLE:
+            init_func = owner.__init__
+            base_args = inspect.signature(init_func)
+            
+            default_val = Style.NONESTYLE
+            for param in base_args.parameters.values():
+                if param.name == name:
+                    default_val = param.default
+                    break
+
+            if default_val is Style.NONESTYLE:
+                if name not in cls._base_styles:
+                    if self._vroot is not Style.NONESTYLE:
+                        cls._base_styles[name] = self._vroot
+                    else:
+                        cls._base_styles[name] = default_val
+                return
+
             self.vdefault = default_val
 
         if owner_elt in cls._style_tree_root:
@@ -657,7 +694,10 @@ class styleproperty(customproperty):
             cls._element_classes[owner_elt] = owner
 
         if cls._base_styles.get(name, Style.NONESTYLE) is Style.NONESTYLE:
-            cls._base_styles[name] = self.vdefault
+            if self._vroot is not Style.NONESTYLE:
+                cls._base_styles[name] = self._vroot
+            else:
+                cls._base_styles[name] = self.vdefault
         
         cls._all_owners.add(owner_elt)
         return
@@ -721,7 +761,7 @@ class styleproperty(customproperty):
         if not isinstance(getattr(element.__class__, self.property_name, None), styleproperty):
             return getattr(element, self.property_name)
         val = element.get_style_value(getattr(element, f"_{self.property_name}"), self.property_name)
-        if isinstance(val, dict):
+        if isinstance(val, (dict,list)):
             return val.copy()
         return val
 
@@ -731,13 +771,25 @@ class styleproperty(customproperty):
         return self
 
     def getter(self, fget):
-        return type(self)(fget, self.fset, self.fdel, self.__doc__, vdefault=self.vdefault, vsetraw=self.vsetraw)
+        return self._returner(fget=fget)
 
     def setter(self, fset):
-        return type(self)(self.fget, fset, self.fdel, self.__doc__, vdefault=self.vdefault, vsetraw=self.vsetraw)
+        return self._returner(fset=fset)
 
     def deleter(self, fdel):
-        return type(self)(self.fget, self.fset, fdel, self.__doc__, vdefault=self.vdefault, vsetraw=self.vsetraw)
+        return self._returner(fdel=fdel)
+
+    def _returner(self, **kwargs):
+        d = {
+            "fget": self.fget,
+            "fset": self.fset,
+            "fdel": self.fdel,
+            "doc": self.__doc__,
+            "vdefault": self.vdefault,
+            "vroot": self._vroot,
+            "vsetraw": self.vsetraw,
+        }
+        return type(self)(**d | kwargs)
 
     def create_style_string(self, obj : "Element", string : str):
 
@@ -926,7 +978,6 @@ class _styleclasses(_childstyles):
             return self
         return self._class_tree
 
-
 class colorproperty(styleproperty):
     """Decorator to indicate a property is defines the color of an element.
     
@@ -959,6 +1010,7 @@ class colorproperty(styleproperty):
                 doc=None,
                 *,
                 vdefault = Style.NONESTYLE,
+                vroot = Style.NONESTYLE,
                 vallowsnone = True,
                 fset_post = None,
                 ):
@@ -978,7 +1030,7 @@ class colorproperty(styleproperty):
 
         if fset is None:
             fset = self._color_setter
-        super().__init__(fget, fset, fdel, doc, vdefault=vdefault)
+        super().__init__(fget, fset, fdel, doc, vdefault=vdefault, vroot=vroot)
         self._allows_none = vallowsnone
         self._fset_post = fset_post
         return
@@ -990,13 +1042,15 @@ class colorproperty(styleproperty):
     #         obj = colorproperty(fget, fset,fdel, doc, allows_none=False)
     #         return obj
 
-    def __get__(self, obj: "Element", objtype=None) -> Union["colorproperty", Any]:
+    # def __call__(self, fget) -> "colorproperty":
+    #     self.getter(fget)
+
+    def __get__(self, obj, objtype=None):
         if obj is None:
             return self
         if self.fget is None:
             raise AttributeError("unreadable attribute")
         return self.fget(obj)
-        # return self._get_element_color(obj)
 
     def __set__(self, obj, value):
         v = super().__set__(obj, value)
@@ -1128,33 +1182,28 @@ class colorproperty(styleproperty):
         """Return a PIL appropriate color value for this attribute
         """
         return self._get_element_color(element, colormode)
-        # val = self._get_element_color(element, colormode)
-        # return Style.get_color(val, colormode)
 
     def configure(self, *, default=Style.NONESTYLE, allows_none : bool = Style.NONESTYLE):
         if allows_none is not Style.NONESTYLE:
             self._allows_none = allows_none
         return super().configure(default=default)
-
-    def getter(self, fget: Callable[[Any], Any]):
-        fset = None if self.fset == self._color_setter else self.fset
-        return type(self)(fget, fset, self.fdel, self.__doc__, 
-                        vdefault=self.vdefault, vallowsnone=self._allows_none, fset_post=self._fset_post)
-
-    def setter(self, fset):
-        return type(self)(self.fget, fset, self.fdel, self.__doc__, 
-                        vdefault=self.vdefault, vallowsnone=self._allows_none, fset_post=self._fset_post)
-
+    
     def post_setter(self, fset_post):
+        return self._returner(fset_post=fset_post)
+    
+    def _returner(self, **kwargs):
         fset = None if self.fset == self._color_setter else self.fset
-        return type(self)(self.fget, fset, self.fdel, self.__doc__, 
-                        vdefault=self.vdefault, vallowsnone=self._allows_none, fset_post=fset_post)
-
-    def deleter(self, fdel):
-        fset = None if self.fset == self._color_setter else self.fset
-        return type(self)(self.fget, fset, fdel, self.__doc__,
-                        vdefault=self.vdefault, vallowsnone=self._allows_none, fset_post=self._fset_post)
-
+        d = {
+            "fget": self.fget,
+            "fset": fset,
+            "fdel": self.fdel,
+            "doc": self.__doc__,
+            "vdefault": self.vdefault,
+            "vroot": self._vroot,
+            "vallowsnone": self._allows_none,
+            "fset_post": self._fset_post,
+        }
+        return type(self)(**d | kwargs)
 
 decorators.colorproperty = colorproperty
 decorators.styleproperty = styleproperty
