@@ -185,6 +185,7 @@ DEFAULT_HOLD_TIME = '0.5s'
 
 STYLE_SEPERATOR = "::"
 STYLE_PARENTCLASS_SEPERATOR = "."
+ROOT_STYLE_SUFFIX = ".root"
 
 DEFAULT_FEEDBACK_DURATION : float = 0.75
 "Default duration to show element feedback"
@@ -192,7 +193,16 @@ DEFAULT_FEEDBACK_DURATION : float = 0.75
 DEFAULT_BACKGROUND : Union["ColorType",Path] = None
 "Default screen background. Defaults to None (device defaultColor), or the standard inkBoard background image if inkBoard is running."
 
-PSSM_COLORS : dict[str,tuple[int,int,int,int]] = {'None': None}
+class ROOTCOLORS:
+    "Default colors for the root style tree"
+    BACKGROUND = "white"
+    FOREGROUND = "black"
+    ACCENT = "gray"
+    HEADER = "accent_color"
+
+PSSM_COLORS : dict[str,tuple[int,int,int,int]] = {
+            "none": None
+            }
 """
 Predefined shorthand colors that are not present in the PIL shorthands. 
 16 shades of gray (Dare I make it 50?) Use as 'gray1'/'grey1'; Higher number means a lighter shade. Returns
@@ -243,6 +253,8 @@ SHORTHAND_FONTS['default'] = SHORTHAND_FONTS['notosans']
 SHORTHAND_FONTS['default-regular'] = SHORTHAND_FONTS['notosans-regular']
 SHORTHAND_FONTS['default-bold'] = SHORTHAND_FONTS['notosans-bold']
 SHORTHAND_FONTS["header"] = SHORTHAND_FONTS['default-bold']
+
+FALLBACK_COLOR : str = "black"
 
 DEFAULT_FONT = SHORTHAND_FONTS["default"]
 "The default font"
