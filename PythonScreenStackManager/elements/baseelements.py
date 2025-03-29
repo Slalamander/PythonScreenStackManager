@@ -21,7 +21,7 @@ import mdi_pil as mdi
 from mdi_pil import mdiType
 
 from .. import constants as const
-from ..constants import FuncExceptions, \
+from ..constants import FuncExceptions, ROOTCOLORS, ROOT_STYLE_SUFFIX,\
                 DEFAULT_FEEDBACK_DURATION, FEEDBACK_ON_ACTION, DEBUG
 
 from .constants import DEFAULT_FONT, \
@@ -349,7 +349,7 @@ class Element(ABC):
         return None
     #endregion
 
-    @colorproperty(vdefault = DEFAULT_BACKGROUND_COLOR).getter
+    @colorproperty(vroot=ROOTCOLORS.BACKGROUND ,vdefault = DEFAULT_BACKGROUND_COLOR).getter
     def background_color(self) -> Union[ColorType,None]:
         """Color of the element background."""
         # Set to None to take on the color of its parent layout"""
@@ -1494,7 +1494,7 @@ class Layout(Element):
     def imgMatrix(self):
         return self._imgMatrix
 
-    @colorproperty
+    @colorproperty(vroot=ROOTCOLORS.FOREGROUND).getter
     def foreground_color(self) ->  Union[ColorType,None]:
         """Foreground color to style child elements
         Additional color property for Layouts. Not inherently used in the layout itself, but can be used in child elements, to give them a uniform style.
@@ -1503,7 +1503,7 @@ class Layout(Element):
         return self._foreground_color
 
 
-    @colorproperty
+    @colorproperty(vroot=ROOTCOLORS.ACCENT).getter
     def accent_color(self) ->  Union[ColorType,None]:
         """Accent color to style child elements.
         Not inherently used in the layout itself, but can be used in child elements, to give them a uniform style
