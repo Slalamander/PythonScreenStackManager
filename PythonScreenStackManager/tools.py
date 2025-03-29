@@ -843,7 +843,7 @@ def get_Color(color : ColorType, colorMode:str) -> Union[tuple]:
                 # return const.PSSM_COLORS[color]
             else:
                 return get_Color(Style.shorthand_colors[color],colorMode)
-        elif "::" in color:
+        elif const.STYLE_SEPERATOR in color:
             return Style.get_color(color)
         
         try:
