@@ -7,7 +7,8 @@ from pathlib import Path
 import logging
 
 from ..pssm_types import *
-from ..constants import INKBOARD, PATH_TO_PSSM, SHORTHAND_FONTS, SHORTHAND_ICONS
+from ..constants import INKBOARD, PATH_TO_PSSM, \
+    SHORTHAND_FONTS, SHORTHAND_ICONS, ROOT_STYLE_SUFFIX
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +29,13 @@ DEFAULT_MENU_HEADER_COLOR : ColorType =  "steelblue"
 DEFAULT_MENU_BUTTON_COLOR : ColorType = "grey11"
 "Default color for menu buttons"
 
-DEFAULT_FOREGROUND_COLOR : ColorType = "black"
+DEFAULT_FOREGROUND_COLOR : ColorType = "foreground" + ROOT_STYLE_SUFFIX #"black"
 "Default color for foreground parts of elements (e.g. text)"
 
-DEFAULT_ACCENT_COLOR : ColorType = "gray"
+DEFAULT_ACCENT_COLOR : ColorType = "accent" + ROOT_STYLE_SUFFIX #"gray"
 "Default color for (Tile) accents"
 
-DEFAULT_BACKGROUND_COLOR : ColorType = "white"
+DEFAULT_BACKGROUND_COLOR : ColorType = "background" + ROOT_STYLE_SUFFIX #"white"
 "Default color for backgrounds, Taken as the color of an empty screen."
 
 
