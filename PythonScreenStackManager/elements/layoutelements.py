@@ -204,13 +204,13 @@ class GridLayout(base.Layout):
         if not 1 <= l <= 4:
             msg = f"{self}: margins cannot be set to {value}, value must be a single dimension, or a list of 1 to 4 dimensions"
             _LOGGER.exception(msg)
+            raise ValueError(msg)
 
         for m in value.copy():
-            res = tools.is_valid_dimension(m)
-            if isinstance(res, Exception):
-                _LOGGER.exception(res)
-                return
+            tools.test_dimension_string(m)
 
+        ##Converting these to a styleproperty:
+        ##use tools.construct_margin_tuple
         l = len(value)
         if l == 4:
             pass
