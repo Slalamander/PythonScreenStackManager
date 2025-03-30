@@ -162,7 +162,7 @@ class Style:
             if isinstance(element, Element):
                 # element = element.__class__.__name__
                 # parent_classes = 
-                s = element.styleOwnerString
+                # s = element.styleOwnerString
                 d["owner"] = element.styleOwnerString
             elif element and isinstance(element, str):
                 d["owner"] = element
@@ -260,14 +260,14 @@ class Style:
             return style_value
 
         bases = ()
-        style_tuple = cls._construct_style_tuple(style_value)
-        style_length = len(style_tuple)
-        if style_length > 3:
-            pass
-            # raise ValueError("A style string can be made up of 3 components at most")
-        elif style_length < 3:
-            style_tuple = cls._construct_style_tuple(
-                cls.construct_style_string(style_value, element = element, property_name=property_name))
+        # style_tuple = cls._construct_style_tuple(style_value)
+        # style_length = len(style_tuple)
+        # if style_length > 3:
+        #     pass
+        #     # raise ValueError("A style string can be made up of 3 components at most")
+        # elif style_length < 3:
+        style_tuple = cls._construct_style_tuple(
+            cls.construct_style_string(style_value, element = element, property_name=property_name))
 
         # (style, owner, prop) = style_tuple
         style, prop = style_tuple[0], style_tuple[-1]
@@ -278,54 +278,55 @@ class Style:
         ##styletuple can be larger than 3, BUT 0 and -1 are style and prop still.
         # if STYLE_PARENTCLASS_SEPERATOR in owner:
         if len(owner) > 1:
+            cur_tree = cls._get_class_tree(owner, prop)
             # owners = owner.split(STYLE_PARENTCLASS_SEPERATOR)
-            owners = owner
+            # owners = owner
             # owner_name = owners[-1]
 
             ##Don't forget to check if this includes or excludes the last one
-            cur_tree = cls.base_style_tree
-            traversed_trees = []
-            for i, parent_owner_string in enumerate(owners[:-1]):
-                styleclass, parent_owner = cls._split_style_class(parent_owner_string)
-                # if STYLE_PARENTCLASS_SEPERATOR in parent_owner_string:
-                #     styleclass, parent_owner = parent_owner_string.split(STYLE_PARENTCLASS_SEPERATOR)
-                # else:
-                #     styleclass, parent_owner = parent_owner_string, parent_owner_string
+            # cur_tree = cls.base_style_tree
+            # traversed_trees = []
+            # for i, parent_owner_string in enumerate(owners[:-1]):
+            #     styleclass, parent_owner = cls._split_style_class(parent_owner_string)
+            #     # if STYLE_PARENTCLASS_SEPERATOR in parent_owner_string:
+            #     #     styleclass, parent_owner = parent_owner_string.split(STYLE_PARENTCLASS_SEPERATOR)
+            #     # else:
+            #     #     styleclass, parent_owner = parent_owner_string, parent_owner_string
 
-                if parent_owner not in cls._knownowners:
-                    raise KeyError(f"Unknown element class {parent_owner} in style string {style_value}")
+            #     if parent_owner not in cls._knownowners:
+            #         raise KeyError(f"Unknown element class {parent_owner} in style string {style_value}")
                 
-                if styleclass in cur_tree and styleclass != parent_owner:
-                    ##Honestly in here, need to have all things seperated already I think?
-                    ##Or at least be able to track the previous one, so its possible to take a step back to the class.
+            #     if styleclass in cur_tree and styleclass != parent_owner:
+            #         ##Honestly in here, need to have all things seperated already I think?
+            #         ##Or at least be able to track the previous one, so its possible to take a step back to the class.
 
-                    ##Because: styleclass may not contain it but yada yada
-                    stylecls_tree = cur_tree[styleclass]
-                    owner_tree = cur_tree.get(parent_owner,{})
-                    # cur_tree = owner_tree | stylecls_tree
-                    cur_tree = tools.update_nested_dict(stylecls_tree, owner_tree)
-                    _LOGGER.debug(f"Combined trees for {styleclass} and {parent_owner}")                    
-                elif parent_owner in cur_tree:
-                    cur_tree = cur_tree[parent_owner]
-                else:
-                    ##check for base tree? Or simply break here regardless.
-                    ##Also, to make it easier to reference styles from other things: simply use style::Parent::Owner AS THE STYLE VALUE
-                    _LOGGER.debug(f"Unable to fully traverse style tree for owners {owner}")
-                    cur_tree = cls.base_style_tree
-                    break
+            #         ##Because: styleclass may not contain it but yada yada
+            #         stylecls_tree = cur_tree[styleclass]
+            #         owner_tree = cur_tree.get(parent_owner,{})
+            #         # cur_tree = owner_tree | stylecls_tree
+            #         cur_tree = tools.update_nested_dict(stylecls_tree, owner_tree)
+            #         _LOGGER.debug(f"Combined trees for {styleclass} and {parent_owner}")                    
+            #     elif parent_owner in cur_tree:
+            #         cur_tree = cur_tree[parent_owner]
+            #     else:
+            #         ##check for base tree? Or simply break here regardless.
+            #         ##Also, to make it easier to reference styles from other things: simply use style::Parent::Owner AS THE STYLE VALUE
+            #         _LOGGER.debug(f"Unable to fully traverse style tree for owners {owner}")
+            #         cur_tree = cls.base_style_tree
+            #         break
                 
-                traversed_trees.append(cur_tree)
+            #     traversed_trees.append(cur_tree)
                     
             # owner = owners[-1]
-            style_class, owner = cls._split_style_class(owners[-1])
+            style_class, owner = cls._split_style_class(owner[-1])
             if owner not in cur_tree:   ##Do the fallback in here probably?
-                _LOGGER.warning(f"No child style for {owner} found after traversing owners {owners}, reverting to base tree")
+                _LOGGER.debug(f"No child style for {owner} found after traversing owners {owner}, reverting to base tree")
                 cur_tree = cls.base_style_tree
             elif not (prop in cur_tree.get(style_class,{}) or prop in cur_tree[owner]):
                 ##This does mean the property is checked twice if it is in there, but it is probably the best way to do so.
                 cur_tree = cls.base_style_tree
             else:
-                _LOGGER.debug(f"Fully traversed style tree for {owners}")
+                _LOGGER.debug(f"Fully traversed style tree for {owner}")
 
         else:
             style_class, owner = cls._split_style_class(owner[0])
@@ -390,6 +391,56 @@ class Style:
             v = cls.get_value(new_string)
             return v
         return val
+
+    @classmethod
+    def _get_class_tree(cls, owners : list[str], prop):
+        
+        if len(owners) > 1:
+            ##Don't forget to check if this includes or excludes the last one
+            cur_tree = cls.base_style_tree
+            traversed_trees = [cur_tree]
+            for i, parent_owner_string in enumerate(owners[:-1]):
+                styleclass, parent_owner = cls._split_style_class(parent_owner_string)
+                # if STYLE_PARENTCLASS_SEPERATOR in parent_owner_string:
+                #     styleclass, parent_owner = parent_owner_string.split(STYLE_PARENTCLASS_SEPERATOR)
+                # else:
+                #     styleclass, parent_owner = parent_owner_string, parent_owner_string
+
+                if parent_owner not in cls._knownowners:
+                    raise KeyError(f"Unknown element class {parent_owner}")
+                
+                if styleclass in cur_tree and styleclass != parent_owner:
+                    ##Honestly in here, need to have all things seperated already I think?
+                    ##Or at least be able to track the previous one, so its possible to take a step back to the class.
+
+                    ##Because: styleclass may not contain it but yada yada
+                    stylecls_tree = cur_tree[styleclass]
+                    owner_tree = cur_tree.get(parent_owner,{})
+                    # cur_tree = owner_tree | stylecls_tree
+                    cur_tree = tools.update_nested_dict(stylecls_tree, owner_tree)
+                    _LOGGER.debug(f"Combined trees for {styleclass} and {parent_owner}")                    
+                elif parent_owner in cur_tree:
+                    cur_tree = cur_tree[parent_owner]
+                else:
+                    ##check for base tree? Or simply break here regardless.
+                    ##Also, to make it easier to reference styles from other things: simply use style::Parent::Owner AS THE STYLE VALUE
+                    _LOGGER.debug(f"Unable to fully traverse style tree for owners {owners}")
+                    # cur_tree = cls.base_style_tree
+                    
+                    ##Run through traverse tree looking for either?
+                    for tree in traversed_trees:
+                        if styleclass in tree:
+                            cur_tree = tree[styleclass]
+                            break
+                        elif parent_owner in tree:
+                            cur_tree = tree[parent_owner]
+                            break
+                    c = cur_tree
+                
+                # traversed_trees.append(cur_tree)
+                traversed_trees.insert(0, cur_tree)
+        return cur_tree
+
 
     @classmethod
     def get_color(cls, value: ColorType, colormode: str = "screen-image"):
@@ -755,7 +806,8 @@ class styleproperty(customproperty):
                 if self.vnestdict:
                     self._set_nestdict(obj, value)
                 elif Style.is_style_string(value):
-                    style_string = self.create_style_string(obj, value)
+                    # style_string = self.create_style_string(obj, value)
+                    style_string = value
                     style_value = Style.get_value(style_string, obj, self.property_name)
                     self.fset(obj, style_value)
                     # setattr(obj,f"_{self._style_attribute}", style_string)
