@@ -321,7 +321,7 @@ class Style:
             if owner not in cur_tree:   ##Do the fallback in here probably?
                 _LOGGER.warning(f"No child style for {owner} found after traversing owners {owners}, reverting to base tree")
                 cur_tree = cls.base_style_tree
-            elif not (prop in cur_tree[style_class] or prop in cur_tree[owner]):
+            elif not (prop in cur_tree.get(style_class,{}) or prop in cur_tree[owner]):
                 ##This does mean the property is checked twice if it is in there, but it is probably the best way to do so.
                 cur_tree = cls.base_style_tree
             else:
@@ -638,8 +638,9 @@ class styleproperty(customproperty):
                 doc=None,
                 *,
                 vdefault=Style.NONESTYLE,
-                vsetraw=False,
                 vroot=Style.NONESTYLE,
+                vsetraw=False,
+                vnestdict=False
                 ):
         """Attributes of 'our_decorator'
         fget
@@ -658,11 +659,15 @@ class styleproperty(customproperty):
         vsetraw
             Have the setter function handle setting, not just validating.
             This means the setter can be passed raw style strings as well.
+        vnestdict : bool
+            Applies nested dict updates for this property. Meaning setting the property to a dict will have the property value be the updated dict from the old and new value.
+            This setting is ignored if vsetraw is ``True``
         """
         super().__init__(fget,fset,fdel,doc)
         self.vdefault = vdefault
         self.vsetraw = vsetraw
         self._vroot = vroot
+        self.vnestdict = vnestdict
         return
 
     # def __call__(self, element):
@@ -747,16 +752,20 @@ class styleproperty(customproperty):
             self.fset(obj, value)
         else:
             try:
-                if Style.is_style_string(value):
+                if self.vnestdict:
+                    self._set_nestdict(obj, value)
+                elif Style.is_style_string(value):
                     style_string = self.create_style_string(obj, value)
                     style_value = Style.get_value(style_string, obj, self.property_name)
                     self.fset(obj, style_value)
-                    setattr(obj,f"_{self._style_attribute}", style_string)
+                    # setattr(obj,f"_{self._style_attribute}", style_string)
+                    self._set_eltattr(obj, style_string)
                 else:
                     if isinstance(value, str) and value.lower() == 'none':
                         value = None
                     self.fset(obj, value)
-                    setattr(obj,f"_{self.property_name}", value)
+                    # setattr(obj,f"_{self.property_name}", value)
+                    self._set_eltattr(obj, value)
                 return
             except (ValueError, TypeError, AttributeError, AssertionError) as exce:
                 msg = f"{obj}: can't set property {self._style_attribute} to style {style_string}, {exce}"
@@ -764,6 +773,32 @@ class styleproperty(customproperty):
                 raise
         
         return self.fset(obj,value)
+
+    def _set_nestdict(self, obj : "Element", value):
+
+        if Style.is_style_string(value):
+            value = self.create_style_string(obj, value)
+            set_value = obj.get_style_value(value, self._style_attribute)
+        else:
+            set_value = value
+        
+        cur_val = getattr(obj, f"_{self._style_attribute}", {})
+        self.fset(obj, set_value)
+
+        if Style.is_style_string(value):
+            self._set_eltattr(obj, value)
+        else:
+            if Style.is_style_string(cur_val):
+                cur_val = obj.get_style_value(cur_val, self._style_attribute)
+            
+            if isinstance(cur_val, (dict,)) and isinstance(value, (dict,)):
+                self._set_eltattr(obj, tools.update_nested_dict(value, cur_val))
+            else:
+                self._set_eltattr(obj, value)
+
+    def _set_eltattr(self, obj : "Element", value):
+        #Shorthand for the correct code to set the private attribute
+        setattr(obj,f"_{self.property_name}", value)
 
     def value(self, element : "Element"):
         """Returns the value of this property for the given element
@@ -800,6 +835,7 @@ class styleproperty(customproperty):
             "vdefault": self.vdefault,
             "vroot": self._vroot,
             "vsetraw": self.vsetraw,
+            "vnestdict": self.vnestdict,
         }
         return type(self)(**d | kwargs)
 
