@@ -29,7 +29,8 @@ from .constants import DEFAULT_FONT, \
     ALLOWED_BADGE_SETTINGS
 
 from .constants import CoordType, ColorType, \
-            DEFAULT_FOREGROUND_COLOR, DEFAULT_ACCENT_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_MENU_HEADER_COLOR, DEFAULT_FONT_HEADER, DEFAULT_BLUR_POPUP_BACKGROUND
+            DEFAULT_FOREGROUND_COLOR, DEFAULT_ACCENT_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_MENU_HEADER_COLOR, DEFAULT_FONT_HEADER, DEFAULT_BLUR_POPUP_BACKGROUND, \
+            DEFAULT_ACTIVE_COLOR, DEFAULT_INACTIVE_COLOR
 from ..pssm_types import *
 
 from .. import tools
@@ -1404,9 +1405,9 @@ class Layout(Element):
 
     emulator_icon = "mdi:view-dashboard"
 
-    def __init__(self, layout : PSSMLayout, area=None, background_color : ColorType = None, isInverted=False, radius : PSSMdimension = 0, 
-                outline_color : ColorType=None, foreground_color : ColorType = DEFAULT_FOREGROUND_COLOR, accent_color : ColorType = DEFAULT_ACCENT_COLOR,
-                outline_width:PSSMdimension=0,
+    def __init__(self, layout : PSSMLayout, area : PSSMarea = None, background_color : ColorType = None, isInverted=False, radius : PSSMdimension = 0, 
+                outline_color : ColorType = None, foreground_color : ColorType = DEFAULT_FOREGROUND_COLOR, accent_color : ColorType = DEFAULT_ACCENT_COLOR,
+                outline_width : PSSMdimension = 0,
                 show_feedback : bool = False, _isSubLayout : bool = False, 
                  **kwargs):
 
@@ -1516,7 +1517,7 @@ class Layout(Element):
     def background_color(self) ->  Union[ColorType,None]:
         return self._background_color
 
-    @colorproperty
+    @colorproperty(vroot=ROOTCOLORS.ACCENT).getter
     def outline_color(self) ->  Union[ColorType,None]:
         """Color of the layout's outline. 
         Set to None to use no outline"""
@@ -2475,7 +2476,7 @@ class TileElement(Layout):
         self.__hide = tuple(value_set)
         self._reparse_layout = True
 
-    @styleproperty(vsetraw=True).getter
+    @styleproperty(vnestdict=True).getter
     def vertical_sizes(self) -> dict[str,PSSMdimension]:
         """Vertical sizing of the tiles.
         Setting this will update from the current values, not overwrite it.
@@ -2485,11 +2486,11 @@ class TileElement(Layout):
     @vertical_sizes.setter
     def vertical_sizes(self, value : dict):
 
-        if Style.is_style_string(value):
-            set_value = value
-            value = TileElement.vertical_sizes.value(self)
-        else:
-            set_value = value
+        # if Style.is_style_string(value):
+        #     set_value = value
+        #     value = TileElement.vertical_sizes.value(self)
+        # else:
+        #     set_value = value
 
         if isinstance(value, str) and value in self.defaultVerticalSizes:
             value = self.defaultVerticalSizes[value]
@@ -2501,16 +2502,16 @@ class TileElement(Layout):
             _LOGGER.exception(KeyError(msg))
             return
         
-        if Style.is_style_string(set_value):
-            self._vertical_sizes = set_value
-        elif Style.is_style_string(self._vertical_sizes):
-            self._vertical_sizes = TileElement.vertical_sizes.value(self) | value
-        else:
-            self._vertical_sizes.update(value)
+        # if Style.is_style_string(set_value):
+        #     self._vertical_sizes = set_value
+        # elif Style.is_style_string(self._vertical_sizes):
+        #     self._vertical_sizes = TileElement.vertical_sizes.value(self) | value
+        # else:
+        #     self._vertical_sizes.update(value)
 
         self._reparse_layout = True
 
-    @styleproperty(vsetraw=True).getter
+    @styleproperty(vnestdict=True).getter
     def horizontal_sizes(self) -> dict[str,PSSMdimension]:
         """Horizontal sizing of the tiles.
         Setting this will update from the current values, not overwrite it.
@@ -2520,11 +2521,11 @@ class TileElement(Layout):
     @horizontal_sizes.setter
     def horizontal_sizes(self, value : dict[str,PSSMdimension]):
 
-        if Style.is_style_string(value):
-            set_value = value
-            value = TileElement.horizontal_sizes.value(self)
-        else:
-            set_value = value
+        # if Style.is_style_string(value):
+        #     set_value = value
+        #     value = TileElement.horizontal_sizes.value(self)
+        # else:
+        #     set_value = value
 
         if isinstance(value, str) and value in self.defaultHorizontalSizes:
             value = self.defaultHorizontalSizes[value]
@@ -2536,12 +2537,12 @@ class TileElement(Layout):
             raise KeyError(msg)
             
 
-        if Style.is_style_string(set_value):
-            self._horizontal_sizes = set_value
-        elif Style.is_style_string(self._horizontal_sizes):
-            self._horizontal_sizes = TileElement.horizontal_sizes.value(self) | value
-        else:
-            self._horizontal_sizes.update(value)
+        # if Style.is_style_string(set_value):
+        #     self._horizontal_sizes = set_value
+        # elif Style.is_style_string(self._horizontal_sizes):
+        #     self._horizontal_sizes = TileElement.horizontal_sizes.value(self) | value
+        # else:
+        #     self._horizontal_sizes.update(value)
         self._reparse_layout = True
 
     @property
@@ -3191,7 +3192,9 @@ class PopupMenu(Popup):
     ##This one will provide the basis, but shouldn't be singleton
     ##Building: make layout with a title and a close button, everything underneath is up to the designer
     def __init__(self,  menu_layout : Layout, title : str, 
-                title_font : str = DEFAULT_FONT_HEADER,  close_icon : Optional[mdiType] = "mdi:close-thick", title_color : ColorType = "white", close_icon_color : ColorType = "white", header_color : ColorType = DEFAULT_MENU_HEADER_COLOR, **kwargs):
+                title_font : str = DEFAULT_FONT_HEADER,  close_icon : Optional[mdiType] = "mdi:close-thick",
+                title_color : ColorType = DEFAULT_FOREGROUND_COLOR, close_icon_color : ColorType = "white",
+                header_color : ColorType = DEFAULT_MENU_HEADER_COLOR, **kwargs):
         self.title = title
         "Title of the menu"
 
@@ -3222,7 +3225,7 @@ class PopupMenu(Popup):
     def title(self, value):
         self._title = str(value)
 
-    @colorproperty
+    @colorproperty(vroot=ROOTCOLORS.HEADER).getter
     def header_color(self) -> ColorType:
         "Color of the header bar"
         return self._header_color
@@ -6043,7 +6046,7 @@ class _ElementSelect(Element):
 
     def  __init__(self, layout_element : Union[Layout, "_ElementSelect"], elements : dict[Literal["option"], Element], select_multiple : bool = False, allow_deselect : bool = True, on_select : InteractionFunctionType = None,
                 active_properties : dict = {"background_color": "active"}, inactive_properties : dict = {"background_color": "inactive"}, option_properties: dict = {},
-                active_color : ColorType = DEFAULT_FOREGROUND_COLOR, inactive_color : ColorType = DEFAULT_ACCENT_COLOR,
+                active_color : ColorType = DEFAULT_ACTIVE_COLOR, inactive_color : ColorType = DEFAULT_INACTIVE_COLOR,
                 foreground_color : ColorType = DEFAULT_FOREGROUND_COLOR, accent_color : ColorType = DEFAULT_ACCENT_COLOR):
 
         ##Check if this will work with the setters
@@ -6102,6 +6105,8 @@ class _ElementSelect(Element):
         for opt, elt in self.__option_elements.items():
             d = {"action": self.async_select_by_element, "data": {"option": opt}}
             elt.tap_action = d
+            if not elt.styleParent:
+                elt._styleParent = self
 
         self._reparse_element_colors()
 
@@ -6249,14 +6254,14 @@ class _ElementSelect(Element):
     def outline_color(self) ->  Union[ColorType,None]:
         return self._outline_color
 
-    @colorproperty
+    @colorproperty(vroot=ROOTCOLORS.ACTIVE).getter
     def active_color(self) -> ColorType:
         """A color value that can be used to style the active elements.
         Access it via the shorthand "active".
         """
         return self._active_color
 
-    @colorproperty
+    @colorproperty(vroot=ROOTCOLORS.INACTIVE).getter
     def inactive_color(self) -> ColorType:
         """A color value that can be used to style the inactive elements
         Access it via the shorthand "inactive".
@@ -6318,7 +6323,8 @@ class _ElementSelect(Element):
                 # ##At least for now: no updatelock or generator lock are returned, so all elements think the selector is always updating and generating
                 ##Should be able to fix that when copying stuff over from the parentlayout
                 elt_upd = elt.update(set_props, skipPrint=self.isUpdating, skipGen=skipGen)
-                if elt_upd: updated = True
+                if elt_upd:
+                    updated = True
 
         if inactive_elts:
             inactive_elts = list(inactive_elts)
@@ -6329,10 +6335,11 @@ class _ElementSelect(Element):
             for prop in color_props.intersection(set_props):
                 if set_props[prop] in color_setters:
                     color_attr = color_setters[set_props[prop]]
-                    set_props[prop] = getattr(self,color_attr)
+                    set_props[prop] = getattr(self, color_attr)
             for elt in inactive_elts:
                 elt_upd = elt.update(set_props, skipPrint=self.isUpdating, skipGen=skipGen)
-                if elt_upd: updated = True
+                if elt_upd:
+                    updated = True
         
         self._reparse_colors = False
         return updated
