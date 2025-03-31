@@ -696,13 +696,6 @@ class TabPages(base.TileElement):
                         element_properties=element_properties, **kwargs)
 
         self._set_default_sizes()
-
-        t = TabPages.tile_layout.value(self)
-        v = base.Icon.icon_color.get_color(NextHandle)
-        f = TabPages.foreground_color.get_color(self)
-
-        ##Would like to have tile_layout be able to be a tileproperty, however need to somehow implement that in the tilebase oid to handle it
-
         return
 
     #region
