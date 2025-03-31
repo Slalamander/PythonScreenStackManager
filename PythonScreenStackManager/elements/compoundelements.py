@@ -2959,6 +2959,7 @@ class Counter(base.TileElement):
     @classproperty
     def defaultLayouts(cls):
         return {"default": "count,[up;down]", "horizontal": "down,count,up"}
+    tileStyles = {"default": "Default", "horizontal": "Horizontal"}
 
     @classproperty
     def action_shorthands(cls) -> dict[str,Callable[["base.Element", CoordType],Any]]:
@@ -3005,9 +3006,6 @@ class Counter(base.TileElement):
         self.step = step
         self.roundDigits = roundDigits
         self.value = value
-
-        self.tile_layout
-
         return
 
     #region
@@ -3038,20 +3036,6 @@ class Counter(base.TileElement):
                 "horizontal_sizes": {"up": "?", "down": "?"},
                 "vertical_sizes": {"outer": "h*0.1", "up": "?", "down": "?"},
                 }})
-
-    @base.Element.style_class.getter
-    def style_class(self):
-        sc = self._style_class
-        if sc is None:
-            tl = getattr(self, "_tile_layout", None)
-            if tl == "horizontal":
-                return "Horizontal"
-            elif tl == "default":
-                return "Default"
-            else:
-                return None
-        else:
-            return sc
 
     @property
     def elements(self) -> MappingProxyType[Literal["count","up","down"],base.Element]:
