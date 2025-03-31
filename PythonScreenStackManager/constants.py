@@ -198,7 +198,9 @@ class ROOTCOLORS:
     BACKGROUND = "white"
     FOREGROUND = "black"
     ACCENT = "gray"
-    HEADER = "accent_color"
+    HEADER = "accent" + ROOT_STYLE_SUFFIX
+    ACTIVE = "foreground" + ROOT_STYLE_SUFFIX
+    INACTIVE = "accent" + ROOT_STYLE_SUFFIX
 
 PSSM_COLORS : dict[str,tuple[int,int,int,int]] = {
             "none": None
