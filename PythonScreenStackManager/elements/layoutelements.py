@@ -13,7 +13,7 @@ from ..exceptions import *
 from . import baseelements as base
 from . import compoundelements as comps     ##May need restructuring here if I want to use compounds with grid elements -> Nope probably? Since that would kinda take away some configuration
 from .baseelements import Element, elementactionwrapper,\
-    classproperty, styleproperty, trigger_condition
+    classproperty, styleproperty, trigger_condition, Style, const
 from .constants import DEFAULTCOLORS, DEFAULT_FOREGROUND_COLOR
 from ..pssm_types import *
 from .. import tools
@@ -637,7 +637,8 @@ class TabPages(base.TileElement):
     def tiles(cls) -> tuple[str,str,str,str]:
         return ("navigation", "handle-next", "handle-previous", "tab")
 
-    def __init__(self, tabs : list[tabDict], tile_layout : Union[Literal["top","bottom","left","right"], PSSMLayoutString] = "bottom",
+    def __init__(self, tabs : list[tabDict],
+                tile_layout : Union[Literal["top","bottom","left","right"], PSSMLayoutString] = "bottom",
                 apply_default_sizes : bool = True, navigation_tile_size : Union[float,PSSMdimension] = 0.2,
                 hide_navigation_bar : bool = False, hide_page_handles : bool = True, cycle : bool = True,
                 element_properties : dict = {}, horizontal_sizes: dict[str,PSSMdimension] = {}, vertical_sizes: dict[str,PSSMdimension] = {},
@@ -682,8 +683,13 @@ class TabPages(base.TileElement):
         vertical_sizes = vertical_sizes
         horizontal_sizes = horizontal_sizes
 
-        super().__init__(tile_layout, vertical_sizes=vertical_sizes, horizontal_sizes=horizontal_sizes, element_properties=element_properties, **kwargs)
+        super().__init__(tile_layout,
+                        vertical_sizes=vertical_sizes, horizontal_sizes=horizontal_sizes,
+                        element_properties=element_properties, **kwargs)
 
+        self.tile_layout
+        s = TabPages.tile_layout.value(self)
+        t = Style.base_style_tree.get("TabPages", {})
         self._set_default_sizes()
 
         v = base.Icon.icon_color.get_color(NextHandle)
@@ -779,20 +785,38 @@ class TabPages(base.TileElement):
 
     @base.TileElement.tile_layout.setter
     def tile_layout(self, value):
-        if value == getattr(self,"_tile_layout",None):
-            return
+        # if value == getattr(self,"_tile_layout",None):
+        #     return
         
-        base.TileElement.tile_layout.fset(self, value)
-        if self._tile_layout != value or value not in TabPages.defaultLayouts:
-            return ##This means something was wrong with the layout (or it's not a default one)
+        # base.TileElement.tile_layout.fset(self, value)
+        # if self._tile_layout != value or value not in TabPages.defaultLayouts:
+        #     return ##This means something was wrong with the layout (or it's not a default one)
 
+        base.TileElement.tile_layout.fset(self, value)
         self._resize_defaults = True
 
     @base.Element.style_class.getter
     def style_class(self):
         sc = self._style_class
         if sc is None:
-            tl = getattr(self, "_tile_layout", None)
+            try:
+                ##This causes an infinite loop because:
+                ##tile_layout determine style_class
+                ##style_class determines tile_layout...
+
+                ##so get the value from the base tree, instead via self.
+                ##But, how to handle nested TabPage styles though
+                tl = self._tile_layout
+            except AttributeError:
+                tl = None
+            
+            if Style.is_style_string(tl):
+                if s := self.styleParentString:
+                    s = f"{s}{const.STYLE_SEPERATOR}{self.__class__.__name__}{const.STYLE_SEPERATOR}tile_layout"
+                else:
+                    s = f"{self.__class__.__name__}{const.STYLE_SEPERATOR}tile_layout"
+                tl = Style.get_value(s)
+
             if tl in ("top", "bottom"):
                 return "HorizontalNav"
             elif tl in ("left", "right"):
@@ -1130,23 +1154,25 @@ class TabPages(base.TileElement):
 
             tab_w = "?" if self.hide_page_handles else "w*0.95"
 
-            self.vertical_sizes = {"navigation": "h*0.05", "tab": "?", "inner": 0, "outer": 0}                
-            self.horizontal_sizes = {"tab": tab_w,"navigation": "w"}
+            # self.vertical_sizes = {"navigation": "h*0.05", "tab": "?", "inner": 0, "outer": 0}                
+            # self.horizontal_sizes = {"tab": tab_w,"navigation": "w"}
 
             col_size = self.navigation_tile_size
             if isinstance(col_size, float) and col_size < 1:
                 col_size = f"w*{col_size}"
 
-            nav_dict = {"columns": None, "rows": 1, 
-                        "column_sizes": col_size, "row_sizes" : "?",
-                        "outer_margins": [3,"?",0,"w*0.025"]}
+            nav_dict = {"columns": None, "rows": 1, }
+                        # "column_sizes": col_size, "row_sizes" : "?",
+                        # "outer_margins": [3,"?",0,"w*0.025"]}
 
             line_or = "horizontal"
             line_al = "top"
             hide = ()
             ##Should set all values here that are required
-            horizontal_sizes = {"icon": "r", "inner": "r/3", "line": "w", "outer": 0}
-            vertical_sizes = {"line": 7, "inner": 3, "outer": 0}
+            # horizontal_sizes = {"icon": "r", "inner": "r/3", "line": "w", "outer": 0}
+            # vertical_sizes = {"line": 7, "inner": 3, "outer": 0}
+            upd_attr = {"hide": hide, 
+                    "element_properties": {"line": {"orientation": line_or, "alignment": line_al}}}
         elif self._tile_layout in {"left", "right"}:
             tab_h = "?" if self.hide_page_handles else "h*0.95"
             
@@ -1165,11 +1191,10 @@ class TabPages(base.TileElement):
             hide = ("name",)
             horizontal_sizes = {"line": 7, "inner": 3, "outer": 3, "icon": "?"}
             vertical_sizes = {"line": "h", "outer": 0, "inner": "?"}
+            upd_attr = {"hide": hide, "horizontal_sizes": horizontal_sizes, "vertical_sizes": vertical_sizes, 
+                    "element_properties": {"line": {"orientation": line_or, "alignment": line_al}}}
         else:
             return
-
-        upd_attr = {"hide": hide, "horizontal_sizes": horizontal_sizes, "vertical_sizes": vertical_sizes, 
-                    "element_properties": {"line": {"orientation": line_or, "alignment": line_al}}}
         
         if not tiles:
             tiles = self.NavigationBar.elements
