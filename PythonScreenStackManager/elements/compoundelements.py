@@ -3038,7 +3038,10 @@ class Counter(base.TileElement):
         base.Button: {
             "font_color": "foreground",
             "background_color": None,
-            "font_size": "h*0.9"
+            "font_size": 0,
+            "fit_text": True,
+            "resize": False,
+            "multiline": False,
         },
         base.Icon : {
             "background_shape": None,
