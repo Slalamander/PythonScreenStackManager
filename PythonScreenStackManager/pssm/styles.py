@@ -115,9 +115,7 @@ class Style:
         cls._root_styles = root
 
         new_tree = cls._nest_style_trees(new_tree, user_tree)
-        
         cls.base_style_tree = new_tree
-        cls.root_styles
         return
 
     @classmethod
