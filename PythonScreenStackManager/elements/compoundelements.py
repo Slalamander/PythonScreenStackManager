@@ -1066,19 +1066,19 @@ class DigitalClock(base.Button, dateTimeElementInterval):
         "The current time string being displayed on the clock"
         return self._text
     
-    @base.Element.style_class.getter
-    def style_class(self):
+    @property
+    def styleClass(self):
         sc = self._style_class
         if sc is None:
             tl = getattr(self, "orientation", None)
             if tl == "horizontal":
-                return "Horizontal"
+                return "Horizontal" + STYLE_PARENTCLASS_SEPERATOR + self.__class__.__name__
             elif tl == "vertical":
-                return "Vertical"
+                return "Vertical" + STYLE_PARENTCLASS_SEPERATOR + self.__class__.__name__
             else:
-                return None
+                return base.Element.styleClass.fget(self)
         else:
-            return sc
+            return base.Element.styleClass.fget(self)
 
     @styleproperty
     def time_format(self) -> str:
