@@ -20,7 +20,7 @@ from ..pssm_types import *
 from . import constants as const
 from .constants import DEFAULT_FONT_CLOCK, DEFAULT_FONT_SIZE,\
     MISSING_ICON, DEFAULT_FOREGROUND_COLOR, DEFAULT_BACKGROUND_COLOR,  DEFAULT_FONT_HEADER,\
-    DEFAULT_ACCENT_COLOR, DEFAULT_FONT_BOLD
+    DEFAULT_ACCENT_COLOR, DEFAULT_FONT_BOLD, STYLE_PARENTCLASS_SEPERATOR
 
 from .. import tools
 from ..tools import DrawShapes, DummyTask
@@ -28,6 +28,7 @@ from ..tools import DrawShapes, DummyTask
 from . import baseelements as base
 from .baseelements import IMPLEMENTED_ICON_SHAPES, Style,\
         colorproperty, styleproperty, elementaction, elementactionwrapper, trigger_condition, classproperty
+
 
 BoolDict = TypedDict("BoolDict", {True: dict, False: dict})
 
@@ -90,6 +91,8 @@ class Tile(base.TileElement):
     @classproperty
     def defaultLayouts(cls):
         return {"vertical": "icon;title;text", "horizontal": "icon,[title;text]"}
+    
+    tileStyles = {"vertical": "Vertical", "horizontal": "Horizontal"}
 
     _restricted_element_properties : dict[str,set[str]] = {"icon": {"icon"}, "text": {"text"}, "title": {"text"}}
     "Properties of the elements that are not allowed to be set."
@@ -252,19 +255,18 @@ class Tile(base.TileElement):
                 "vertical_sizes": _EltSizeDict(icon="?*5", text="?", title="?", outer="?", inner=8),
                 "Button": {"text_x_position": "m"}}})
 
-    @base.Element.style_class.getter
-    def style_class(self):
-        sc = self._style_class
-        if sc is None:
-            tl = getattr(self, "tile_layout", None)
-            if tl == "horizontal":
-                return "Horizontal"
-            elif tl == "vertical":
-                return "Vertical"
-            else:
-                return None
-        else:
-            return sc
+    @base.TileElement.tile_layout.setter
+    def tile_layout(self, value):
+        if value in ("hor", "ver"):
+            if value == "hor":
+                value = "horizontal"
+            elif value == "ver":
+                value = "vertical"
+            msg = f"{self}: shorthand layouts hor and ver are being deprecated"
+            _LOGGER.warning(msg)
+        
+        base.TileElement.tile_layout.fset(self, value)
+            
 
     @colorproperty
     def background_color(self) -> Union[ColorType,None]:
@@ -374,31 +376,6 @@ class Tile(base.TileElement):
         
         self.__title = value
         self.__TitleElement.update({"text": self.title}, skipPrint=self.isUpdating)
-
-    @property
-    def tile_layout(self) -> Union[Literal["vertical", "horizontal"], PSSMLayoutString]:
-        return self.__tile_layout
-    
-    @tile_layout.setter
-    def tile_layout(self, value : Union[Literal["horizontal", "vertical", "hor", "ver"],PSSMLayoutString]):
-        if not isinstance(value,str):
-            ##Maybe do allow for this but call the is_layout_valid
-            msg = "tile_layout must be a string. Set the layout itself to alter it directly?"
-            _LOGGER.error(TypeError(msg))
-            return
-        
-        if value not in ["horizontal", "vertical", "hor", "ver"]:
-            self.__tile_layout = value
-            self._layoutstr = value
-        else:
-            if "hor" in value:
-                self.__tile_layout = "horizontal"
-            else:
-                self.__tile_layout = "vertical"
-            
-            if hasattr(self, "_IconElement"):
-                self._layoutstr = self._build_tile_layout_str(value)
-        self._reparse_layout = True
 
     def _build_tile_layout_str(self, value : str):
         """
