@@ -2425,7 +2425,12 @@ class TileElement(Layout):
     @property
     def tile_layout(self) -> Optional[str]:
         """String used to set the layout. 
-        None if the layout was set directly"""
+        ``None`` if the layout was set directly"""
+
+        ##Making this into a styleproperty:
+        ##Basically, set the root value to NONESTYLE
+        ##And use that as a starting point for custom styles.
+        ##Do think about: handling the custom styleclass returners?
         if self._tile_layout in self.__class__.defaultLayouts:
             return self.__class__.defaultLayouts[self._tile_layout]
 
