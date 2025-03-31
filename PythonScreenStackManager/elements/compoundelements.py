@@ -2116,17 +2116,18 @@ class Slider(LineSlider, BoxSlider):
         self.slider_style = slider_style
 
         ##This may work in at least having everything working?
-        if self.slider_style == "box":
+        if (v := Slider.slider_style.value(self)) == "box":
             LineSlider.__init__(self, orientation=orientation,_register=False)
             BoxSlider.__init__(self, orientation=orientation,**kwargs)
-        elif self.slider_style == "line":
+        elif v == "line":
             BoxSlider.__init__(self, orientation=orientation, _register=False)
             LineSlider.__init__(self, orientation=orientation, **kwargs)
-
-        Slider.width
+        else:
+            msg = f"{self}: Invalid slider style {v}"
+            raise ValueError(msg)
 
     #region
-    @property
+    @styleproperty
     def slider_style(self) -> Literal["line", "box"]:
         """
         The style of the slider, i.e. whether it displays a box or line slider. 
@@ -2139,32 +2140,30 @@ class Slider(LineSlider, BoxSlider):
         styles = ["line", "box"]
         if value not in styles:
             msg = f"Slider style must be one of {styles}, not {value}"
-            _LOGGER.exception(ValueError(msg))
-        else:
-            self._slider_style = value
+            raise ValueError(msg)
 
         return
 
     @colorproperty
     def thumb_color(self):
-        if self.slider_style == "line":
+        if (v := Slider.slider_style.value(self)) == "line":
             return LineSlider.thumb_color.fget(self)
-        elif self.slider_style == "box":
+        elif v == "box":
             return BoxSlider.thumb_color.fget(self)
 
     @property
     def SliderClass(self) -> Union[type[LineSlider], type[BoxSlider]]:
         "Quickhand function to get the correct class"
-        if self.slider_style == "line":
+        if (v := Slider.slider_style.value(self)) == "line":
             return LineSlider
-        elif self.slider_style == "box":
+        elif v == "box":
             return BoxSlider
     #endregion
 
     def generator(self, area=None, skipNonLayoutGen=False):
-        if self.slider_style == "box":
+        if (v := Slider.slider_style.value(self)) == "box":
             img = BoxSlider.generator(self, area, skipNonLayoutGen)
-        elif self.slider_style == "line":
+        elif v == "line":
             img = LineSlider.generator(self, area, skipNonLayoutGen)
         return img
 
@@ -2225,8 +2224,9 @@ class TimerSlider(Slider):
     def count(self, value):
         if value not in {"up","down"}:
             msg = f"Counter value must be either up or down, {value} is not valid."
-            _LOGGER.exception(ValueError(msg))
-            return
+            raise ValueError(msg)
+            # _LOGGER.exception(ValueError(msg))
+            # return
         
         if not self._timerTask.done() and value != self.count:
             _LOGGER.warning(f"{self.id} changed count value. Don't forget to restart the timer.")
@@ -2372,8 +2372,6 @@ class TimerSlider(Slider):
         " Starts the timer. If the timer previously reached its end, it will be restarted."
 
         ##Second condition ensures the timer can be restart if it is paused
-        d = self._timerTask.done()
-        c = self._timerTask.cancelled()
         if (self._timerTask.done() and not self._timerTask.cancelled()) or reset:
             if self.count == "up":
                 self.position = self.minimum
@@ -3018,31 +3016,6 @@ class Counter(base.TileElement):
         countButton = base.Button(str(value), styleParent = self)
 
         self.__elements = MappingProxyType({"count": countButton, "up": upButton, "down": downButton})
-
-        # default_properties = {"count": {"font_color": "foreground"}, "up": {"icon_color": "foreground"},"down": {"icon_color": "foreground"}}
-        # default_properties = {"count": {}, "up": {},"down": {}}
-
-        # for elt in default_properties:
-        #     set_props = element_properties.get(elt, {})
-        #     default_properties[elt].update(set_props)
-
-        # element_properties = default_properties
-
-        # if not isinstance(vertical_sizes, dict):
-        #     if tile_layout == "default":
-        #         vertical_sizes = {"outer": "h*0.1", "up": "?", "down": "?"}
-        #     elif tile_layout == "horizontal":
-        #         vertical_sizes = {"up": "?", "down": "?", "outer": "h*0.05"}
-        #     else:
-        #         vertical_sizes = {}
-
-        # if not isinstance(horizontal_sizes, dict):
-        #     if tile_layout == "default":
-        #         horizontal_sizes = {"count": "w*0.6", "up": "r", "down": "r"}
-        #     elif tile_layout == "horizontal":
-        #         horizontal_sizes = {"up": "?", "down": "?"}
-        #     else:
-        #         horizontal_sizes = {}
 
         super().__init__(tile_layout, element_properties=element_properties, horizontal_sizes=horizontal_sizes, vertical_sizes= vertical_sizes, 
                         background_color=background_color, radius=radius,
