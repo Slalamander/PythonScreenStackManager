@@ -686,9 +686,7 @@ class TabPages(base.TileElement):
         self.apply_default_sizes = apply_default_sizes
         self.hide_navigation_bar = hide_navigation_bar
         self.hide_page_handles = hide_page_handles
-
         self.cycle = cycle
-        self.navigation_tile_size = navigation_tile_size
 
         vertical_sizes = vertical_sizes
         horizontal_sizes = horizontal_sizes
@@ -894,6 +892,21 @@ class TabPages(base.TileElement):
         self._resize_defaults = True
 
     @styleproperty
+    def cycle(self) -> bool:
+        """Enables cycling through tabs
+        
+        When using the page handles, or calling `next_page` or `previous_page`, if this is True, this will mean the element will loop through tabs.
+        Otherwise, it won't change the current tab if the list is exhausted.
+        """
+        return self._cycle
+
+    @cycle.setter
+    def cycle(self, value: bool):
+        if type(value) != bool:
+            msg = f"{self}: using non boolean value {value} for cycle is not advised"
+            _LOGGER.warning(msg)
+
+    @styleproperty
     def apply_default_sizes(self) -> bool:
         """If True, applies default orientations where needed, _if_ a default layout is used. Can be set to False to take (more) control of the element's layout.
 
@@ -915,7 +928,9 @@ class TabPages(base.TileElement):
 
     @property
     def navigation_tile_size(self) -> Union[float, PSSMdimension]:
-        """DEPRECATED
+        """DEPRECATED. Set via ``element_properties`` or styling.
+        
+        ------------
         The relative size to use for the Navigation Tile. 
         Depending on the orientation, this will set the row height for the right and left default layouts, and the column width for the top and bottom layouts.
         If a float smaller than 0 is used, it will be parsed as `h*val` or `w*val`, depending on the above.
@@ -1126,7 +1141,7 @@ class TabPages(base.TileElement):
         """        
         new_idx = self._currentIdx + 1
         if new_idx >= len(self.__tabElements):
-            if not self.cycle:
+            if not TabPages.cycle.value(self):
                 return
             
             new_idx = 0
@@ -1140,7 +1155,7 @@ class TabPages(base.TileElement):
         """   
         new_idx = self._currentIdx - 1
 
-        if new_idx < 0 and not self.cycle:
+        if new_idx < 0 and not TabPages.cycle.value(self):
             return
 
         self.show_page(new_idx)
