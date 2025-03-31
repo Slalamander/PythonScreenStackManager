@@ -309,6 +309,9 @@ class Element(ABC):
         else:
             self._style_class = value
 
+        self._signal_styling_update()
+        return
+
     @property
     def styleClass(self) -> str:
         "style class of the element, i.e. its style_class, if any, and its class name"
@@ -342,7 +345,7 @@ class Element(ABC):
         """
         if self.styleParent:
             if self.styleParent.styleParent:
-                return f"{self.styleParent.styleParentString}{const.STYLE_PARENTCLASS_SEPERATOR}{self.styleParent.styleClass}"
+                return f"{self.styleParent.styleParentString}{const.STYLE_SEPERATOR}{self.styleParent.styleClass}"
             else:
                 return self.styleParent.styleClass
         
@@ -1056,6 +1059,9 @@ class Element(ABC):
                     msg = f"{self}: Color {col_val} is not a valid color, nor is it recognised as a value to reference a parent's color."
                     _LOGGER.error(msg)
 
+    def _signal_styling_update(self):
+        self._requestGenerate = True
+
     def _update_parent_colors(self, *updated_colors):
         parent = self.parentLayout
         if parent == None:
@@ -1700,6 +1706,11 @@ class Layout(Element):
         "Called when a style property is updated"
         if attribute in self.color_properties:
             self._update_child_colors(attribute)
+
+    def _signal_styling_update(self):
+        super()._signal_styling_update()
+        for elt in self.create_element_list():
+            elt._signal_styling_update()
 
     def _update_child_colors(self, *updated_colors : str):
         
@@ -2430,6 +2441,9 @@ class TileElement(Layout):
             self._reparse_layout = True
             self._tile_layout = value
 
+            if value in self.__class__.defaultLayouts and self.__class__.style_class != Element.style_class:
+                self._signal_styling_update()
+
     @Layout.layout.setter
     def layout(self, value:Union[list,str]):
         if isinstance(value, str):
@@ -2508,7 +2522,7 @@ class TileElement(Layout):
         val_keys = set(value.keys()) | allowed_keys
         if val_keys != allowed_keys:
             msg = f"{self.id} vertical sizes only allows {allowed_keys}. {value.keys()} has at least 1 not allowed. Don't forget to add new elements before setting vertical and horizontal sizes."
-            _LOGGER.exception(KeyError(msg))
+            raise KeyError(msg)
             return
         
         # if Style.is_style_string(set_value):
@@ -3680,7 +3694,7 @@ class Button(Element):
     emulator_icon = "mdi:alpha-b-box"
 
     def __init__(self, text: Optional[str]="", font:str= "default", font_size: PSSMdimension = DEFAULT_FONT_SIZE, font_color : Union[bool,ColorType] = DEFAULT_FOREGROUND_COLOR, #"black",
-                background_color: ColorType =None, outline_color: Optional[ColorType] = None, outline_width : PSSMdimension = 1, radius:int=0, 
+                background_color: ColorType = DEFAULT_BACKGROUND_COLOR, outline_color: Optional[ColorType] = None, outline_width : PSSMdimension = 1, radius:int=0, 
                 margins : int = 0, text_x_position : Union[int,Literal["l","m","r","s"]] ="center", text_y_position : Union[int,Literal["a","t","m","s","b","d"]] ="center", text_anchor_alignment : textAlignmentType = (None,None), multiline : bool =False, 
                 inverted:bool=False, resize=False, fit_text=False, **kwargs):
 
