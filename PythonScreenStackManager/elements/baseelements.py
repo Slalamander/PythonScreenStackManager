@@ -942,8 +942,17 @@ class Element(ABC):
 
     def get_style_value(self, style_value : str, property_name : Union[styleproperty,str] = None):
         "Returns the appropriate value for the given style string"
-        if isinstance(style_value, str) and Style.is_style_string(style_value):
-            return Style.get_value(style_value, self, property_name)
+        if Style.is_style_string(style_value):
+            try:
+                return Style.get_value(style_value, self, property_name)
+            except RecursionError:
+                fallback = Style._root_styles.get(property_name, Style.NONESTYLE)
+                if fallback is not Style.NONESTYLE:
+                    msg = f"{self}: could not deconstruct style_value {style_value}, likely ran into an infinite loop. Returning root value"
+                else:
+                    msg = f"{self}: could not deconstruct style_value {style_value}, likely ran into an infinite loop. No root value to fall back to"
+                _LOGGER.error(msg, exc_info=DEBUG)
+                return fallback 
         return style_value
     
     def get_color_value(self, color : ColorType, colormode : str = None, property_name : Union[str, colorproperty] = None):
