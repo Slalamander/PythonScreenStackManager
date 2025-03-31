@@ -710,10 +710,13 @@ class styleproperty(customproperty):
 
         owner_elt = owner.__name__
         cls = self.__class__
+
         self.owner = owner
 
         ##Do not use __elt_init__ here, __set_name__ is called before __init_subclass__ (so before __init__ is overwritten)
-        if getattr(self, "vdefault", Style.NONESTYLE) is Style.NONESTYLE:
+        if (getattr(self, "vdefault", Style.NONESTYLE) is Style.NONESTYLE
+            ##How to know if it was redefined?
+            ):
             init_func = owner.__init__
             base_args = inspect.signature(init_func)
             
@@ -748,7 +751,7 @@ class styleproperty(customproperty):
         cls._all_owners.add(owner_elt)
         return
 
-    def __get__(self, obj, objtype=None):
+    def __get__(self, obj, objtype=None) -> Union["styleproperty", Any]:
         if obj is None:
             # if objtype is None:
             #     return self
@@ -763,13 +766,6 @@ class styleproperty(customproperty):
         if isinstance(val, str) and val.lower() == "none":
             val = None
 
-        return val
-
-        if obj.__class__.__name__ in self._all_owners:
-            return val
-        if isinstance(val,str) and "::" in val:
-            style_val = Style.get_value(val, obj)
-            return style_val
         return val
 
     def __set__(self, obj, value):
@@ -839,7 +835,7 @@ class styleproperty(customproperty):
         """
         if not isinstance(getattr(element.__class__, self.property_name, None), styleproperty):
             return getattr(element, self.property_name)
-        val = element.get_style_value(getattr(element, f"_{self.property_name}"), self.property_name)
+        val = element.get_style_value(getattr(element, self.property_name), self.property_name)
         if isinstance(val, (dict,list)):
             return val.copy()
         return val
@@ -864,11 +860,13 @@ class styleproperty(customproperty):
             "fset": self.fset,
             "fdel": self.fdel,
             "doc": self.__doc__,
-            "vdefault": self.vdefault,
+            # "vdefault": self.vdefault,
             "vroot": self._vroot,
             "vsetraw": self.vsetraw,
             "vnestdict": self.vnestdict,
         }
+        if not hasattr(self, "owner"):
+            d["vdefault"] = self.vdefault
         return type(self)(**d | kwargs)
 
     def create_style_string(self, obj : "Element", string : str):
@@ -1125,7 +1123,7 @@ class colorproperty(styleproperty):
     # def __call__(self, fget) -> "colorproperty":
     #     self.getter(fget)
 
-    def __get__(self, obj, objtype=None):
+    def __get__(self, obj, objtype=None) -> Union["colorproperty", ColorType]:
         if obj is None:
             return self
         if self.fget is None:
