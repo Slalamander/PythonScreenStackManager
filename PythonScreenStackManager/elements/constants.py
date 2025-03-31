@@ -23,7 +23,7 @@ ALLOWED_BADGE_SETTINGS : tuple = ("background_color", "icon_color", "location", 
 #endregion
 
 #region configurable constants
-DEFAULT_MENU_HEADER_COLOR : ColorType =  "steelblue"
+DEFAULT_MENU_HEADER_COLOR : ColorType =  "header" + ROOT_STYLE_SUFFIX
 "Default color for the header part of menu popups"
 
 DEFAULT_MENU_BUTTON_COLOR : ColorType = "grey11"
@@ -38,6 +38,19 @@ DEFAULT_ACCENT_COLOR : ColorType = "accent" + ROOT_STYLE_SUFFIX #"gray"
 DEFAULT_BACKGROUND_COLOR : ColorType = "background" + ROOT_STYLE_SUFFIX #"white"
 "Default color for backgrounds, Taken as the color of an empty screen."
 
+DEFAULT_ACTIVE_COLOR : ColorType = "active" + ROOT_STYLE_SUFFIX
+
+DEFAULT_INACTIVE_COLOR : ColorType = "inactive" + ROOT_STYLE_SUFFIX
+
+class DEFAULTCOLORS:
+    FOREGROUND = DEFAULT_FOREGROUND_COLOR
+    BACKGROUND = DEFAULT_BACKGROUND_COLOR
+    ACCENT = DEFAULT_ACCENT_COLOR
+
+    ACTIVE = DEFAULT_ACTIVE_COLOR
+    INACTIVE = DEFAULT_INACTIVE_COLOR
+
+    HEADER = DEFAULT_MENU_HEADER_COLOR
 
 DEFAULT_BLUR_POPUP_BACKGROUND : bool = True
 "Default setting to indicate whether to blur the background when showing a popup"
