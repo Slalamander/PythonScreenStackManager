@@ -6,14 +6,15 @@ from math import floor, ceil
 import asyncio
 
 from PIL.Image import Image
-from typing import Coroutine, Sequence
+from typing import Coroutine, Sequence, Literal, Union
 from types import MappingProxyType
 
 from ..exceptions import *
 from . import baseelements as base
 from . import compoundelements as comps     ##May need restructuring here if I want to use compounds with grid elements -> Nope probably? Since that would kinda take away some configuration
-from .baseelements import Element, elementactionwrapper, classproperty, trigger_condition
-from .constants import DEFAULT_ACCENT_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR
+from .baseelements import Element, elementactionwrapper,\
+    classproperty, styleproperty, trigger_condition
+from .constants import DEFAULTCOLORS, DEFAULT_FOREGROUND_COLOR
 from ..pssm_types import *
 from .. import tools
 
@@ -150,10 +151,10 @@ class GridLayout(base.Layout):
         "The list of elements assigned to this grid"
         return tuple(self.__elements)
 
-    @property
+    @styleproperty
     def outer_margins(self) -> tuple[PSSMdimension,PSSMdimension,PSSMdimension,PSSMdimension]:
         "The values of the outer margins, parsed to a 4 tuple (i.e. the (top,right,bottom,left) margins respectively)"
-        return self.__outer_margins
+        return self._outer_margins
     
     @outer_margins.setter
     def outer_margins(self, value : Union[PSSMdimension, list[PSSMdimension]]):
@@ -163,34 +164,19 @@ class GridLayout(base.Layout):
         else:
             value = list(value)
         
-        l = len(value)
-        if not 1 <= l <= 4:
+        if not 1 <= len(value) <= 4:
             msg = f"{self}: margins cannot be set to {value}, value must be a single dimension, or a list of 1 to 4 dimensions"
-            _LOGGER.exception(msg)
+            raise ValueError(msg)
 
         for m in value.copy():
-            res = tools.is_valid_dimension(m)
-            if isinstance(res, Exception):
-                _LOGGER.exception(res)
-                return
+            tools.test_dimension_string(m)
 
-        l = len(value)
-        if l == 4:
-            pass
-        elif l == 3:
-            value.append(value[1])
-        elif l == 2:
-            value.extend(value)
-        elif l == 1:
-            value = [value[0]]*4    
-
-        self.__outer_margins = tuple(value)
         self._rebuild_layout = True
     
-    @property
+    @styleproperty
     def inner_margins(self) -> tuple[PSSMdimension,PSSMdimension,PSSMdimension,PSSMdimension]:
         "The values of the inner margins, parsed to a 4 tuple (i.e. the (top,right,bottom,left) margins respectively)"
-        return self.__inner_margins
+        return self._inner_margins
     
     @inner_margins.setter
     def inner_margins(self, value : Union[PSSMdimension, list[PSSMdimension]]):
@@ -200,28 +186,13 @@ class GridLayout(base.Layout):
         else:
             value = list(value)
         
-        l = len(value)
-        if not 1 <= l <= 4:
+        if not 1 <= len(value) <= 4:
             msg = f"{self}: margins cannot be set to {value}, value must be a single dimension, or a list of 1 to 4 dimensions"
-            _LOGGER.exception(msg)
             raise ValueError(msg)
 
         for m in value.copy():
             tools.test_dimension_string(m)
 
-        ##Converting these to a styleproperty:
-        ##use tools.construct_margin_tuple
-        l = len(value)
-        if l == 4:
-            pass
-        elif l == 3:
-            value.append(value[1])
-        elif l == 2:
-            value.extend(value)
-        elif l == 1:
-            value = [value[0]]*4    
-
-        self.__inner_margins = tuple(value)
         self._rebuild_layout = True
 
     @property
@@ -233,20 +204,21 @@ class GridLayout(base.Layout):
     def rows(self, value):
         if value != None and not isinstance(value,int):
             msg = f"{self}: rows must be either None or an integer. Value {value} with type {type(value)} is not valid"
-            _LOGGER.exception(TypeError(msg))
-            return
+            raise TypeError(msg)
+            
         self._rows = value
 
-    @property
+    @styleproperty
     def row_sizes(self) -> list[PSSMdimension]:
         "Sizes of the rows. Either a list with the values of the corresponding row index, or a single value with the size for all rows"
-        if isinstance(self._row_sizes, list):
-            return self._row_sizes.copy()
+        # if isinstance(self._row_sizes, list):
+        #     return self._row_sizes.copy()
         return self._row_sizes
     
     @row_sizes.setter
     def row_sizes(self, value):
-        self._row_sizes = value
+        # self._row_sizes = value
+        tools.test_dimension_string(value, variables=("r"))
         self._rebuild_layout = True
 
     @property
@@ -258,20 +230,20 @@ class GridLayout(base.Layout):
     def columns(self, value):
         if value != None and not isinstance(value,int):
             msg = f"{self}: columns must be either None or an integer. Value {value} with type {type(value)} is not valid"
-            _LOGGER.exception(TypeError(msg))
-            return
+            raise TypeError(msg)
         self._columns = value
 
-    @property
+    @styleproperty
     def column_sizes(self) -> list[PSSMdimension]:
         "Sizes of the columns. Either a list with the values of the corresponding column index, or a single value with the size for all columns"
-        if isinstance(self._column_sizes, list):
-            return self._column_sizes.copy()
+        # if isinstance(self._column_sizes, list):
+        #     return self._column_sizes.copy()
         return self._column_sizes
     
     @column_sizes.setter
     def column_sizes(self, value):
-        self._column_sizes = value
+        # self._column_sizes = value
+        tools.test_dimension_string(value, variables=("r"))
         self._rebuild_layout = True
     #endregion
 
@@ -407,8 +379,8 @@ class GridLayout(base.Layout):
     def build_layout(self):
         "Builds the grid layout"
         elt_grid = self.create_element_grid()
-        outer_margins = self.outer_margins
-        inner_margins = self.inner_margins
+        outer_margins = tools.construct_margin_tuple(GridLayout.outer_margins.value(self))
+        inner_margins = tools.construct_margin_tuple(GridLayout.inner_margins.value(self))
 
 
         num_columns = self.columns
@@ -421,16 +393,16 @@ class GridLayout(base.Layout):
 
             c = ceil(min_cells/mult)
 
-            if num_rows == None: num_rows = c
-            if num_columns == None: num_columns = c
+            if num_rows is None: num_rows = c
+            if num_columns is None: num_columns = c
 
-        row_sizes = self.row_sizes
+        row_sizes = GridLayout.row_sizes.value(self)
         if not isinstance(row_sizes,list):
             row_sizes = [row_sizes]*num_rows
         elif len(row_sizes) < num_rows:
             row_sizes.extend(["?"] * (num_rows - len(row_sizes)))
 
-        col_sizes = self.column_sizes
+        col_sizes = GridLayout.column_sizes.value(self)
         if not isinstance(col_sizes,list):
             col_sizes = [col_sizes]*num_columns
         elif len(col_sizes) < num_columns:
@@ -512,17 +484,39 @@ class NavigationTile(base.TileElement):
     def __init__(self, tile_layout : str, icon : mdiType, name : str, **kwargs): 
         
         self._name = name
-        NavIcon = base.Icon(icon, background_shape="circle", _isNavElt=True, NavTile = self, id = f"navtile-{name}-icon")
+        NavIcon = base.Icon(icon, _isNavElt=True, 
+                            NavTile = self, styleParent = self, id = f"navtile-{name}-icon")
         if icon == None:
             NavIcon._icon = None
-        NavText = base.Button(name, text_x_position="left", fit_text=True, _isNavElt=True, NavTile = self, id = f"navtile-{name}-text")
-        NavLine = base.Line(width=4, alignment="top", _isNavElt=True, NavTile = self, id = f"navtile-{name}-line")
+        NavText = base.Button(name, _isNavElt=True,
+                            NavTile = self, styleParent = self, id = f"navtile-{name}-text")
+        NavLine = base.Line(alignment="top", _isNavElt=True,
+                            NavTile = self, styleParent = self, id = f"navtile-{name}-line")
 
         self.__elements = {"icon": NavIcon, "name": NavText, "line": NavLine}
         super().__init__(tile_layout,**kwargs)
         self._reparse_layout = True
         
-    
+    childStyles = styleproperty.child_styles({
+        base.Icon: {
+            "background_shape": "circle",
+            "background_color": "foreground"
+            },
+        base.Button: {
+            "text_x_position" : "left",
+            "font_color": "foreground",
+            "background_color": None,
+            "fit_text" : True,
+            },
+        base.Line: {
+            "width": 4,
+            "background_color": None,
+            "line_color": "foreground"
+        }
+
+    })
+
+
     @property
     def elements(self) -> dict[Literal["icon","name","line"],Union[base.Icon,base.Button,base.Line]]:
         return self.__elements
@@ -567,19 +561,8 @@ class NavigationTile(base.TileElement):
             upd = await super().async_update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated=updated)
         except Exception as exce:
             _LOGGER.exception(f"{self} could not update")
-        s = self
-        i = self.elements["icon"]
-        l = self.elements["line"]
         return upd
         # return upd
-
-    # async def async_generate(self, area=None, skipNonLayoutGen=False):
-    #     await asyncio.sleep(0)
-    #     return await super().async_generate(area, skipNonLayoutGen)
-
-    # def generator(self, area=None, skipNonLayoutGen=False):
-    #     img = super().generator(area, skipNonLayoutGen)
-    #     return img
 
 ##Kinda want to keep them called Pages cause of Ereader shenanigans
 ##In a way you'd page through things anyways
@@ -660,20 +643,21 @@ class TabPages(base.TileElement):
                 element_properties : dict = {}, horizontal_sizes: dict[str,PSSMdimension] = {}, vertical_sizes: dict[str,PSSMdimension] = {},
                 **kwargs) -> None:
 
-        BackHandle = base.Icon("mdi:menu-left", icon_color='foreground', tap_action = self.previous_page)
-        NextHandle = base.Icon("mdi:menu-right", icon_color='foreground', tap_action = self.next_page)
+        BackHandle = base.Icon("mdi:menu-left", tap_action = self.previous_page, 
+                            styleParent = self, style_class = "Handle")
+        NextHandle = base.Icon("mdi:menu-right", tap_action = self.next_page,
+                            styleParent = self, style_class = "Handle")
 
         self.__NavBar : Union[base._ElementSelect, GridLayout] = GridLayout(rows=1,columns=None, elements=[], column_sizes="w*0.2",
-                                                                            outer_margins=[0,"?",0,"w*0.025"])
-
-        base._ElementSelect(self.__NavBar, {}, allow_deselect=False, active_color="foreground", inactive_color=None,
-                            active_properties={"accent_color": "active","element_properties": {"line": {"line_color": "active"}, "icon": {"background_color": "active"}}}, 
-                            inactive_properties={"accent_color": "inactive", "element_properties": {"line": {"line_color": "inactive"}, "icon": {"background_color":  "inactive", "icon_color": "gray"}}})
-
+                                                                            outer_margins=[0,"?",0,"w*0.025"],
+                                                                            styleParent = self, style_class = "NavBar")
+        base._ElementSelect(self.__NavBar, {}, allow_deselect=False, 
+                            )
         self.__NavBar : base._ElementSelect
         self.__NavBar.on_select = self._navigation_show_tab
         self.__NavBar._skip_select_update = True
 
+        v = base._ElementSelect.active_color.value(self.__NavBar)
         self.__elements = {"handle-previous": BackHandle, "handle-next": NextHandle, "navigation": self.__NavBar}
 
         self.__tabElements = []
@@ -702,7 +686,93 @@ class TabPages(base.TileElement):
 
         self._set_default_sizes()
 
+        v = base.Icon.icon_color.get_color(NextHandle)
+        f = TabPages.foreground_color.get_color(self)
+
+        ##Would like to have tile_layout be able to be a tileproperty, however need to somehow implement that in the tilebase oid to handle it
+
+        return
+
     #region
+
+    childStyles = styleproperty.child_styles({
+        "Handle": {
+            "Class": (base.Icon,),
+            "icon_color": "foreground",
+            "background_shape": "circle",
+            "background_color": "accent",
+        },
+        "NavBar.GridLayout_select": {
+            "active_color": "foreground",
+            "inactive_color": "inactive.root",
+            "active_properties": {
+                "accent_color": "active",
+                "style_class": "Active",
+                # "element_properties": {
+                # "line": {"line_color": "active"},
+                # "icon": {"background_color": "active", "icon_color": DEFAULT_FOREGROUND_COLOR}},
+            },
+            "inactive_properties": {
+                "accent_color": "inactive",
+                "style_class": "Inactive",
+                # "element_properties": {
+                # "line": {"line_color": "inactive"},
+                # "icon": {"background_color": "inactive", "icon_color": "gray"}},
+            },
+            "NavigationTile":{
+                "radius": "h*0.1"
+            },
+            "Active.NavigationTile": {
+                "background_color": (255, 255, 255, 200),
+                base.Button : {"font_color": DEFAULTCOLORS.FOREGROUND},
+                base.Line: {"line_color": "active"},
+                base.Icon : {"background_color": "active", "icon_color": DEFAULT_FOREGROUND_COLOR}
+            },
+            "Inactive.NavigationTile": {
+                "background_color": None,
+                base.Button : {"font_color": "inactive"},
+                base.Line: {"line_color": "inactive"},
+                base.Icon : {"background_color": "inactive", "icon_color": "foreground"}
+            }
+        },
+    })
+
+    styleClasses = styleproperty.style_classes({
+        "HorizontalNav": {
+            "vertical_sizes": {
+                "navigation": "h*0.05",
+                "tab": "?",
+                "inner": 0,
+                "outer": 0
+            },
+            "horizontal_sizes": {
+                "tab": "?*19", ##This should amount to the same width as 95% of w
+                ##Either "?" or "w*0.95"
+                ##Depends on if page handles are shown. But:
+                ##No style for that, either implement it in here or somehow handle the dynamics
+                "navigation": "w"
+            },
+            "NavBar.GridLayout_select": {
+                "column_sizes": "w*0.2",
+                "row_sizes": "?",
+                "outer_margins": [3,"?",0,"w*0.025"],
+                "NavigationTile": {
+                    "horizontal_sizes": {
+                        "icon": "r",
+                        "line": "w",
+                        "inner": "r/3",
+                        "outer": 0,
+                    },
+                    "vertical_sizes": {
+                        "line": 7,
+                        "inner": 3,
+                        "outer": 0,
+                    }
+                }
+            }
+        }
+    })
+
     @property
     def elements(self) -> dict[Literal["navigation","handle-previous","handle-next","tab"], Union[base.Layout,GridLayout, base.Icon]]:
         return self.__elements | {"tab": self.__currentTab}
@@ -717,6 +787,20 @@ class TabPages(base.TileElement):
             return ##This means something was wrong with the layout (or it's not a default one)
 
         self._resize_defaults = True
+
+    @base.Element.style_class.getter
+    def style_class(self):
+        sc = self._style_class
+        if sc is None:
+            tl = getattr(self, "_tile_layout", None)
+            if tl in ("top", "bottom"):
+                return "HorizontalNav"
+            elif tl in ("left", "right"):
+                return "VerticalNav"
+            else:
+                return None
+        else:
+            return sc
 
     @property
     def tabs(self) -> dict:
@@ -765,26 +849,26 @@ class TabPages(base.TileElement):
             The elements in the tile_layout to hide.
         """        
         l = []
-        if self.hide_navigation_bar: l.append("navigation")
-        if self.hide_page_handles: l.extend(["handle-next","handle-previous"])
+        if TabPages.hide_navigation_bar.value(self): l.append("navigation")
+        if TabPages.hide_page_handles.value(self): l.extend(["handle-next","handle-previous"])
         return tuple(l)
     
-    @property
+    @styleproperty
     def hide_navigation_bar(self) -> bool:
         return self._hide_navigation_bar
 
     @hide_navigation_bar.setter
     def hide_navigation_bar(self, value: bool):
-        self._hide_navigation_bar = bool(value)
+        # self._hide_navigation_bar = bool(value)
         self._resize_defaults = True 
 
-    @property
+    @styleproperty
     def hide_page_handles(self) -> bool:
         return self._hide_page_handles
 
     @hide_page_handles.setter
     def hide_page_handles(self, value: bool):
-        self._hide_page_handles = bool(value)
+        # self._hide_page_handles = bool(value)
         self._resize_defaults = True
 
     @property
@@ -818,10 +902,11 @@ class TabPages(base.TileElement):
     def navigation_tile_size(self, value):
         if value == getattr(self,"_navigation_tile_size",None):
             return
-        r = tools.is_valid_dimension(value)
-        if isinstance(r,Exception):
-            _LOGGER.exception(r)
-            return
+        tools.test_dimension_string(value)
+        # r = tools.is_valid_dimension(value)
+        # if isinstance(r,Exception):
+        #     _LOGGER.exception(r)
+        #     return
         self._navigation_tile_size = value
 
     @property
@@ -872,7 +957,8 @@ class TabPages(base.TileElement):
         idx = self.__tabElements.index(element)
 
         issub = True
-        NavElement = NavigationTile("auto", icon, name, _isSubLayout=issub)
+        NavElement = NavigationTile("auto", icon, name, _isSubLayout=issub, 
+                                    styleParent = self.__NavBar)
 
         self.__NavBar.add_elements(NavElement)
         self.__NavBar.add_option(name, NavElement)
