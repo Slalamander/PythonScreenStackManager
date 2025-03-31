@@ -667,8 +667,6 @@ class TabPages(base.TileElement):
         self.__NavBar : base._ElementSelect
         self.__NavBar.on_select = self._navigation_show_tab
         self.__NavBar._skip_select_update = True
-
-        v = base._ElementSelect.active_color.value(self.__NavBar)
         self.__elements = {"handle-previous": BackHandle, "handle-next": NextHandle, "navigation": self.__NavBar}
 
         self.__tabElements = []
@@ -935,14 +933,6 @@ class TabPages(base.TileElement):
     def navigation_tile_size(self, value):
         _LOGGER.warning(f"{self}: property navigation_tile_size is deprecated")
         self._navigation_tile_size = value
-        # if value == getattr(self,"_navigation_tile_size",None):
-        #     return
-        # tools.test_dimension_string(value)
-        # # r = tools.is_valid_dimension(value)
-        # # if isinstance(r,Exception):
-        # #     _LOGGER.exception(r)
-        # #     return
-        # self._navigation_tile_size = value
 
     @property
     def navigation_tile_properties(self):
