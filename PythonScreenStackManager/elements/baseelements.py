@@ -510,7 +510,8 @@ class Element(ABC):
     @property
     def isPopup(self) -> bool:
         "True if the element is a popup"
-        return self._isPopup
+        return isinstance(self, Popup) or getattr(self, "_isPopup", False)
+        # return self._isPopup
     
     #Tap-action
 
