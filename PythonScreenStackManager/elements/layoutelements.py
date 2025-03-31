@@ -521,21 +521,29 @@ class NavigationTile(base.TileElement):
     def elements(self) -> dict[Literal["icon","name","line"],Union[base.Icon,base.Button,base.Line]]:
         return self.__elements
 
-    @property
+    @base.TileElement.tile_layout.getter
     def tile_layout(self) -> PSSMLayoutString:
-        if self._tile_layout == "auto":
+
+        if Style.is_style_string(self._tile_layout):
+            v = NavigationTile.tile_layout.value(self)
+        else:
+            v = self._tile_layout
+        if v == "auto":
             l = self.get_auto_layout()
             return l
             ##Let the parentTab return the layout
             ##And also set the properties appropriately
             ##tab tile_layout setter: go through the tiles and set the lines etc. if _tile_layout is auto
-        return base.TileLayout.tile_layout.fget(self)
+        return self._tile_layout
+        # return base.TileLayout.tile_layout.fget(self)
     
     @tile_layout.setter
     def tile_layout(self, value: str):
-        if value.lower() == "auto":
-            self._tile_layout = "auto"
-        base.TileLayout.tile_layout.fset(self, value)
+        base.TileElement.tile_layout.fset(self, value)
+
+        if NavigationTile.tile_layout.value(self) == "auto":
+            self._signal_styling_update()
+            self._reparse_layout = True
 
     def get_auto_layout(self) -> PSSMLayoutString:
         "Returns the default layout as per the `TabPages` element this `NavigationTile` is contained in."
@@ -543,7 +551,7 @@ class NavigationTile(base.TileElement):
             return "[icon,name];line"
 
         tabparent : TabPages = self.parentLayouts[-2]
-        parent_layout = tabparent._tile_layout
+        parent_layout = TabPages.tile_layout.value(tabparent)
 
         if parent_layout not in TabPages.defaultLayouts or parent_layout in {"top", "bottom"}:
             return "[icon,name];line"
@@ -552,17 +560,13 @@ class NavigationTile(base.TileElement):
         elif parent_layout == "right":
             return "icon,line"
 
-    # def update(self, updateAttributes={}, skipGen=False, forceGen: bool = False, skipPrint=False, reprintOnTop=False, updated: bool = False):
-    #     return super().update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
-    
     async def async_update(self, updateAttributes={}, skipGen=False, forceGen = False, skipPrint=False, reprintOnTop=False, updated = False):
         try:
-            # upd = await super().async_update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated=updated or upd)
             upd = await super().async_update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated=updated)
         except Exception as exce:
             _LOGGER.exception(f"{self} could not update")
         return upd
-        # return upd
+
 
 ##Kinda want to keep them called Pages cause of Ereader shenanigans
 ##In a way you'd page through things anyways
@@ -622,6 +626,12 @@ class TabPages(base.TileElement):
                         "left": "navigation,[tab;[handle-previous,handle-next]]",
                         "right": "[tab;[handle-previous,handle-next]],navigation"
                         }
+    tileStyles = {
+                "top": "HorizontalNav",                  
+                "bottom": "HorizontalNav",
+                "left": "VerticalNav",
+                "right": "VerticalNav",
+                }
 
     _restricted_element_properties : dict[str,set[str]] = {"navigation": {"allow_deselect", "tap_action"}, "handle-next" : {"tap_action"}, "handle-previous" : {"tap_action"}}
     "Properties of the elements that are not allowed to be set."
@@ -649,8 +659,8 @@ class TabPages(base.TileElement):
         NextHandle = base.Icon("mdi:menu-right", tap_action = self.next_page,
                             styleParent = self, style_class = "Handle")
 
-        self.__NavBar : Union[base._ElementSelect, GridLayout] = GridLayout(rows=1,columns=None, elements=[], column_sizes="w*0.2",
-                                                                            outer_margins=[0,"?",0,"w*0.025"],
+        self.__NavBar : Union[base._ElementSelect, GridLayout] = GridLayout(rows=1,columns=None, elements=[], 
+                                                                            # column_sizes="w*0.2", outer_margins=[0,"?",0,"w*0.025"],
                                                                             styleParent = self, style_class = "NavBar")
         base._ElementSelect(self.__NavBar, {}, allow_deselect=False, 
                             )
@@ -687,11 +697,9 @@ class TabPages(base.TileElement):
                         vertical_sizes=vertical_sizes, horizontal_sizes=horizontal_sizes,
                         element_properties=element_properties, **kwargs)
 
-        self.tile_layout
-        s = TabPages.tile_layout.value(self)
-        t = Style.base_style_tree.get("TabPages", {})
         self._set_default_sizes()
 
+        t = TabPages.tile_layout.value(self)
         v = base.Icon.icon_color.get_color(NextHandle)
         f = TabPages.foreground_color.get_color(self)
 
@@ -714,20 +722,12 @@ class TabPages(base.TileElement):
             "active_properties": {
                 "accent_color": "active",
                 "style_class": "Active",
-                # "element_properties": {
-                # "line": {"line_color": "active"},
-                # "icon": {"background_color": "active", "icon_color": DEFAULT_FOREGROUND_COLOR}},
             },
             "inactive_properties": {
                 "accent_color": "inactive",
                 "style_class": "Inactive",
-                # "element_properties": {
-                # "line": {"line_color": "inactive"},
-                # "icon": {"background_color": "inactive", "icon_color": "gray"}},
             },
-            "NavigationTile":{
-                "radius": "h*0.1"
-            },
+
             "Active.NavigationTile": {
                 "background_color": (255, 255, 255, 200),
                 base.Button : {"font_color": DEFAULTCOLORS.FOREGROUND},
@@ -753,9 +753,6 @@ class TabPages(base.TileElement):
             },
             "horizontal_sizes": {
                 "tab": "?*19", ##This should amount to the same width as 95% of w
-                ##Either "?" or "w*0.95"
-                ##Depends on if page handles are shown. But:
-                ##No style for that, either implement it in here or somehow handle the dynamics
                 "navigation": "w"
             },
             "NavBar.GridLayout_select": {
@@ -763,6 +760,7 @@ class TabPages(base.TileElement):
                 "row_sizes": "?",
                 "outer_margins": [3,"?",0,"w*0.025"],
                 "NavigationTile": {
+                    "radius": "h*0.1",
                     "horizontal_sizes": {
                         "icon": "r",
                         "line": "w",
@@ -776,8 +774,41 @@ class TabPages(base.TileElement):
                     }
                 }
             }
+        },
+        "VerticalNav": {
+            "horizontal_sizes": {
+                "navigation": "w*0.05",
+                "tab": "?",
+                "inner": 0,
+                "outer": 0,
+            },
+            "vertical_sizes": {
+                "tab": "?*19", ##This should amount to the same width as 95% of w
+                "navigation": "h",
+            },
+            "NavBar.GridLayout_select": {
+                "column_sizes": "?",
+                "row_sizes": "h*0.2",
+                "outer_margins": ["h*0.025",0,"?",0],
+                "inner_margins": [10,0],
+                "NavigationTile": {
+                    "horizontal_sizes": {
+                        "icon": "?",
+                        "line": 7,
+                        "inner": 3,
+                        "outer": 3,
+                    },
+                    "vertical_sizes": {
+                        "line": "h",
+                        "inner": "?",
+                        "outer": 0,
+                    }
+            },
+            "Active.NavigationTile": {
+                    "background_color": None,
+                }
         }
-    })
+    }})
 
     @property
     def elements(self) -> dict[Literal["navigation","handle-previous","handle-next","tab"], Union[base.Layout,GridLayout, base.Icon]]:
@@ -785,46 +816,8 @@ class TabPages(base.TileElement):
 
     @base.TileElement.tile_layout.setter
     def tile_layout(self, value):
-        # if value == getattr(self,"_tile_layout",None):
-        #     return
-        
-        # base.TileElement.tile_layout.fset(self, value)
-        # if self._tile_layout != value or value not in TabPages.defaultLayouts:
-        #     return ##This means something was wrong with the layout (or it's not a default one)
-
         base.TileElement.tile_layout.fset(self, value)
         self._resize_defaults = True
-
-    @base.Element.style_class.getter
-    def style_class(self):
-        sc = self._style_class
-        if sc is None:
-            try:
-                ##This causes an infinite loop because:
-                ##tile_layout determine style_class
-                ##style_class determines tile_layout...
-
-                ##so get the value from the base tree, instead via self.
-                ##But, how to handle nested TabPage styles though
-                tl = self._tile_layout
-            except AttributeError:
-                tl = None
-            
-            if Style.is_style_string(tl):
-                if s := self.styleParentString:
-                    s = f"{s}{const.STYLE_SEPERATOR}{self.__class__.__name__}{const.STYLE_SEPERATOR}tile_layout"
-                else:
-                    s = f"{self.__class__.__name__}{const.STYLE_SEPERATOR}tile_layout"
-                tl = Style.get_value(s)
-
-            if tl in ("top", "bottom"):
-                return "HorizontalNav"
-            elif tl in ("left", "right"):
-                return "VerticalNav"
-            else:
-                return None
-        else:
-            return sc
 
     @property
     def tabs(self) -> dict:
@@ -884,6 +877,9 @@ class TabPages(base.TileElement):
     @hide_navigation_bar.setter
     def hide_navigation_bar(self, value: bool):
         # self._hide_navigation_bar = bool(value)
+        if type(value) != bool:
+            msg = f"{self}: using non boolean value {value} for hide_navigation_bar is not advised"
+            _LOGGER.warning(msg)
         self._resize_defaults = True 
 
     @styleproperty
@@ -892,20 +888,24 @@ class TabPages(base.TileElement):
 
     @hide_page_handles.setter
     def hide_page_handles(self, value: bool):
-        # self._hide_page_handles = bool(value)
+        if type(value) != bool:
+            msg = f"{self}: using non boolean value {value} for hide_page_handles is not advised"
+            _LOGGER.warning(msg)
         self._resize_defaults = True
 
-    @property
+    @styleproperty
     def apply_default_sizes(self) -> bool:
-        "If True, applies default sizes and orientations where needed, _if_ a default layout is used. Can be set to False to take (more) control of the element's layout."
+        """If True, applies default orientations where needed, _if_ a default layout is used. Can be set to False to take (more) control of the element's layout.
+
+        This is mainly used to set the look of the navigation bar.
+        """
         return self._apply_default_sizes
     
     @apply_default_sizes.setter
     def apply_default_sizes(self, value):
-        if bool(value) == getattr(self, "_apply_default_sizes", None):
-            return
-        
-        self._apply_default_sizes = bool(value)
+        if type(value) != bool:
+            msg = f"{self}: using non boolean value {value} for apply_default_sizes is not advised"
+            _LOGGER.warning(msg)
         self._resize_defaults = True        
 
     @property
@@ -915,23 +915,26 @@ class TabPages(base.TileElement):
 
     @property
     def navigation_tile_size(self) -> Union[float, PSSMdimension]:
-        """
+        """DEPRECATED
         The relative size to use for the Navigation Tile. 
         Depending on the orientation, this will set the row height for the right and left default layouts, and the column width for the top and bottom layouts.
         If a float smaller than 0 is used, it will be parsed as `h*val` or `w*val`, depending on the above.
-        """        
+        """
+        _LOGGER.warning(f"{self}: property navigation_tile_size is deprecated")
         return self._navigation_tile_size
     
     @navigation_tile_size.setter
     def navigation_tile_size(self, value):
-        if value == getattr(self,"_navigation_tile_size",None):
-            return
-        tools.test_dimension_string(value)
-        # r = tools.is_valid_dimension(value)
-        # if isinstance(r,Exception):
-        #     _LOGGER.exception(r)
-        #     return
+        _LOGGER.warning(f"{self}: property navigation_tile_size is deprecated")
         self._navigation_tile_size = value
+        # if value == getattr(self,"_navigation_tile_size",None):
+        #     return
+        # tools.test_dimension_string(value)
+        # # r = tools.is_valid_dimension(value)
+        # # if isinstance(r,Exception):
+        # #     _LOGGER.exception(r)
+        # #     return
+        # self._navigation_tile_size = value
 
     @property
     def navigation_tile_properties(self):
@@ -1147,19 +1150,22 @@ class TabPages(base.TileElement):
         Updates the NavigationBar and the navigation tiles to match the default styles for the current tile_layout.
         If `apply_default_sizes` is `False` or the tile_layout is not a default style, will do nothing.
         """
-        if not self.apply_default_sizes or self._tile_layout not in TabPages.defaultLayouts: 
+        tl = TabPages.tile_layout.value(self)
+        apply_defaults = TabPages.apply_default_sizes.value(self)
+        if not apply_defaults or tl not in TabPages.defaultLayouts: 
+            self._resize_defaults = True
             return
 
-        if self._tile_layout in {"top", "bottom"}:
-
-            tab_w = "?" if self.hide_page_handles else "w*0.95"
+        if tl in {"top", "bottom"}:
+            _LOGGER.warning("Handle hide page handles etc as styling????")
+            # tab_w = "?" if self.hide_page_handles else "w*0.95"
 
             # self.vertical_sizes = {"navigation": "h*0.05", "tab": "?", "inner": 0, "outer": 0}                
             # self.horizontal_sizes = {"tab": tab_w,"navigation": "w"}
 
-            col_size = self.navigation_tile_size
-            if isinstance(col_size, float) and col_size < 1:
-                col_size = f"w*{col_size}"
+            # col_size = self.navigation_tile_size
+            # if isinstance(col_size, float) and col_size < 1:
+            #     col_size = f"w*{col_size}"
 
             nav_dict = {"columns": None, "rows": 1, }
                         # "column_sizes": col_size, "row_sizes" : "?",
@@ -1173,25 +1179,27 @@ class TabPages(base.TileElement):
             # vertical_sizes = {"line": 7, "inner": 3, "outer": 0}
             upd_attr = {"hide": hide, 
                     "element_properties": {"line": {"orientation": line_or, "alignment": line_al}}}
-        elif self._tile_layout in {"left", "right"}:
-            tab_h = "?" if self.hide_page_handles else "h*0.95"
+        elif tl in {"left", "right"}:
+            # tab_h = "?" if self.hide_page_handles else "h*0.95"
             
-            self.vertical_sizes = {"navigation": "h", "tab": tab_h}
-            self.horizontal_sizes = {"navigation": "w*0.05","tab": "?"}
+            # self.vertical_sizes = {"navigation": "h", "tab": tab_h}
+            # self.horizontal_sizes = {"navigation": "w*0.05","tab": "?"}
 
-            row_size = self.navigation_tile_size
-            if isinstance(row_size, float) and row_size < 1:
-                row_size = f"h*{row_size}"
+            # row_size = self.navigation_tile_size
+            # if isinstance(row_size, float) and row_size < 1:
+            #     row_size = f"h*{row_size}"
 
-            nav_dict = {"columns": 1, "rows": None, "column_sizes": "?",
-                        "row_sizes": row_size, "outer_margins": ["h*0.025",0,"?",0]}
+            nav_dict = {"columns": 1, "rows": None}
+                        # , "column_sizes": "?", "row_sizes": row_size,
+                        # "outer_margins": ["h*0.025",0,"?",0]}
 
             line_or = "vertical"
-            line_al = "right" if self._tile_layout == "left" else "left"
+            line_al = "right" if tl == "left" else "left"
             hide = ("name",)
-            horizontal_sizes = {"line": 7, "inner": 3, "outer": 3, "icon": "?"}
-            vertical_sizes = {"line": "h", "outer": 0, "inner": "?"}
-            upd_attr = {"hide": hide, "horizontal_sizes": horizontal_sizes, "vertical_sizes": vertical_sizes, 
+            # horizontal_sizes = {"line": 7, "inner": 3, "outer": 3, "icon": "?"}
+            # vertical_sizes = {"line": "h", "outer": 0, "inner": "?"}
+            upd_attr = {"hide": hide,
+                    # "horizontal_sizes": horizontal_sizes, "vertical_sizes": vertical_sizes, 
                     "element_properties": {"line": {"orientation": line_or, "alignment": line_al}}}
         else:
             return
@@ -1205,23 +1213,6 @@ class TabPages(base.TileElement):
         
         self.NavigationBar.update(nav_dict, skipGen=self.isUpdating, skipPrint=self.isUpdating, updated=True)
         self._resize_defaults = False
-
-    # def generator(self, area=None, skipNonLayoutGen=False):
-
-    #     if self._resize_defaults:
-    #         self._set_default_sizes()
-    #         self._rebuild_area_matrix = True
-
-    #     img = super().generator(area, skipNonLayoutGen)
-    #     return img
-    
-    # async def async_generate(self, area=None, skipNonLayoutGen=False):
-    #     async with self._generatorLock:
-    #         if self._resize_defaults:
-    #             self._set_default_sizes()
-    #             self._rebuild_area_matrix = True
-    #     img = await super().async_generate(area, skipNonLayoutGen)
-    #     return img
 
     async def pre_generate(self, area=None, skipNonLayoutGen=False):
         if self._resize_defaults:
