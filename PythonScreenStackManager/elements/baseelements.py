@@ -334,6 +334,7 @@ class Element(ABC):
 
     @property
     def styleOwnerString(self) -> str:
+        "Full owner part of this element's style string's, including style_class and the owner parts of styleParent's"
         if self.styleParent:
             # return f"{self.styleParentString}{const.STYLE_PARENTCLASS_SEPERATOR}{self.styleClass}"
             return f"{self.styleParentString}{const.STYLE_SEPERATOR}{self.styleClass}"
@@ -2350,8 +2351,17 @@ class TileElement(Layout):
     """
 
     @classproperty
-    def defaultLayouts(cls) -> dict: return {}    ##rename to defaultLayouts
-    "Dict that can hold default layouts for elements."
+    def defaultLayouts(cls) -> dict:
+        "Dict that can hold default layouts for elements."
+        return {}
+
+    @classproperty
+    def tileStyles(cls) -> dict[str,str]:
+        """Substitutes for style_class when using a defaultLayout and no style_class
+
+        This allows for defining custom style classes to i.e. set sizing. If the user has set a style_class for this element, that class is returned instead.
+        """
+        return {}
 
     @property
     def tiles(self) -> tuple[str]:
@@ -2401,18 +2411,23 @@ class TileElement(Layout):
         self._element_properties = {}
         
         if isinstance (tile_layout, str):
-            layout = parse_layout_string(tile_layout, None, self.hide, 
-                                        TileElement.vertical_sizes.value(self),
-                                        TileElement.horizontal_sizes.value(self),
-                                        **self.elements)
+            # tile_str = self.get_style_value(tile_layout, TileElement.tile_layout)
+            tile_str = self._get_tile_string(tile_layout)
+            try:
+                layout = parse_layout_string(tile_str, None, self.hide, 
+                                            TileElement.vertical_sizes.value(self),
+                                            TileElement.horizontal_sizes.value(self),
+                                            **self.elements)
+            except Exception:
+                _LOGGER.exception(f"{self}: Cannot parse tilestring {tile_str}")
+                layout = [["?", (None,"?")]]
         else:
             layout = tile_layout
         super().__init__(layout, background_color=background_color, outline_color=outline_color, foreground_color=foreground_color, accent_color=accent_color,  **kwargs)
 
-        if isinstance (tile_layout, str):
-            self._tile_layout = tile_layout
-            if tile_layout in self.__class__.defaultLayouts:
-                self._reparse_layout = True
+        if isinstance(tile_layout, str):
+            self.tile_layout = tile_layout
+            self._reparse_layout = True
 
         for elt_str in  element_properties:
             elt = self.elements[elt_str]
@@ -2422,7 +2437,7 @@ class TileElement(Layout):
         self._reparse_element_colors()
         
     #region
-    @property
+    @styleproperty(vsetraw=True).getter
     def tile_layout(self) -> Optional[str]:
         """String used to set the layout. 
         ``None`` if the layout was set directly"""
@@ -2431,36 +2446,46 @@ class TileElement(Layout):
         ##Basically, set the root value to NONESTYLE
         ##And use that as a starting point for custom styles.
         ##Do think about: handling the custom styleclass returners?
-        if self._tile_layout in self.__class__.defaultLayouts:
-            return self.__class__.defaultLayouts[self._tile_layout]
+        # if self._tile_layout in self.__class__.defaultLayouts:
+        #     return self.__class__.defaultLayouts[self._tile_layout]
 
         return self._tile_layout
-    
+
     @tile_layout.setter
     def tile_layout(self, value : str):
+        
+        if Style.is_style_string(value):
+            tile_value = Style.get_value(value, self, TileElement.tile_layout)
+        else:
+            tile_value = value
+        
         if not isinstance(value, str):
             msg = f"{self}: tile_layout must be a string. {value} is not valid."
-            _LOGGER.exception(TypeError(msg))
-            return
+            raise TypeError(msg)
         
-        if value != self._tile_layout:
+        # if value != self._tile_layout:
+        if tile_value != TileElement.tile_layout.value(self):
             self._reparse_layout = True
-            self._tile_layout = value
+            # self._tile_layout = value
 
-            if value in self.__class__.defaultLayouts and self.__class__.style_class != Element.style_class:
+            if tile_value in self.tileStyles: ##Assume a different property means a custom class _may_ be returned
+
                 self._signal_styling_update()
+        self._tile_layout = value
 
     @Layout.layout.setter
     def layout(self, value:Union[list,str]):
         if isinstance(value, str):
-            self.__class__.tile_layout.fset(self, value)
+            # self.__class__.tile_layout.fset(self, value)
+            self.tile_layout = value
             return
 
         try:
             self.is_layout_valid(value)
         except FuncExceptions as exce:
-            _LOGGER.error(f"Layout invalid: {exce}")
+            msg = f"{self}: Layout invalid, {exce}"
             value = [["?",(None,"?")]]
+            raise ValueError(msg)
         
         old_layout = self._layout
 
@@ -2471,6 +2496,42 @@ class TileElement(Layout):
 
         self.set_parent_layouts(old_layout,self._layout)
 
+    @property
+    def styleOwnerString(self) -> str:
+        if sc := self._style_class:
+            return Element.styleOwnerString.fget(self)
+        if sc is None:
+            try:
+                ##This causes an infinite loop because:
+                ##tile_layout determine style_class
+                ##style_class determines tile_layout...
+
+                ##so get the value from the base tree, instead via self.
+                ##But, how to handle nested TabPage styles though
+                tl = self._tile_layout
+            except AttributeError:
+                tl = None
+            
+            ##Other option for this could be handling it in the styleOwnerString being returned?
+            ##Idk how much of a difference that makes in the stuff being called basically
+            ##Since now this can lead to styleParentString being called a couple times while constructing the string
+
+            ##So what you'd do in that case is use the same logic as here, but instead append the Horizontal/etc class to it in there.
+
+            if Style.is_style_string(tl):
+                if s := self.styleParentString:
+                    s = f"{s}{const.STYLE_SEPERATOR}{self.__class__.__name__}{const.STYLE_SEPERATOR}tile_layout"
+                    tl = Style.get_value(s)
+                    fmt_str = s + const.STYLE_SEPERATOR + "{style_class}" + const.STYLE_PARENTCLASS_SEPERATOR + self.__class__.__name__
+                else:
+                    s = f"{self.__class__.__name__}{const.STYLE_SEPERATOR}tile_layout"
+                    tl = Style.get_value(s)
+                    fmt_str = "{style_class}" + const.STYLE_PARENTCLASS_SEPERATOR + self.__class__.__name__
+            
+            if tl in self.tileStyles:
+                return fmt_str.format(style_class = self.tileStyles[tl])
+            else:
+                return Element.styleOwnerString.fget(self)
 
     @property
     @abstractmethod
@@ -2624,9 +2685,26 @@ class TileElement(Layout):
         return self._outline_color
     #endregion
 
+    def _signal_styling_update(self):
+        self._reparse_layout = True
+        return super()._signal_styling_update()
+
     def _style_update(self, attribute, value):
         self._reparse_colors = True
         super()._style_update(attribute, value)
+
+    def _get_tile_string(self, tile_layout : str = None) -> str:
+
+        if tile_layout:
+            tile_str = tile_layout
+        else:
+            tile_str = TileElement.tile_layout.value(self)
+        if v := self.__class__.defaultLayouts.get(tile_str, None):
+            return v
+        else:
+            return tile_str
+
+
 
     def _reparse_element_colors(self, elt_name : str = None):
         """
@@ -2683,7 +2761,7 @@ class TileElement(Layout):
 
     async def pre_generate(self, area = None, skipNonLayoutGen = False):
         
-        if self.tile_layout != None and self._reparse_layout:
+        if self._reparse_layout and self.tile_layout is not None:
             old_layout = self.layout.copy()
             vertical_sizes = TileElement.vertical_sizes.value(self)
             # if vertical_sizes in self.defaultVerticalSizes:
@@ -2692,8 +2770,8 @@ class TileElement(Layout):
             horizontal_sizes = TileElement.horizontal_sizes.value(self)
             # if horizontal_sizes in self.defaultHorizontalSizes:
             #     horizontal_sizes = self.defaultHorizontalSizes[horizontal_sizes]
-
-            new_layout = parse_layout_string(self.tile_layout, None, self.hide, vertical_sizes, horizontal_sizes, **self.elements)
+            tile_str = self._get_tile_string()
+            new_layout = parse_layout_string(tile_str, None, self.hide, vertical_sizes, horizontal_sizes, **self.elements)
             if new_layout != old_layout: ##This doesn't quite work since sublayouts are a thing
                 self.set_parent_layouts(old_layout,new_layout)
                 self._layout = new_layout
