@@ -6180,7 +6180,7 @@ class _ElementSelect(Element):
     def allow_deselect(self, value):
         self.__allow_deselect = bool(value)
 
-    @property
+    @styleproperty(vnestdict=True).getter
     def active_properties(self) -> dict:
         """Attributes that are applied to an element when it becomes active.
         """
@@ -6189,16 +6189,16 @@ class _ElementSelect(Element):
     
     @active_properties.setter
     def active_properties(self, value):
-        if value == self._active_properties:
-            return
+        # if value == self._active_properties:
+        #     return
         
         ##may want to make these two styleproperties?
         ##but especially with these, and perhaps some others, how to handle updating?
         ##I.e. update nested dict or not?
-        self._active_properties = tools.update_nested_dict(value, self._active_properties)
+        # self._active_properties = tools.update_nested_dict(value, self._active_properties)
         self._reparse_colors = True
 
-    @property
+    @styleproperty(vnestdict=True).getter
     def inactive_properties(self) -> dict:
         """Attributes that are applied to an element when it becomes inactive.
         When the selector is setup, these properties are applied to all elements."""
@@ -6206,10 +6206,10 @@ class _ElementSelect(Element):
     
     @inactive_properties.setter
     def inactive_properties(self, value):
-        if value == self._inactive_properties:
-            return
+        # if value == self._inactive_properties:
+        #     return
         
-        self._inactive_properties = tools.update_nested_dict(value, self._inactive_properties)
+        # self._inactive_properties = tools.update_nested_dict(value, self._inactive_properties)
         self._reparse_colors = True
 
     @property
@@ -6318,10 +6318,10 @@ class _ElementSelect(Element):
                 ##Intersection: i.e. all elements in active_elements and in elt_list; difference: all elements in elt_list and not in active_elts (meaning they're in inactive_elts)
                 active_elts = elt_list.intersection(active_elts)
                 inactive_elts = elt_list.difference(active_elts)
-            
+        
         if active_elts:
             active_elts = list(active_elts)
-            set_props = self.active_properties.copy()
+            set_props = _ElementSelect.active_properties.value(self)
             color_setters = self.__class__._color_shorthands
             color_props = active_elts[0].__class__.color_properties
             for prop in color_props.intersection(set_props):
@@ -6337,7 +6337,7 @@ class _ElementSelect(Element):
 
         if inactive_elts:
             inactive_elts = list(inactive_elts)
-            set_props = self.inactive_properties.copy()
+            set_props = _ElementSelect.inactive_properties.value(self)
             color_setters = self.__class__._color_shorthands
 
             color_props = inactive_elts[0].__class__.color_properties
@@ -6476,6 +6476,7 @@ class _ElementSelect(Element):
         
         self.__option_elements[option] = element
         element.tap_action = {"action": self.async_select_by_element, "data": {"option": option}}
+        element._styleParent = self
         self._reparse_element_colors(element)
         self._hidden_options.pop(option,None)
 
@@ -6506,6 +6507,7 @@ class _ElementSelect(Element):
 
         element = self.__option_elements.pop(option)
         element.tap_action = None
+        element._styleParent = None
         
         if hide:
             self._hidden_options[option] = element
