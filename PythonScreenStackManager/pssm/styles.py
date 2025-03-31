@@ -347,7 +347,7 @@ class Style:
                 t = cls._nest_style_trees(t.get(owner,{}), t.get(styleclass,{}))
                 return t
         
-        root_tree = cls._get_class_tree([owner], prop)
+        # root_tree = cls._get_class_tree([owner], prop)
 
         ##Don't forget to check if this includes or excludes the last one
         cur_tree = cls.base_style_tree
@@ -785,11 +785,10 @@ class styleproperty(customproperty):
                     self._set_nestdict(obj, value)
                 elif Style.is_style_string(value):
                     # style_string = self.create_style_string(obj, value)
-                    style_string = value
-                    style_value = Style.get_value(style_string, obj, self.property_name)
+                    style_value = Style.get_value(value, obj, self.property_name)
                     self.fset(obj, style_value)
                     # setattr(obj,f"_{self._style_attribute}", style_string)
-                    self._set_eltattr(obj, style_string)
+                    self._set_eltattr(obj, value)
                 else:
                     if isinstance(value, str) and value.lower() == 'none':
                         value = None
@@ -798,7 +797,10 @@ class styleproperty(customproperty):
                     self._set_eltattr(obj, value)
                 return
             except (ValueError, TypeError, AttributeError, AssertionError) as exce:
-                msg = f"{obj}: can't set property {self._style_attribute} to style {style_string}, {exce}"
+                if Style.is_style_string(value):
+                    msg = f"{obj}: can't set property {self._style_attribute} to style {value}, {exce}"
+                else:
+                    msg = f"{obj}: can't set property {self._style_attribute} to value {value}, {exce}"
                 _LOGGER.error(msg, exc_info=DEBUG)
                 raise
         
@@ -807,7 +809,7 @@ class styleproperty(customproperty):
     def _set_nestdict(self, obj : "Element", value):
 
         if Style.is_style_string(value):
-            value = self.create_style_string(obj, value)
+            # value = self.create_style_string(obj, value)
             set_value = obj.get_style_value(value, self._style_attribute)
         else:
             set_value = value
