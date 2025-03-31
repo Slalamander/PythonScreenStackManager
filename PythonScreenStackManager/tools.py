@@ -16,7 +16,8 @@ from typing import (
     Any,
     Union,
     TypedDict,
-    Literal
+    Literal,
+    Sequence,
 )
 from math import cos, sin, floor
 from  pathlib import Path
@@ -551,10 +552,19 @@ def test_dimension_string(dimStr: Union[PSSMdimension,list[PSSMdimension]], vari
     Exception
         Relevant exception
     """
-
-    res = is_valid_dimension(dimStr,variables)
-    if isinstance(res, Exception):
-        raise res
+    if type(dimStr) is not str and isinstance(dimStr, Sequence):
+        exces = []
+        for dim in dimStr:
+            try:
+                test_dimension_string(dim, variables)
+            except Exception as exce:
+                _LOGGER.error(exce, exc_info=const.DEBUG)
+        if exces:
+            raise ValueError("invalid dimensions, see logs.")
+    else:
+        res = is_valid_dimension(dimStr,variables)
+        if isinstance(res, Exception):
+            raise res
 
 def is_valid_dimension(dimStr: Union[PSSMdimension,list[PSSMdimension]], variables : list[str] =[]) -> Union[bool,Exception]:
     """
