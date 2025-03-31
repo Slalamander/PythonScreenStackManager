@@ -8,7 +8,7 @@ import logging
 
 from ..pssm_types import *
 from ..constants import INKBOARD, PATH_TO_PSSM, \
-    SHORTHAND_FONTS, SHORTHAND_ICONS, ROOT_STYLE_SUFFIX
+    SHORTHAND_FONTS, SHORTHAND_ICONS, ROOT_STYLE_SUFFIX, STYLE_SEPERATOR, STYLE_PARENTCLASS_SEPERATOR
 
 logger = logging.getLogger(__name__)
 
