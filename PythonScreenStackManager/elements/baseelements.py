@@ -2497,10 +2497,10 @@ class TileElement(Layout):
         self.set_parent_layouts(old_layout,self._layout)
 
     @property
-    def styleOwnerString(self) -> str:
-        if sc := self._style_class:
-            return Element.styleOwnerString.fget(self)
-        if sc is None:
+    def styleClass(self) -> str:
+        if self.style_class:
+            return Element.styleClass.fget(self)
+        else:
             try:
                 ##This causes an infinite loop because:
                 ##tile_layout determine style_class
@@ -2517,21 +2517,19 @@ class TileElement(Layout):
             ##Since now this can lead to styleParentString being called a couple times while constructing the string
 
             ##So what you'd do in that case is use the same logic as here, but instead append the Horizontal/etc class to it in there.
-
             if Style.is_style_string(tl):
                 if s := self.styleParentString:
                     s = f"{s}{const.STYLE_SEPERATOR}{self.__class__.__name__}{const.STYLE_SEPERATOR}tile_layout"
                     tl = Style.get_value(s)
-                    fmt_str = s + const.STYLE_SEPERATOR + "{style_class}" + const.STYLE_PARENTCLASS_SEPERATOR + self.__class__.__name__
                 else:
                     s = f"{self.__class__.__name__}{const.STYLE_SEPERATOR}tile_layout"
                     tl = Style.get_value(s)
-                    fmt_str = "{style_class}" + const.STYLE_PARENTCLASS_SEPERATOR + self.__class__.__name__
+            fmt_str = "{style_class}" + const.STYLE_PARENTCLASS_SEPERATOR + self.__class__.__name__
             
             if tl in self.tileStyles:
                 return fmt_str.format(style_class = self.tileStyles[tl])
             else:
-                return Element.styleOwnerString.fget(self)
+                return Element.styleClass.fget(self)
 
     @property
     @abstractmethod
