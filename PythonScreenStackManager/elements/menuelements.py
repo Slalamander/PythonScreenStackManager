@@ -6,6 +6,7 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Literal, Optional, Union
 from types import MappingProxyType
+from contextlib import suppress
 
 from mdi_pil import MDI_VERSION
 
@@ -14,13 +15,15 @@ from ..tools import Singleton
 from ..pssm_types import *
 from ..constants import FEATURES
 
+from ..pssm.styles import Style, styleproperty, colorproperty
+
 from .constants import DEFAULT_FONT_BOLD
 from . import baseelements as base
 from . import compoundelements as comps
 from . import deviceelements as develts
 from . import layoutelements as layouts
 from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_FONT_BOLD, DEFAULT_FONT_HEADER,\
-    DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR, DEFAULT_FONT_SIZE
+    DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR, DEFAULT_FONT_SIZE, DEFAULTCOLORS
 
 from .baseelements import _LOGGER, classproperty
 if TYPE_CHECKING:
@@ -48,66 +51,139 @@ class StatusBar(layouts.GridLayout):
         return MappingProxyType(cls._statusbar_elements)
 
     def __init__(self, orientation : Literal["horizontal","vertical"] = "horizontal", show_clock = True,
-                outer_margins = [0, 10], inner_margins = [0,5], hide : list[str] = [], element_size : PSSMdimension = "default",
-                element_properties : dict = {}, status_element_properties : dict = {"background_shape": "circle", "background_color": DEFAULT_BACKGROUND_COLOR},
+                outer_margins : Union[StyleString, list[PSSMdimension]] = 0, inner_margins : Union[StyleString, list[PSSMdimension]] = 0, hide : list[str] = [], element_size : Union[StyleString, PSSMdimension] = "?",
+                element_properties : dict = {}, status_element_properties : dict = {},
                 **kwargs):
         
         ##Considering the amount of things that shouldn't be set (i.e., no sizing etc.) Simply skip the gridLayout init and immediately go to base.Layout
         ##Don't forget to allow for setting inner and outer margins however
         ##And call build_layout
 
-        if "ver" in orientation:
-            clock_args = {"text_y_position": "bottom"}
-        else:
-            clock_args = {"text_x_position": "right"}
-        self.__ClockElement = comps.DigitalClock(**clock_args)
-        
+        # if "ver" in orientation:
+        #     ##These should be handled via styling?
+        #     ##Yeah, add custom styleClass handler to StatusBar too
+        #     clock_args = {"text_y_position": "bottom"}
+        # else:
+        #     clock_args = {"text_x_position": "right"}
         self.orientation = orientation
         self.show_clock = show_clock        ##putting this on True if the orientation is vertical is not recommended until rotating text elements in implemented
         self.outer_margins = outer_margins
         self.inner_margins = inner_margins
+        self._hide = set()
         self.hide = hide
 
         self.element_size = element_size
         self.element_properties = element_properties
         self.status_element_properties = status_element_properties
-
+        self.__ClockElement = comps.DigitalClock(styleParent = self, orientation=self.orientation)
+        
         base.Layout.__init__(self,None, **kwargs)
 
         self.build_layout()
 
+    childStyles = styleproperty.child_styles({
+        comps.DigitalClock: {
+            "background_color": None,
+            "font_color": "foreground",
+        },
+        "Vertical.DigitalClock": {
+            "text_y_position": "bottom",
+            },
+        "Horizontal.DigitalClock": {
+            "text_x_position": "right",
+            },
+        "Icon": {
+            ##Thing with Icons in here: they are added generally
+            ##So cannot use a specific instance for styleParent
+            "background_shape": "circle",
+            "background_color": DEFAULTCOLORS.BACKGROUND,
+            "icon_color": "foreground"
+            ##Running into the problem here where childclasses of Icon do not take on styling
+            ##Can do that, but ONLY by checking if any of the bases are in there with the property asked for
+        }
+    })
+
+    styleClasses = styleproperty.style_classes({
+        "Vertical": {
+            "element_size": "w",
+            "outer_margins": [10, 5],
+            "inner_margins": [5,0]
+        },
+        "Horizontal": {
+            "element_size": "r",
+            "outer_margins": [5, 10],
+            "inner_margins": [0,5]
+        }
+    })
+
     #region
+    @property
+    def styleClass(self) -> str:
+        if self.style_class:
+            return Element.styleClass.fget(self)
+
+        if self.orientation == "vertical":
+            sc = "Vertical"
+        else:
+            sc = "Horizontal"
+        
+        return sc + const.STYLE_PARENTCLASS_SEPERATOR + self.__class__.__name__
+
     @property
     def elements(self) -> tuple["Element"]:
         "The elements registered in the statusbar"
 
         elt_list = []
         all_elts = self.statusbar_elements
+        hide = StatusBar.hide.value(self)
         for elt_name in sorted(all_elts.keys()):
-            if elt_name not in self.hide:
+            if elt_name not in hide:
                 elt_list.append(all_elts[elt_name])
 
-        if self.show_clock:
+        if StatusBar.show_clock.value(self):
             elt_list.append(self.__ClockElement)
         else:
             elt_list.append(None)
         return tuple(elt_list)
 
-    @property
-    def hide(self) -> set[str]:
-        return self.__hide
+    @styleproperty(vsetraw=True).getter
+    def hide(self) -> Union[StyleString,set[str]]:
+        "Set which elements to hide from the statusbar"
+        return self._hide
     
     @hide.setter
     def hide(self, value : Union[list,tuple,set]):
+        ##Hide will be a styleproperty here, mainly to make it easier to hide multiple things in one go
+        set_value = value
+        if Style.is_style_string(value):
+            value = self.get_style_value(value, StatusBar.hide)
+
         if not isinstance(value, set):
             value = set(value)
 
         for elt in value.copy():
+            if not isinstance(elt, str):
+                raise TypeError(f"{self}: entries in the hide list must be strings")
             if elt not in self.statusbar_elements:
                 _LOGGER.warning(f"{self}: {elt} is not registered as a statusbar element")
                 value.remove(elt)
 
-        self.__hide = value
+        if Style.is_style_string(set_value):
+            self._hide = set_value
+        # elif Style.is_style_string(self._hide):
+        else:
+            ##I believe this can simply be done like this, since it .value can always return a raw value too
+            self._hide = StatusBar.hide.value(self) | value
+        
+    @styleproperty
+    def show_clock(self) -> Union[StyleString, bool]:
+        "Shows a digital clock on the statusbar"
+        return self._show_clock
+    
+    @show_clock.setter
+    def show_clock(self, value):
+        if not isinstance(value, bool):
+            _LOGGER.warning(f"{self}: setting show_clock to none boolean values is not advised")
 
     @property
     def orientation(self) -> Literal["horizontal","vertical"]:
@@ -115,23 +191,24 @@ class StatusBar(layouts.GridLayout):
         The orientation of the slider. Horizontal or Vertical.
         When changed after initialising, this does change the clock's orientation along with it, but not the text alignment of the clock.
         """
-        return self.__orientation
+        return self._orientation
     
     @orientation.setter
     def orientation(self, value:str):
         if value.lower() not in ["horizontal", "vertical","hor","ver"]:
             msg = f"Statusbar orientation must be hor(izontal) or ver(tical). {value} is not allower"
-            _LOGGER.exception(msg,exc_info=TypeError(msg))
-            return
+            raise TypeError(msg)
         else:
             if "hor" in value.lower():
-                self.__orientation = "horizontal"
+                self._orientation = "horizontal"
             else:
-                self.__orientation = "vertical"
+                self._orientation = "vertical"
             
             self._rebuild_layout = True
         
-        self.__ClockElement.update({"orientation": self.__orientation})
+        with suppress(AttributeError):
+            ##Handled for during __init__
+            self.__ClockElement.update({"orientation": self._orientation})
     
     @property
     def rows(self) -> Optional[int]:
@@ -153,7 +230,7 @@ class StatusBar(layouts.GridLayout):
     def column_sizes(self) -> list[PSSMdimension]:
         "Sizes of the columns. Either a list with the values of the corresponding column index, or a single value with the size for all columns"
         if self.orientation == "horizontal":
-            elt_size = self.element_size
+            elt_size = StatusBar.element_size.value(self)
             if isinstance(elt_size,float) and elt_size < 0:
                 elt_size = f"w*{elt_size}"
             l = [elt_size]*(len(self.elements) -1)
@@ -166,7 +243,7 @@ class StatusBar(layouts.GridLayout):
     def row_sizes(self) -> list[PSSMdimension]:
         "Sizes of the columns. Either a list with the values of the corresponding column index, or a single value with the size for all columns"
         if self.orientation == "vertical":
-            elt_size = self.element_size
+            elt_size = StatusBar.element_size.value(self)
             if isinstance(elt_size,float) and elt_size < 0:
                 elt_size = f"h*{elt_size}"
             l = [elt_size]*(len(self.elements) -1)
@@ -175,8 +252,11 @@ class StatusBar(layouts.GridLayout):
         else:
             return "?"
     
-    @property
+    @styleproperty
     def element_size(self) -> PSSMdimension:
+        "The size of the rows/columns depending on the orientation"    
+        return self._element_size
+    
         if self._element_size != "default":
             return self._element_size
         if self.orientation == "horizontal":
@@ -186,15 +266,7 @@ class StatusBar(layouts.GridLayout):
     
     @element_size.setter
     def element_size(self, value):
-        if value == "default":
-            self._element_size = value
-            return
-        
-        if isinstance(v := tools.is_valid_dimension(value, ["r"]), Exception):
-            _LOGGER.exception(v)
-            return
-        else:
-            self._element_size = value
+        tools.test_dimension_string(value, ["r"])
 
     @property
     def element_properties(self):
@@ -254,13 +326,16 @@ class StatusBar(layouts.GridLayout):
             _LOGGER.error(f"The statusbar already has an element named {name} registered.")
             return
         elif name == "clock":
-            _LOGGER.error(f"'clock' is a reserved name and cannot be used for a statusbar element.")
-            return
+            msg = "'clock' is a reserved name and cannot be used for a statusbar element."
+            raise ValueError(msg)
         
         if not isinstance(element, layouts._GridElement):
             layouts._GridElement.wrap_element(element)
         ##Not going to deal with updating this from here, generally, all elements should be registered before printing starts
         cls._statusbar_elements[name] = element
+        if not element.styleParent:
+            element._styleParent = cls.__name__
+
 
 class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
     "Base class for popups that can only be defined once."
@@ -268,7 +343,7 @@ class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
     ##Give this a title element, and then the close button in the corner. Everything else is a layout element.
     def __init__(self, popupID : str, title : str, title_font : PSSMdimension = DEFAULT_FONT_HEADER, **kwargs):
         layout = self.build_menu()
-        base.PopupMenu.__init__(self,layout,title, title_font, popupID=popupID, **kwargs)
+        base.PopupMenu.__init__(self, layout, title, title_font, popupID=popupID, **kwargs)
 
     @abstractmethod
     def build_menu(self):
