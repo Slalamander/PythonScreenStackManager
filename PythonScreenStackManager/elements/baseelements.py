@@ -178,7 +178,10 @@ class Element(ABC):
         instance.style_class = kwargs.get("style_class",None)
 
         styleParent = kwargs.get("styleParent",None)
-        assert isinstance(styleParent, Element) or styleParent is None, "styleParent must be None or an element object"
+        if isinstance(styleParent, str):
+            assert styleParent[0].isupper(), "styleParent strings must start with a capital letter"
+        else:
+            assert isinstance(styleParent, (Element,str)) or styleParent is None, "styleParent must be None or an element object"
         instance._styleParent = styleParent
 
         instance._generatedno = 0
@@ -313,7 +316,7 @@ class Element(ABC):
         return
 
     @property
-    def styleClass(self) -> str:
+    def styleClass(self) -> StyleClass:
         "style class of the element, i.e. its style_class, if any, and its class name"
         
         ##Problem with making this a two part class: how to deal with it in the base style tree?
@@ -345,7 +348,9 @@ class Element(ABC):
         """Fully constructed parent classes for this element's style string
         """
         if self.styleParent:
-            if self.styleParent.styleParent:
+            if isinstance(self.styleParent, str):
+                return self.styleParent
+            elif self.styleParent.styleParent:
                 return f"{self.styleParent.styleParentString}{const.STYLE_SEPERATOR}{self.styleParent.styleClass}"
             else:
                 return self.styleParent.styleClass
@@ -355,7 +360,7 @@ class Element(ABC):
     #endregion
 
     @colorproperty(vroot=ROOTCOLORS.BACKGROUND ,vdefault = DEFAULT_BACKGROUND_COLOR).getter
-    def background_color(self) -> Union[ColorType,None]:
+    def background_color(self) -> Union[StyleString,ColorType,None]:
         """Color of the element background."""
         # Set to None to take on the color of its parent layout"""
         return self._background_color
@@ -367,7 +372,7 @@ class Element(ABC):
         return self._isInverted
 
     @styleproperty(vdefault = False).getter
-    def inverted(self) -> bool:
+    def inverted(self) -> Union[StyleString,bool]:
         """True if the default inverted state of the element is inverted 
         (i.e. the image made in the generator will be inverted if true)."""
         return self._inverted
@@ -383,7 +388,7 @@ class Element(ABC):
         return self._isTemporaryInverted
 
     @styleproperty(vdefault = DEFAULT_FEEDBACK_DURATION).getter
-    def feedback_duration(self) -> DurationType:
+    def feedback_duration(self) -> Union[StyleString,DurationType]:
         """Duration of the element's feedback function
         The time an element will stay in 'feedback state', before returning to its normal state.
         Can be set to a string, which will be parsed to the right amount of seconds.
@@ -404,7 +409,7 @@ class Element(ABC):
         self._feedback_duration = value
 
     @styleproperty(vdefault = FEEDBACK_ON_ACTION).getter
-    def show_feedback(self) -> bool:
+    def show_feedback(self) -> Union[StyleString,bool]:
         """Whether the element will show feedback when interacted with"
         If set to ``on_action``, feedback will be shown based on whether an action is called.
         """
@@ -420,7 +425,9 @@ class Element(ABC):
 
     @property
     def feedbackSeconds(self) -> Union[float,int]:
-        "The time in seconds to show feedback for"
+        """The time in seconds to show feedback for
+        Value is processed from ``show_feedback``
+        """
         return tools.parse_duration_string(Element.feedback_duration.value(self))
 
     @property
@@ -2498,6 +2505,9 @@ class TileElement(Layout):
 
     @property
     def styleClass(self) -> str:
+        ##would it be better to set this as a private/hidden attribute via style_class setter?
+        ##Cause the logic here is likely called relatively often
+        ##problem is it may not be up to date with tile_layout -> so use that setter to maybe?
         if self.style_class:
             return Element.styleClass.fget(self)
         else:
@@ -2510,7 +2520,7 @@ class TileElement(Layout):
                 ##But, how to handle nested TabPage styles though
                 tl = self._tile_layout
             except AttributeError:
-                tl = None
+                return Element.styleClass.fget(self)
             
             ##Other option for this could be handling it in the styleOwnerString being returned?
             ##Idk how much of a difference that makes in the stuff being called basically
