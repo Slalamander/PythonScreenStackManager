@@ -85,7 +85,7 @@ class Style:
         return _nonstyle
 
     @classproperty
-    def _knownowners(cls) -> dict[str,"Element"]:
+    def _knownowners(cls) -> dict[str, type["Element"]]:
         return styleproperty._element_classes
 
     @classproperty
@@ -387,7 +387,17 @@ class Style:
                 ##Also, to make it easier to reference styles from other things: simply use style::Parent::Owner AS THE STYLE VALUE
                 _LOGGER.debug(f"Unable to fully traverse style tree for owners {owners}")
                 # cur_tree = cls.base_style_tree
-                
+                if i == len(owners) - 1: ##May need to handle this different considering nested layouts and stuff
+
+                    ##Look for present bases in here, assuming this is the last tree they got to
+                    ##Only make this work for the last entry??
+                    ##As well as do not make it work for styleclasses??
+
+                    ##Handle logic a break if needed
+                    cur_tree = cls._get_element_bases_tree(parent_owner, cur_tree)
+                    if prop in cur_tree:
+                        break
+
                 ##Run through traverse tree looking for either?
                 for tree in traversed_trees:
                     if styleclass in tree and styleclass != parent_owner:
@@ -397,11 +407,35 @@ class Style:
                     elif parent_owner in tree:
                         cur_tree = tree[parent_owner]
                         break
-                c = cur_tree
             
             # traversed_trees.append(cur_tree)
             traversed_trees.insert(0, cur_tree)
         return cur_tree
+
+    @classmethod
+    def _get_element_bases_tree(cls, element_cls : Union[str,type["Element"]], style_tree : dict = None):
+        ##Check baseclasses of an element in the tree
+
+        if style_tree is None:
+            style_tree = cls.base_style_tree
+        
+        if isinstance(element_cls, str):
+            elt_name = element_cls
+            elt_cls = cls._knownowners[elt_name]
+        else:
+            elt_name = element_cls.__name__
+            elt_cls = element_cls
+        
+        # bases = 
+        tree = {}
+        for base in inspect.getmro(elt_cls):
+            if base.__name__ in style_tree:
+                ##This goes top to bottom I believe, so overwrite the gotten tree with the old one I think
+                tree = cls._nest_style_trees(style_tree[base.__name__], tree)
+            if base == Element:
+                break
+        return tree
+        
 
     @classmethod
     def _nest_style_trees(cls, root_tree : dict, branch_tree : dict) -> dict:
