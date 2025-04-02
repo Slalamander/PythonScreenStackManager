@@ -7,6 +7,7 @@ import sys
 from copy import deepcopy
 from PIL import ImageFont
 from pathlib import Path
+import traceback
 
 from .. import tools
 from ..util import classproperty
@@ -683,14 +684,36 @@ class styleproperty(customproperty):
         "base style string for this style. Usually style::[property]"
         return f"style::{self._style_attribute}"
     
-    @property
+    
     def default(self) -> Any:
-        """The value of this property as defined in the __init__ function
+        """The default value of this property
+
+        It tries to get the default value from the requested class, otherwise returns the default value.
+        The requested class is gotten via stack_frames, so it may be finicky
+        The value of this property as defined in the __init__ function
         Definition may come from earlier parent classes.
         """
-        if self.vdefault is Style.NONESTYLE:
-            raise AttributeError(f"{self} has no default value set")
-        return self.vdefault
+
+        if self.__get_frame and inspect.currentframe().f_back == self.__get_frame[0]:
+            cls = self.__get_frame[1]
+        else:
+            cls = self.owner
+
+        try:
+            if cls.__name__ in self._style_tree_root and self.property_name in self._style_tree_root[cls.__name__]:
+                return self._style_tree_root[cls.__name__][self.property_name]
+            elif cls == self.owner:
+                pass
+            else:
+                for base in inspect.getmro(cls):
+                    tree = self._style_tree_root.get(base.__name__, {})
+                    if self.name in tree:
+                        return tree[self.name]
+            if self.vdefault is Style.NONESTYLE:
+                raise AttributeError(f"{self} has no default value set")
+            return self.vdefault
+        finally:
+            self.__get_frame = None
 
     def __init__(self,
                 fget=None, 
@@ -729,6 +752,7 @@ class styleproperty(customproperty):
         self.vsetraw = vsetraw
         self._vroot = vroot
         self.vnestdict = vnestdict
+        self.__get_frame = None
         return
 
     # def __call__(self, element):
@@ -785,12 +809,14 @@ class styleproperty(customproperty):
 
     def __get__(self, obj, objtype=None) -> Union["styleproperty", Any]:
         if obj is None:
-            # if objtype is None:
-            #     return self
-            # else:
-                ##Idea here was to return a new type with the defaults etc. set, but that seems rather superfluous tbh
-                ##That would also cause a new one to be returned each time value etc. is called
-                return self
+            
+            if objtype:
+                f = inspect.currentframe()
+                while f.f_code.co_name == "__get__":
+                    f = f.f_back
+                self.__get_frame = (f, objtype)
+
+            return self
         if self.fget is None:
             raise AttributeError("unreadable attribute")
 
@@ -1157,7 +1183,7 @@ class colorproperty(styleproperty):
 
     def __get__(self, obj, objtype=None) -> Union["colorproperty", ColorType]:
         if obj is None:
-            return self
+            return super().__get__(obj, objtype)
         if self.fget is None:
             raise AttributeError("unreadable attribute")
         return self.fget(obj)
