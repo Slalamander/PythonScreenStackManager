@@ -4,7 +4,7 @@
 """
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union, ClassVar
 from types import MappingProxyType
 from contextlib import suppress
 
@@ -23,7 +23,8 @@ from . import compoundelements as comps
 from . import deviceelements as develts
 from . import layoutelements as layouts
 from .constants import INKBOARD, DEFAULT_MENU_BUTTON_COLOR, DEFAULT_FONT_BOLD, DEFAULT_FONT_HEADER,\
-    DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR, DEFAULT_FONT_SIZE, DEFAULTCOLORS
+        DEFAULT_BACKGROUND_COLOR, DEFAULT_FOREGROUND_COLOR, DEFAULT_FONT_SIZE,\
+        DEFAULTCOLORS, BACKGROUNDSHAPES
 
 from .baseelements import _LOGGER, classproperty
 if TYPE_CHECKING:
@@ -98,8 +99,6 @@ class StatusBar(layouts.GridLayout):
             "background_shape": "circle",
             "background_color": DEFAULTCOLORS.BACKGROUND,
             "icon_color": "foreground"
-            ##Running into the problem here where childclasses of Icon do not take on styling
-            ##Can do that, but ONLY by checking if any of the bases are in there with the property asked for
         }
     })
 
@@ -341,7 +340,7 @@ class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
     "Base class for popups that can only be defined once."
     
     ##Give this a title element, and then the close button in the corner. Everything else is a layout element.
-    def __init__(self, popupID : str, title : str, title_font : PSSMdimension = DEFAULT_FONT_HEADER, **kwargs):
+    def __init__(self, popupID : str, title : str, title_font : Union[StyleString,PSSMdimension] = DEFAULT_FONT_HEADER, **kwargs):
         layout = self.build_menu()
         base.PopupMenu.__init__(self, layout, title, title_font, popupID=popupID, **kwargs)
 
@@ -360,47 +359,86 @@ class DeviceMenu(UniquePopupMenu):
     def __init__(self, **kwargs):
         self.device = self.parentPSSMScreen.device
 
-        if self.device.name == None:
-            title = "PSSM"
+        if self.device.name is None:
+            if INKBOARD:
+                title = "inkBoard"
+            else:
+                title = "PSSM"
         else:
             title = self.device.name
 
         super().__init__(title=title, popupID = "device-menu", **kwargs)
         return
-        
+
+    childStyles : ClassVar[dict] = styleproperty.child_styles({
+        base.Layout: {
+            base.Layout.background_color: None
+        },
+        base.Button: {
+            "text_x_position": "left", 
+            "resize": False,
+            "fit_text": False,
+            base.Button.background_color: None
+        },
+        base.Icon: {
+            "background_shape": BACKGROUNDSHAPES.CIRCLE,
+        },
+        develts.DeviceButton: {
+            "fit_text": True
+        },
+        "Menu": {
+            "Class": base.Layout,
+            base.Layout.background_color: DEFAULTCOLORS.HEADER
+        },
+        "Menu.Button": {
+            base.Button.background_color: None,
+            base.Button.resize: base.Button.font_size.default(),
+        },
+        "Name":{
+            "Class": base.Button,
+            base.Button.text_x_position: "center"
+        },
+    })
+
     def build_menu(self):
         fSize = DEFAULT_FONT_SIZE
         buttonSettings = {"text_x_position": "left", "font_size":fSize}
         m = "w*0.02"
         h = "?"
         h_margin = 5
+        elt_args = {"styleParent": self}
+        menu_args = {"style_class": "Menu"} | elt_args
 
         deviceText = self.device.deviceName if self.device.deviceName != None else "PSSM"
         
-        deviceButton = base.Button(deviceText, font_size=buttonSettings["font_size"])
+        deviceButton = base.Button(deviceText, style_class = "Name", **elt_args)
 
-        layout = [[h,(deviceButton,"?"),(None,"r")]]
+        layout = [[h,(None,"r"), (deviceButton,"?"),(None,"r")]]
 
         if self.device.has_feature(FEATURES.FEATURE_BATTERY) or self.device.has_feature(FEATURES.FEATURE_NETWORK):
             row = [f"{h}*2"]
             if not self.device.has_feature(FEATURES.FEATURE_NETWORK):
                 row.append((None,"?"))
             else:
-                networkIcon = develts.DeviceIcon(icon_feature=FEATURES.FEATURE_NETWORK, tap_action=None, background_shape="circle")
-                wifiButton = develts.DeviceButton(FEATURES.FEATURE_NETWORK,"SSID",**buttonSettings)
+                # networkIcon = develts.DeviceIcon(icon_feature=FEATURES.FEATURE_NETWORK, tap_action=None, background_shape="circle")
+                # wifiButton = develts.DeviceButton(FEATURES.FEATURE_NETWORK,"SSID",**buttonSettings)
+                networkIcon = develts.DeviceIcon(icon_feature=FEATURES.FEATURE_NETWORK, tap_action=None, **elt_args)
+                wifiButton = develts.DeviceButton(FEATURES.FEATURE_NETWORK,"SSID",**elt_args)
 
-                ipIcon = base.Icon("mdi:ip", background_shape="circle")
-                ipButton = develts.DeviceButton(FEATURES.FEATURE_NETWORK,"IP",**buttonSettings)
+                # ipIcon = base.Icon("mdi:ip", background_shape="circle")
+                # ipButton = develts.DeviceButton(FEATURES.FEATURE_NETWORK,"IP",**buttonSettings)
+                ipIcon = base.Icon("mdi:ip", **elt_args)
+                ipButton = develts.DeviceButton(FEATURES.FEATURE_NETWORK,"IP",**elt_args)
+                
                 netwLayout = [[h, (None,m), (networkIcon, "r"), (None,m) , (wifiButton,"?")],[h_margin],
                     [h, (None,m), (ipIcon, "r"), (None,m) , (ipButton,"?")]]
-                row.append((base.Layout(netwLayout),"?"))
+                row.append((base.Layout(netwLayout, **elt_args),"?"))
             
             if self.device.has_feature(FEATURES.FEATURE_BATTERY):
-                batteryIcon = develts.DeviceIcon(FEATURES.FEATURE_BATTERY, tap_action=None)
-                batteryText = develts.DeviceButton(FEATURES.FEATURE_BATTERY,"charge",suffix="%", font_size=fSize, fit_text = True)
-                battery = base.Layout([["h*0.7",(batteryIcon,"w")],["?",(batteryText,"?")]])
+                batteryIcon = develts.DeviceIcon(FEATURES.FEATURE_BATTERY, tap_action=None, **elt_args)
+                batteryText = develts.DeviceButton(FEATURES.FEATURE_BATTERY,"charge",suffix="%",  **elt_args)
+                battery = base.Layout([["h*0.7", (batteryIcon,"w"), (None,m)],["?",(batteryText,"?"), (None,m)]], **elt_args)
                 row.append((battery,"w*0.1"))
-                
         else:
             row = [h,(None,"?")]
 
@@ -410,15 +448,16 @@ class DeviceMenu(UniquePopupMenu):
         col = DEFAULT_MENU_BUTTON_COLOR
         if self.device.has_feature(FEATURES.FEATURE_POWER):
             ##These should be moved to the pssm screen, as I should give that a function for both with a splash screen
-            pw = base.Button("Power off",font_size=fSize, tap_action=self.device.power_off, background_color=col, resize=fSize)
-            rb = base.Button("Reboot", font_size=fSize, tap_action=self.device.reboot, background_color=col, font_color="black", resize=fSize)
+            pw = base.Button("Power off",tap_action=self.device.power_off, **menu_args)
+            # rb = base.Button("Reboot", font_size=fSize, tap_action=self.device.reboot, background_color=col, font_color="black", resize=fSize)
+            rb = base.Button("Reboot", tap_action=self.device.reboot, **menu_args)
             buttonRow = ["?", (pw,"?"),(None,"?"), (rb,"?"),(None,"?")]
         else:
             buttonRow = ["?", (None,"?"),(None,"?")]        
 
-        restartButton = base.Button("Reload", font_size=fSize, background_color=col, tap_action=self.parentPSSMScreen.reload, resize=fSize)
+        restartButton = base.Button("Reload", tap_action=self.parentPSSMScreen.reload, **menu_args)
         buttonRow.append((restartButton,"?"))
-        buttonRow = ["h*0.25",(base.Layout([buttonRow], background_color=col),"w")]
+        buttonRow = ["h*0.25",(base.Layout([buttonRow], style_class = menu_args["style_class"], **elt_args),"w")]
         layout.append(buttonRow)
         self.menu_layout = base.Layout(layout)
         return self.menu_layout
