@@ -80,6 +80,16 @@ MISSING_PICTURE_ICON : str = "mdi:file-image-remove"
 SHORTHAND_ICONS["default"] = DEFAULT_ICON
 SHORTHAND_ICONS["missing"] = MISSING_ICON
 
+class BACKGROUNDSHAPES :
+    CIRCLE = "circle"
+    SQUARE = "square"
+    ROUNDED_SQUARE = "rounded_square"
+    ROUNDED_RECTANGLE = "rounded_rectangle"
+    OCTAGON = "octagon"
+    HEXAGON = "hexagon"
+    ADVANCED = "ADVANCED"
+
+
 DEFAULT_BADGE_LOCATION : BadgeLocationType = "LR"
 "Default location for badges"
 
