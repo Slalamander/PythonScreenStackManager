@@ -30,7 +30,7 @@ from .constants import DEFAULT_FONT, \
 
 from .constants import CoordType, ColorType, \
             DEFAULT_FOREGROUND_COLOR, DEFAULT_ACCENT_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_MENU_HEADER_COLOR, DEFAULT_FONT_HEADER, DEFAULT_BLUR_POPUP_BACKGROUND, \
-            DEFAULT_ACTIVE_COLOR, DEFAULT_INACTIVE_COLOR
+            DEFAULT_ACTIVE_COLOR, DEFAULT_INACTIVE_COLOR, BACKGROUNDSHAPES
 from ..pssm_types import *
 
 from .. import tools
@@ -1537,9 +1537,9 @@ class Layout(Element):
         return self._accent_color
 
 
-    @colorproperty
-    def background_color(self) ->  Union[ColorType,None]:
-        return self._background_color
+    # @colorproperty
+    # def background_color(self) ->  Union[ColorType,None]:
+    #     return self._background_color
 
     @colorproperty(vroot=ROOTCOLORS.ACCENT).getter
     def outline_color(self) ->  Union[ColorType,None]:
