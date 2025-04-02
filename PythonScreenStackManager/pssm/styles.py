@@ -411,6 +411,9 @@ class Style:
             
             # traversed_trees.append(cur_tree)
             traversed_trees.insert(0, cur_tree)
+        if prop not in cur_tree:
+            cur_tree = cls._get_element_bases_tree(parent_owner, traversed_trees[1])
+
         return cur_tree
 
     @classmethod
@@ -1035,29 +1038,39 @@ class _childstyles(styleproperty):
         for k, v in d_proc.items():
             if inspect.isclass(k) and issubclass(k, styleproperty._base_element_class):
                 k_new = k.__name__
-                if isinstance(v, dict):
-                    d[k_new] = cls._process_dict(v)
-                else:
-                    d[k_new] = v
+
             elif isinstance(k, str):
                 if not isinstance(v, dict):
                     v_new = v
-                    d[k] = v
+                    k_new = k
+                    # d[k] = v
                 elif "Class" in v:
                     v_new : dict = v.copy()
                     v_classes = v_new.pop("Class")
-                    assert isinstance(v_classes,(list,tuple)), "Class key must be a list or tuple"
+                    if inspect.isclass(v_classes) and issubclass(v_classes, styleproperty._base_element_class):
+                        v_classes = (v_classes,)
+                    else:
+                        assert isinstance(v_classes,(list,tuple)), "Class key must be a list or tuple"
                     for k_class in v_classes:
                         if type(k_class) is str:
-                            key = f"{k}{STYLE_PARENTCLASS_SEPERATOR}{k_class}"
+                            k_new = f"{k}{STYLE_PARENTCLASS_SEPERATOR}{k_class}"
                         else:
                             assert issubclass(k_class,styleproperty._base_element_class), "Items in 'Class' must be a subclass of element"
-                            key = f"{k}{STYLE_PARENTCLASS_SEPERATOR}{k_class.__name__}"
-                        d[key] = cls._process_dict(v_new)
+                            k_new = f"{k}{STYLE_PARENTCLASS_SEPERATOR}{k_class.__name__}"
+                        v = cls._process_dict(v_new)
                 else:
-                    d[k] = cls._process_dict(v)
+                    k_new = k
+                    v_new = v
+                # continue
+            elif isinstance(k, styleproperty):
+                k_new = k.name
             else:
                 raise TypeError("Child tree keys must be a string or element class")
+            
+            if isinstance(v, dict):
+                d[k_new] = cls._process_dict(v)
+            else:
+                d[k_new] = v
         return d
 
     def getter(self, fget):
