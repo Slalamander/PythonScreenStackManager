@@ -3,7 +3,7 @@ Various type hints for use with pssm.
 """
 from typing import TYPE_CHECKING, \
                 Union, TypeVar, Literal, Optional, TypedDict, Callable, Any, Generic, NamedTuple,\
-                Protocol, get_args
+                Protocol, get_args, Annotated
 import functools
 import inspect
 
@@ -18,6 +18,12 @@ if TYPE_CHECKING:
 
 
 #region General
+
+StyleString = Annotated[str, f"string contains {const.STYLE_SEPERATOR} at least once"]
+"string containing :: at least once"
+
+StyleClass = Annotated[str, f"Name of the element, with an optional style_class prefixed and seperated via {const.STYLE_PARENTCLASS_SEPERATOR}"]
+
 ColorType = Union[str,int,list,
             tuple[TypeVar('L'),TypeVar('A')], ##LA type
             tuple[TypeVar('R'),TypeVar('G'),TypeVar('B')], ##RGB type
@@ -48,6 +54,8 @@ PSSMLayoutString = TypeVar('LayoutString')
 CoordType = tuple[TypeVar('x', bound=int), TypeVar('y', bound=int)]
 # "Type hint for returned coordinates"
 
+##Will maybe need to clean this module up to only hold typehints.
+##Can import classes but we'll see
 class TouchEvent(NamedTuple):
     """NamedTuple used to pass touches to the screen.
     
