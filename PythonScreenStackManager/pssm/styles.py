@@ -1023,7 +1023,7 @@ class styleproperty(customproperty):
         ##But can do it. It does not necessarily need a function, but does perhaps need a classvariable for itself.
         return _childstyles(style_tree)
     
-class _childstyles(styleproperty):
+class _childstyles(styleproperty, classproperty):
 
     def __init__(self, child_tree : dict):
 
@@ -1110,6 +1110,7 @@ class _styleclasses(_childstyles, classproperty):
             d[k] = self._process_dict(v)
 
         self._class_tree = d
+        customproperty.__init__(self)
 
     def __set_name__(self, owner, name):
         d = {}
