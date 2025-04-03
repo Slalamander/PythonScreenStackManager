@@ -806,6 +806,10 @@ class styleproperty(customproperty):
         self.__get_frame = None
         return
 
+    ##For __new__:
+    ##Try and see if len(args) == 1 and not kwargs, that means a default @property call
+    ##Otherwise, a call like @propery() is likely made. If so, make __new__ return a partial function with all kwargs etc. applied like partial(cls,arg,kwargs)
+
     # def __call__(self, element):
     #     ##Currently leaving __call__ commented out
     #     ##I think it it obfuscates what it does, and typing .value does not require much more space.
