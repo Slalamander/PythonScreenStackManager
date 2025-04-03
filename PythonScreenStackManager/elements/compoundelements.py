@@ -1969,15 +1969,17 @@ class BoxSlider(base._BaseSlider):
                 )
         
         ##Draws the outline
-        drawArgs = {"xy": coo,
-                    "radius": radius,
-                    "outline": BoxSlider.outline_color.get_color(self,colorMode),
-                    "width": self._convert_dimension(
-                        BoxSlider.outline_width.value(self),{"l":line_length})
-                    }
-        (paste_rectangle, _) = DrawShapes.draw_rounded_rectangle(rectangle,drawArgs,rescale=["xy","radius","width"],paste=False)
+        outline_col = BoxSlider.outline_color.get_color(self,colorMode)
+        if outline_col is not None:
+            drawArgs = {"xy": coo,
+                        "radius": radius,
+                        "outline": BoxSlider.outline_color.get_color(self,colorMode),
+                        "width": self._convert_dimension(
+                            BoxSlider.outline_width.value(self),{"l":line_length})
+                        }
+            (paste_rectangle, _) = DrawShapes.draw_rounded_rectangle(rectangle,drawArgs,rescale=["xy","radius","width"],paste=False)
         
-        rectangle.alpha_composite(paste_rectangle)
+            rectangle.alpha_composite(paste_rectangle)
 
         if BoxSlider.inverted.value(self):
             rectangle = tools.invert_Image(rectangle)
@@ -2146,10 +2148,14 @@ class Slider(LineSlider, BoxSlider):
 
     def _fast_position_update(self, new_position : float):
         
-        if hasattr(self.SliderClass, "_fast_position_update"):
-            self.SliderClass._fast_position_update(self, new_position)
-        else:
-            asyncio.create_task(self.async_update({"position": new_position},forceGen=True))
+        try:
+            if hasattr(self.SliderClass, "_fast_position_update"):
+                self.SliderClass._fast_position_update(self, new_position)
+            else:
+                asyncio.create_task(self.async_update({"position": new_position},forceGen=True))
+        except Exception as exce:
+            _LOGGER.error(exce)
+            return
 
 class TimerSlider(Slider):
     """
