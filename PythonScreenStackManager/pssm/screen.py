@@ -1253,18 +1253,20 @@ class PSSMScreen:
 
         elt_img = element.imgData
         mask = Image.new("RGBA", elt_img.size, (0,0,0,100))
-        d = self.device.screenMode
 
-        # mask.putalpha(100)
         fb_img = Image.new("RGBA", elt_img.size, None)
         fb_img.paste(mask, mask=elt_img)
 
         self.device.print_pil(fb_img, *element.area[0])
+        
+        # if self.popupsOnTop and self.popupsOnTop[-1] == element.parentLayouts[0]:
 
+        v = Element.show_feedback.value(element)
         await asyncio.sleep(element.feedbackSeconds)
 
-        if not self.popupsOnTop:
+        if not self.popupsOnTop or self.popupsOnTop[-1] == element.parentLayouts[0]:
             self.device.print_pil(element.imgData, *element.area[0])
+
 
         return
         if element is None:
@@ -1719,7 +1721,7 @@ class PSSMScreen:
                         asyncio.to_thread(
                             func,elt, interaction,**kwargs))
 
-            if show_elt_fb or (elt_action and show_elt_fb == const.FEEDBACK_ON_ACTION):
+            if show_elt_fb is True or (elt_action and show_elt_fb == const.FEEDBACK_ON_ACTION):
                 coro_list.append(
                     elt.feedback_function())
 
@@ -1727,7 +1729,7 @@ class PSSMScreen:
                 await elt._dispatch_click(interaction))
 
         else:
-            if show_elt_fb:
+            if show_elt_fb is True or (elt_action and show_elt_fb == const.FEEDBACK_ON_ACTION):
                 coro_list.append(
                     elt.feedback_function())
             
