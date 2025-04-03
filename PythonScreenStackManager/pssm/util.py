@@ -10,7 +10,6 @@ from functools import wraps
 
 from ..pssm_types import *
 from ..exceptions import *
-from ..util import customproperty
 from ..util import classproperty
 
 if TYPE_CHECKING:
@@ -136,13 +135,12 @@ def isclassproperty(obj: Any, attr: str) -> bool:
     else:
         cls = obj
         
-        if attr in cls.__dict__:
-            obj = cls.__dict__.get(attr)
-            if isinstance(obj, classproperty):
-                return True
-        return False
-    
+    if attr in cls.__dict__:
+        obj = cls.__dict__.get(attr)
+        if isinstance(obj, classproperty):
+            return True
     return False
+
 
 def classattr_istype(obj: Any, attr : str, check_types : Union[list,tuple]):
     """Checks if the object's attribute one of the given check_types
