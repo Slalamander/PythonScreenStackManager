@@ -5913,12 +5913,16 @@ class _BaseSlider(Element):
         if new_position == self.position:
             return
 
-        if hasattr(self,"_fast_position_update") and not self.parentPSSMScreen.popupsOnTop:
+        if (hasattr(self,"_fast_position_update") and 
+            (self.parentLayout and self.screen.stack[-1] == self.parentLayouts[0])):
             await asyncio.to_thread(
                 self._fast_position_update, new_position)
-        elif hasattr(self,"_fast_position_update"):    
+        elif hasattr(self,"_fast_position_update"):
+            # if self.parentPSSMScreen.popupsOnTop[-1] != self.parentLayouts[0]:
+
             for popup in self.parentPSSMScreen.popupsOnTop:
-                if tools.get_rectangles_intersection(self.area,popup.area) or Popup.blur_background.value(popup):
+                if (tools.get_rectangles_intersection(self.area,popup.area)
+                    or (popup != self.parentLayouts[0] and Popup.blur_background.value(popup))):
                     self.position = new_position
                     asyncio.create_task(self.async_update(updated=True))
                     if self.on_position_set:
