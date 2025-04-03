@@ -90,10 +90,17 @@ class ClassPropertyMetaClass(type):
         return super(ClassPropertyMetaClass, self).__setattr__(attr, value)
 
 
-class customproperty(property):
+class customproperty(property, Generic[T, R]):
     "Base class for making custom property decorators."
 
-    def __get__(self, obj, objtype=None):
+    def __init__(self,
+                fget : Callable[[type[T]], R] = None,
+                fset = None,
+                fdel = None,
+                doc = None) -> R:
+        super().__init__(fget, fset, fdel, doc)
+
+    def __get__(self, obj, objtype : type[T] = None) -> R:
         if obj is None:
             return self
         if self.fget is None:
@@ -119,6 +126,7 @@ class customproperty(property):
     def deleter(self, fdel):
         return type(self)(self.fget, self.fset, fdel, self.__doc__)
 
+
 ##Tools to move: basically, anything that is so general it can be dropped in anywhere.
 ##Hence DummyTask and Singleton are not moved here since they are implemented deeper into pssm
 ##(DummyTask is debatable tbf)
@@ -130,3 +138,4 @@ class customproperty(property):
 ## - _block_run_coroutine
 ## - rotation_matrix
 ## - fit_Image (?)
+##Do this when done with everything else. Can be done easily via right-click -> refactor
