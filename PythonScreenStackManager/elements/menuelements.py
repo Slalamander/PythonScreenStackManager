@@ -349,30 +349,34 @@ class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
         pass
 
     childStyles : ClassVar[dict] = styleproperty.child_styles({
-        base.Layout: {
-            base.Layout.background_color: None
+        base.Element: {
+            base.Element.background_color: None,
         },
         base.Button: {
             "text_x_position": "left", 
             "resize": False,
             "fit_text": False,
-            base.Button.background_color: None
+            # base.Button.background_color: None
         },
         base.Icon: {
             "background_shape": BACKGROUNDSHAPES.CIRCLE,
+            base.Icon.background_color: "accent"
         },
         develts.DeviceButton: {
             "fit_text": True
         },
         "Menu": {
             "Class": base.Layout,
-            base.Layout.background_color: DEFAULTCOLORS.HEADER
+            base.Layout.background_color: "accent"
         },
         "Menu.Button": {
-            base.Button.background_color: None,
+            # base.Button.background_color: None,
             base.Button.resize: base.Button.font_size.default(),
         }
     })
+    ##Want to use this as a base for DeviceMenu. So::??
+    ##It does not work rn since it only looks at the last moment in DeviceMenu tree
+    ##Which means it cannot find Icon in there and reverts back the the root tree
 
 class DeviceMenu(UniquePopupMenu): 
     """The menu for the device connected to the screen. 
@@ -395,7 +399,6 @@ class DeviceMenu(UniquePopupMenu):
 
         super().__init__(title=title, popupID = "device-menu", **kwargs)
 
-        self.childStyles
         return
 
     childStyles : ClassVar[dict] = styleproperty.child_styles({
@@ -498,11 +501,16 @@ class ScreenMenu(UniquePopupMenu):
         backlightOps = ["Manual", "On Interact", "Always"]
 
         if self.device.has_feature(FEATURES.FEATURE_BACKLIGHT):
-            self.__backlightMenu = comps.DropDown(backlightOps, selected=backlightOps.index(self.screen.backlight_behaviour.title()), on_menu_select=self._selected_behaviour, font_color=DEFAULT_FOREGROUND_COLOR)
+            # self.__backlightMenu = comps.DropDown(backlightOps, selected=backlightOps.index(self.screen.backlight_behaviour.title()), on_menu_select=self._selected_behaviour, font_color=DEFAULT_FOREGROUND_COLOR)
+            self.__backlightMenu = comps.DropDown(backlightOps, 
+                                                selected=backlightOps.index(self.screen.backlight_behaviour.title()),
+                                                on_menu_select=self._selected_behaviour, styleParent = self)
 
             sliderOps = ["Brightness", "Default Brightness"]
-            self.__sliderMenu = comps.DropDown(sliderOps, on_select=self._set_backlight_slider, font_color=DEFAULT_FOREGROUND_COLOR)
-            self.__backlightSlider = develts.BacklightSlider("brightness", orientation="hor", style="box", outline_color=None, end_points=("mdi:brightness-7", None), width="h*0.5")
+            # self.__sliderMenu = comps.DropDown(sliderOps, on_select=self._set_backlight_slider, font_color=DEFAULT_FOREGROUND_COLOR)
+            self.__sliderMenu = comps.DropDown(sliderOps, on_select=self._set_backlight_slider, styleParent = self)
+            # self.__backlightSlider = develts.BacklightSlider("brightness", orientation="hor", style="box", outline_color=None, end_points=("mdi:brightness-7", None), width="h*0.5")
+            self.__backlightSlider = develts.BacklightSlider("brightness", orientation="hor", end_points=("mdi:brightness-7", None), styleParent = self)
 
         if INKBOARD:
             title = "inkBoard"
@@ -513,6 +521,62 @@ class ScreenMenu(UniquePopupMenu):
         super().__init__(title = title,  popupID = id, **kwargs)
         return
     
+    childStyles = styleproperty.child_styles({
+
+        "Version": {
+            "Class": base.Button,
+            "font_size": "h*0.9",
+            base.Button.fit_text: True,
+            base.Button.font_size: "0.4*h"
+        },
+        "ElementText": {
+            "Class": base.Button,
+            base.Button.text_x_position: "r",
+            base.Button.margins: (0, 5, 0, 0),
+            base.Button.show_feedback: False,
+            base.Button.font: "default-bold",
+        },
+        base.Line: {base.Line.width: 1},
+        "MenuSeperator": {
+            "Class": base.Line,
+            base.Line.width: 3,
+        },
+        comps.CheckBox: {
+            comps.CheckBox.background_color: None,
+            comps.CheckBox.background_shape: None,
+            comps.CheckBox.unchecked_icon: "mdi:checkbox-blank",
+            comps.CheckBox.checked_icon: "mdi:checkbox-marked",
+            comps.CheckBox.state_attributes: {
+                "True": {"icon_color": DEFAULTCOLORS.FOREGROUND},
+                "False": {"icon_color": DEFAULTCOLORS.FOREGROUND}
+            }
+        },
+        comps.DropDown: {
+            comps.DropDown.text_y_position: "center",
+            comps.DropDown.icon_color: None,
+            comps.DropDown.background_color: "accent",
+            comps.DropDown.radius: comps.DropDown.radius.default()
+        },
+        comps.Counter: {
+            base.Icon : {
+                "background_shape": None,
+                "background_color": None},
+            base.Button: {
+                "background_color": None,
+                base.Button.font: "default-bold",
+                },
+            comps.Counter.tile_layout: "horizontal",
+            comps.Counter.background_color: "accent",
+            comps.Counter.radius: comps.DropDown.radius.default()
+        },
+        develts.BacklightSlider: {
+            develts.BacklightSlider.slider_style: "box",
+            develts.BacklightSlider.inactive_color : None,
+            develts.BacklightSlider.outline_color : None,
+            develts.BacklightSlider.width: "h*0.5"
+        }
+    })
+
     #region
     @property
     def device(self) -> "PSSMdevice":
@@ -546,6 +610,9 @@ class ScreenMenu(UniquePopupMenu):
         m = "w*0.02"
         h = "?"
 
+        elt_args = {"styleParent": self}
+        elt_button_args = {"style_class": "ElementText"} | elt_args
+
         ##Also include the mdi version
         if INKBOARD:
             versionIcon = "inkboard" ##This should be the iB version of the logo
@@ -554,15 +621,15 @@ class ScreenMenu(UniquePopupMenu):
             versionIcon = "mdi:language-python"
             versionText = f"PSSM version {self.version}"
 
-        versionButton = base.Button(versionText, **buttonSettings)
-        versionIcon = base.Icon(versionIcon)
+        versionButton = base.Button(versionText, style_class = "Version", **elt_args)
+        versionIcon = base.Icon(versionIcon, **elt_args)
         row = [h,(None,m),(versionIcon, "r"),(None,m),(versionButton,"?"),(None,"r")]
         layout.append(row)
 
         mdiIcon = "mdi:drawing-box"
         mdiText = f"MDI release {MDI_VERSION}"
-        mdiButton = base.Button(mdiText, **buttonSettings)
-        mdiIcon = base.Icon(mdiIcon)
+        mdiButton = base.Button(mdiText, style_class = "Version", **elt_args)
+        mdiIcon = base.Icon(mdiIcon, **elt_args)
         row = [h,(None,m),(mdiIcon, "r"),(None,m),(mdiButton,"?"),(None,"r")]
         layout.append(row)
 
@@ -571,8 +638,8 @@ class ScreenMenu(UniquePopupMenu):
         ##That uses the interval timer to check like, every 12 hours
         if self.device.has_feature(FEATURES.FEATURE_AUTOSTART):
             state = self.device.autoStart
-            elt = comps.CheckBox(state, checked_icon="mdi:checkbox-marked", unchecked_icon="mdi:checkbox-blank", on_set = self.device.toggle_autostart)
-            button = base.Button("Auto start",font_size=buttonSettings["font_size"], text_x_position="right")
+            elt = comps.CheckBox(state, on_set = self.device.toggle_autostart, **elt_args)
+            button = base.Button("Auto start", **elt_button_args)
             row1, row2 = layout
             row1.extend([(elt,"r"),(None,"r")])
             row2.extend([(button,"?"),(None,"r")])
@@ -580,11 +647,14 @@ class ScreenMenu(UniquePopupMenu):
         setter_bg = DEFAULT_MENU_BUTTON_COLOR
         buttSett = {"font_color": DEFAULT_FOREGROUND_COLOR}
         iconSett = {"icon_color": DEFAULT_FOREGROUND_COLOR}
-        countkwargs = {"background_color":setter_bg, "radius":5, "countProperties": buttSett, "downProperties": iconSett, "upProperties": iconSett}
+        # countkwargs = {"background_color":setter_bg, "radius":5, "countProperties": buttSett, "downProperties": iconSett, "upProperties": iconSett}
+        countkwargs = elt_args
+
+        menu_args = {"style_class": "Menu"} | elt_args
 
         if self.device.has_feature(FEATURES.FEATURE_BACKLIGHT):
-            title = base.Button("Backlight", show_feedback=False)
-            layout.append([h,(base.Line(),"w*0.1"), (title,"?") ,(base.Line(),"w*0.75")])
+            title = base.Button("Backlight", text_x_position="m", **elt_args)
+            layout.append([h,(base.Line(**elt_args),"w*0.1"), (title,"?") ,(base.Line(**elt_args),"w*0.75")])
 
             self.backlightMenu._selected = self.backlightMenu.options.index(self.parentPSSMScreen.backlight_behaviour.title())
 
@@ -592,45 +662,50 @@ class ScreenMenu(UniquePopupMenu):
             self.backlightMenu.background_color = setter_bg
             self.sliderMenu.background_color = setter_bg
 
-            behvLayout = base.Layout([[h, (base.Button("Behaviour", show_feedback=False),"?")],
+            behvLayout = base.Layout([[h, (base.Button("Behaviour", text_x_position="l", **elt_button_args),"?")],
                                             [h, (self.backlightMenu,"?"),(None,"w*0.05")]])
-            sliderLayout = base.Layout([[h, (base.Button("Slider:", show_feedback=False),"?"),(self.sliderMenu,"w*0.6"), (None,"w*0.05")],
+            sliderLayout = base.Layout([[h, (base.Button("Slider:", **elt_button_args),"?"),(self.sliderMenu,"w*0.6"), (None,"w*0.05")],
                                             [h, (self.backlightSlider,"?")]])
 
             layout.append([f"{h}*2",(sliderLayout, "?"), (behvLayout,"w*0.35")])
 
-            trSetter = comps.Counter("default", self.device.backlight.default_transition,step=0.1, minimum=0, on_count=self._set_transition, **countkwargs)
-            timeSetter = comps.Counter("default",self.parentPSSMScreen.backlight_time_on,step=1, minimum=0, roundDigits=0, on_count=self._set_on_time, **countkwargs)
+            trSetter = comps.Counter(value=self.device.backlight.default_transition, step=0.1, minimum=0, on_count=self._set_transition, **countkwargs)
+            timeSetter = comps.Counter(value=self.parentPSSMScreen.backlight_time_on, step=1, minimum=0, roundDigits=0, on_count=self._set_on_time, **countkwargs)
 
             countW = "w*0.2"
             layout.append([m])
-            layout.append([h, (base.Button("Default Transition",show_feedback=False ),"?"), (trSetter, countW), 
-                        (base.Button("Default Time On",show_feedback=False ),"?"), (timeSetter, countW)])
+            layout.append([h, (base.Button("Default Transition", **elt_button_args),"?"), (trSetter, countW), 
+                        (base.Button("Default Time On", **elt_button_args),"?"), (timeSetter, countW)])
 
 
             ##Maybe, when the function is made, include some options for the screensaver
 
-        layout.append([10,(base.Line(width=3, alignment="bottom"),"w")])
+        layout.append([10,(base.Line(alignment="bottom", style_class = "MenuSeperator", **elt_args),"w")])
 
         buttonRow = ["?"]
 
         refreshButton = base.Icon("mdi:image-refresh",
-                                tap_action = self._screen_actions, tap_action_data={"action": "refresh"})
+                                tap_action = self._screen_actions,
+                                tap_action_data={"action": "refresh"},
+                                **menu_args)
 
         clearButton = base.Icon("mdi:image-remove",
-                            tap_action = self._screen_actions, tap_action_data={"action": "clear"})
+                            tap_action = self._screen_actions,
+                            tap_action_data={"action": "clear"},
+                            **menu_args)
 
         buttonRow.extend([(refreshButton,"?"), (clearButton, "?")])
 
 
         if self.device.screenType == "E-Ink":
             invIcon = base.Icon("mdi:image-minus-outline",
-                                tap_action = self._screen_actions, tap_action_data={"action": "invert"})
+                                tap_action = self._screen_actions, tap_action_data={"action": "invert"},
+                                **menu_args)
             buttonRow.append((invIcon,"?"))
 
         buttonLayout = base.Layout([buttonRow], background_color=setter_bg)
         layout.append([40,(buttonLayout, "?")])
-        self.menu_layout = base.Layout(layout)
+        self.menu_layout = base.Layout(layout, **elt_args)
         return self.menu_layout
     
     def _set_transition(self, elt, value : float):
