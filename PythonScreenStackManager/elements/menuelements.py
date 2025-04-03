@@ -348,28 +348,6 @@ class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
     def build_menu(self):
         pass
 
-class DeviceMenu(UniquePopupMenu): 
-    """The menu for the device connected to the screen. 
-    
-    It can be accessed and shown via its id ``device-menu``.
-    """
-
-    emulator_icon = "mdi:tooltip-cellphone"
-
-    def __init__(self, **kwargs):
-        self.device = self.parentPSSMScreen.device
-
-        if self.device.name is None:
-            if INKBOARD:
-                title = "inkBoard"
-            else:
-                title = "PSSM"
-        else:
-            title = self.device.name
-
-        super().__init__(title=title, popupID = "device-menu", **kwargs)
-        return
-
     childStyles : ClassVar[dict] = styleproperty.child_styles({
         base.Layout: {
             base.Layout.background_color: None
@@ -393,7 +371,35 @@ class DeviceMenu(UniquePopupMenu):
         "Menu.Button": {
             base.Button.background_color: None,
             base.Button.resize: base.Button.font_size.default(),
-        },
+        }
+    })
+
+class DeviceMenu(UniquePopupMenu): 
+    """The menu for the device connected to the screen. 
+    
+    It can be accessed and shown via its id ``device-menu``.
+    """
+
+    emulator_icon = "mdi:tooltip-cellphone"
+
+    def __init__(self, **kwargs):
+        self.device = self.parentPSSMScreen.device
+
+        if self.device.name is None:
+            if INKBOARD:
+                title = "inkBoard"
+            else:
+                title = "PSSM"
+        else:
+            title = self.device.name
+
+        super().__init__(title=title, popupID = "device-menu", **kwargs)
+
+        self.childStyles
+        return
+
+    childStyles : ClassVar[dict] = styleproperty.child_styles({
+
         "Name":{
             "Class": base.Button,
             base.Button.text_x_position: "center"

@@ -10,7 +10,7 @@ from functools import wraps
 
 from ..pssm_types import *
 from ..exceptions import *
-from ..tools import customproperty
+from ..util import customproperty
 from ..util import classproperty
 
 if TYPE_CHECKING:
@@ -144,6 +144,36 @@ def isclassproperty(obj: Any, attr: str) -> bool:
     
     return False
 
+def classattr_istype(obj: Any, attr : str, check_types : Union[list,tuple]):
+    """Checks if the object's attribute one of the given check_types
+
+    Parameters
+    ----------
+    obj : Any
+        The object the attribute belongs to. Can be a class or an instance of one
+    attr : str
+        The attribute to check
+    check_types : list | tuple
+        The types to test
+
+    Returns
+    -------
+    bool
+        True if the attribute is a classproperty
+    """
+
+    if not inspect.isclass(obj):
+        if not hasattr(obj, attr):
+            return False
+        cls = type(obj)
+    else:
+        cls = obj
+        
+    if attr in cls.__dict__:
+        obj = cls.__dict__.get(attr)
+        return isinstance(obj, check_types)
+    return False
+
 
 class ClassPropertyMetaClass(type):
     
@@ -201,3 +231,4 @@ def _get_elt_init_args(element_class: type["Element"]):
                 optional_args.setdefault(param.name, param.default)
 
     return tuple(required_args), MappingProxyType(optional_args)
+

@@ -36,9 +36,9 @@ from ..pssm_types import *
 from .. import tools
 from ..tools import DummyTask, DrawShapes
 
-from ..pssm.styles import Style
+from ..pssm.styles import Style, _childstyles, _styleclasses
 from ..pssm.decorators import colorproperty, styleproperty, elementaction, elementactionwrapper, trigger_condition
-from ..pssm.util import isclassproperty, TriggerCondition, classproperty
+from ..pssm.util import isclassproperty, classattr_istype, TriggerCondition, classproperty
 
 from ..pssm import util
 
@@ -190,7 +190,8 @@ class Element(ABC):
         return instance
 
     def __setattr__(self, name, value):
-        if isclassproperty(self,name):
+        # if classattr_istype(self,name, (classproperty, _childstyles, _styleclasses)):
+        if isclassproperty(self, name):
             raise AttributeError(f"{self}: Cannot set classproperties on elements")
         return super().__setattr__(name, value)
 

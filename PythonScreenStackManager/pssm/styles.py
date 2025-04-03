@@ -1,6 +1,6 @@
 
 import logging
-from typing import TYPE_CHECKING, Any, Union, Callable
+from typing import TYPE_CHECKING, Any, Union, Callable, Generic
 from types import MappingProxyType
 import inspect
 import sys
@@ -10,14 +10,14 @@ from pathlib import Path
 import traceback
 
 from .. import tools
-from ..util import classproperty
+from ..util import classproperty, T, R, customproperty
 from ..pssm_types import ColorType, StyleStringDict
 from ..constants import PSSM_COLORS, DEBUG, STYLE_SEPERATOR,  STYLE_PARENTCLASS_SEPERATOR,\
         SHORTHAND_FONTS, FALLBACK_COLOR, ROOT_STYLE_SUFFIX
 
 from . import decorators
-from .decorators import customproperty, elementaction, trigger_condition
-from .util import _get_elt_init_args
+from .decorators import elementaction, trigger_condition
+from .util import _get_elt_init_args, classproperty
 
 if TYPE_CHECKING:
     from ..elements import Element
@@ -1101,7 +1101,7 @@ class _childstyles(styleproperty):
         ##Do I guess test if everything is a style property, but I guess that should also happen for most things. idk.
         return
 
-class _styleclasses(_childstyles):
+class _styleclasses(_childstyles, classproperty):
 
     def __init__(self, style_tree : dict):
         
@@ -1126,6 +1126,9 @@ class _styleclasses(_childstyles):
         if obj is None:
             return self
         return self._class_tree
+
+    def setter(self, fset):
+        raise AttributeError("Setting styleclasses is not allowed")
 
 class colorproperty(styleproperty):
     """Decorator to indicate a property is defines the color of an element.
