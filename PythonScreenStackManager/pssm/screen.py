@@ -1703,7 +1703,7 @@ class PSSMScreen:
         It also handles element feedback
         """
         coro_list = []
-        if elt == None:
+        if elt is None:
             return []
 
         x,y, action = interaction
