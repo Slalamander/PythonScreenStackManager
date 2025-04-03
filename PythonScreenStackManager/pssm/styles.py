@@ -351,6 +351,9 @@ class Style:
         ##Don't forget to check if this includes or excludes the last one
         cur_tree = cls.base_style_tree
         traversed_trees = [cur_tree]
+
+        ##Ok problem is it just combines all trees. I.e. it gathers all properties of DeviceMenu and puts those into the tree
+        ##Which we don't want, in this case, we just want to gather the classes we need
         for i, parent_owner_string in enumerate(owners):
             parent_root = cls._get_class_tree([parent_owner_string], prop)
             styleclass, parent_owner = cls._split_style_class(parent_owner_string)
@@ -371,36 +374,54 @@ class Style:
 
                 ##Because: styleclass may not contain it but yada yada
                 stylecls_tree = cur_tree[styleclass]
-                owner_tree = cur_tree.get(parent_owner,{})
+                # owner_tree = cur_tree.get(parent_owner,{})
                 # cur_tree = owner_tree | stylecls_tree
                 # cur_tree = tools.update_nested_dict(stylecls_tree, owner_tree)
+                owner_tree = cls._get_element_bases_tree(parent_owner, cur_tree, parent_owner == owner)
                 cur_tree = cls._nest_style_trees(parent_root,
                                                 cls._nest_style_trees(owner_tree, stylecls_tree))
+                
                 _LOGGER.debug(f"Combined trees for {styleclass} and {parent_owner}")                    
             elif parent_owner in cur_tree:
                 ##Maybe nest these updated too?
                 ##I.e. grab cur_tree and update from there/get base tree for main owner
                 ##And update recursively?
-                # cur_tree = cur_tree[parent_owner]
-                cur_tree = cls._nest_style_trees(parent_root, cur_tree[parent_owner])
+
+                cur_tree = cls._get_element_bases_tree(parent_owner, cur_tree, parent_owner == owner)
+                _LOGGER.verbose("constructed a tree")
+                # cur_tree = cls._nest_style_trees(parent_root, owner_tree)
+                # ur_tree = cls._nest_style_trees(parent_root, cur_tree)
+                # cur_tree = cls._get_element_bases_tree(parent_owner, stylecls_tree)
             else:
                 ##check for base tree? Or simply break here regardless.
                 ##Also, to make it easier to reference styles from other things: simply use style::Parent::Owner AS THE STYLE VALUE
                 _LOGGER.debug(f"Unable to fully traverse style tree for owners {owners}")
                 # cur_tree = cls.base_style_tree
-                if i == len(owners) - 1: ##May need to handle this different considering nested layouts and stuff
+                # if i == len(owners) - 1: ##May need to handle this different considering nested layouts and stuff
 
                     ##Look for present bases in here, assuming this is the last tree they got to
                     ##Only make this work for the last entry??
                     ##As well as do not make it work for styleclasses??
 
                     ##Handle logic a break if needed
-                    cur_tree = cls._get_element_bases_tree(parent_owner, cur_tree)
-                    if prop in cur_tree:
-                        break
+                # cur_tree = cls._get_element_bases_tree(parent_owner, cur_tree)
+                
+                ##Gotta walk back and look for owner?
+                if i == len(owners) - 1: #and prop in cur_tree:
+                    key = prop
+                else:
+                    key = parent_owner
 
                 ##Run through traverse tree looking for either?
-                for tree in traversed_trees:
+                for j, tree in enumerate(traversed_trees):
+                    ##Use i to get the correct owner
+                    tree_owner = owners[i-j]
+                    base_tree = cls._get_element_bases_tree(tree_owner, tree)
+
+                    if key in base_tree:
+                        break
+
+
                     if styleclass in tree and styleclass != parent_owner:
                         # cur_tree = tools.update_nested_dict(tree[styleclass], tree.get(parent_owner, {}))
                         cur_tree = cls._nest_style_trees(tree.get(parent_owner, {}),tree[styleclass])
@@ -417,14 +438,14 @@ class Style:
         return cur_tree
 
     @classmethod
-    def _get_element_bases_tree(cls, element_cls : Union[str,type["Element"]], style_tree : dict = None):
+    def _get_element_bases_tree(cls, element_cls : Union[str,type["Element"]], style_tree : dict = None, is_owner : bool = True):
         ##Check baseclasses of an element in the tree
 
         if style_tree is None:
             style_tree = cls.base_style_tree
-        
+
         if isinstance(element_cls, str):
-            elt_name = element_cls
+            _, elt_name = cls._split_style_class(element_cls)
             elt_cls = cls._knownowners[elt_name]
         else:
             elt_name = element_cls.__name__
@@ -435,17 +456,44 @@ class Style:
         for base in inspect.getmro(elt_cls):
             if base.__name__ in style_tree:
                 ##This goes top to bottom I believe, so overwrite the gotten tree with the old one I think
-                tree = cls._nest_style_trees(style_tree[base.__name__], tree)
+                tree = cls._nest_style_trees(style_tree[base.__name__], tree, only_classes = not is_owner)
             if base == Element:
                 break
         return tree
         
 
     @classmethod
-    def _nest_style_trees(cls, root_tree : dict, branch_tree : dict) -> dict:
+    def _nest_style_trees(cls, root_tree : dict, branch_tree : dict, only_classes : bool = False) -> dict:
+        """Join style tree dicts in a nested manner
 
-        new_tree = root_tree.copy()
+        To keep styling consistent, any styleproperties are not updated in a nested manner.
+        Classes are identified via starting with a capital letter, styleproperties as starting with lower case
+
+        Parameters
+        ----------
+        root_tree : dict
+            The tree to use as the basis
+        branch_tree : dict
+            The branch to use for updating the keys of the root_tree
+        only_classes : bool, optional
+            Only return Style/Element Classes in the output tree, no styleproperties, by default False
+
+        Returns
+        -------
+        dict
+            _description_
+        """        
+        ##skip_properties: only put classes in (hopefully?)
+
+        new_tree = deepcopy(root_tree)
+        if only_classes:
+            for k in root_tree:
+                if isinstance(k,str) and k[0].islower():
+                    new_tree.pop(k)
+
         for k, v in branch_tree.items():
+            if only_classes and isinstance(k,str) and k[0].islower():
+                continue
             if (k not in root_tree
                 or (isinstance(k,str) and k[0].islower())   ##Don't nest dicts belonging to styleproperties, only to styleclasses
                 or not isinstance(v, (dict,MappingProxyType))
