@@ -19,6 +19,7 @@ from ..constants import FEATURES, FEATURE_STATE_ATTRIBUTES
 from . import baseelements as base, compoundelements as comps
 from .baseelements import _LOGGER, CoordType, classproperty, colorproperty, Style
 from .constants import BatteryIconMapping, DEFAULT_BATTERY_STYLE, DEFAULT_NETWORK_STYLE, ColorType
+from ..pssm.styles import styleproperty, colorproperty
 
 if TYPE_CHECKING:
     from ..devices import PSSMdevice
@@ -46,11 +47,16 @@ class _DeviceMonitor(base.Element):
         self._monitorTask : asyncio.Task = DummyTask()
         "The task that awaits for a device attribute to update. Started when the element is added to the screen."
 
-        if monitor_feature != None: 
+        if monitor_feature is not None: 
             self.monitor_feature = FEATURE_STATE_ATTRIBUTES.get(monitor_feature,monitor_feature)
             self.__monitor = getattr(self.parentPSSMScreen.device, self.monitor_feature)
 
-            val = getattr(self.monitor, monitor_attribute) ##throws an error if it doesn't have the attribute         
+            try:
+                getattr(self.monitor, monitor_attribute) ##throws an error if it doesn't have the attribute         
+            except AttributeError:
+                msg = f"{self}: device does not have a feature attribute {monitor_attribute}"
+                raise AttributeError(msg)
+
             self.monitor_attribute = monitor_attribute   
 
     @property
@@ -161,10 +167,11 @@ class DeviceButton(_DeviceMonitor, base.Button):
         "The text to display. Cannot be set for the DeviceButton."
         return self._Button__text
     
+    ##Check if the setter can simply be removed?
     @base.Button.text.setter
     def text(self, value):
         _LOGGER.warning("DeviceButton does not allow setting the text property directly")
-    
+
     @property
     def typing(self) -> Optional[type]:
         "The type the monitored value is converted to, before applying the suffic and prefix. Can allow for removing e.g. trailing zeros. Set to None for no conversion"
@@ -181,12 +188,11 @@ class DeviceButton(_DeviceMonitor, base.Button):
                 value = eval(value)
             except NameError as exce:
                 msg = f"Cannot convert {value} to a python type"
-                _LOGGER.exception(TypeError(msg))
-                return
+                raise TypeError(msg) from exce
         
         if not isinstance(value, type):
             msg = f"Cannot convert {value} to a python type. It evaluates as a {type(value)} (Should evaluate to type)"
-            _LOGGER.exception(TypeError(msg))
+            raise TypeError(msg)
         else:
             self.__typing = value
     #endregion
@@ -270,7 +276,8 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
     @base.Icon.icon.setter
     def icon(self, value) -> Union[str,Image.Image]:
         "Status icon. Cannot be set here,  as it is taken care of by the element itself."
-        if value != "mdi:cog": _LOGGER.warning("DeviceStatus does not allow setting the icon property directly")
+        if value != "mdi:cog":
+            _LOGGER.warning(f"{self}: DeviceStatus does not allow setting the icon property directly")
 
     @property
     def monitor(self) -> "PSSMdevice":
@@ -283,10 +290,11 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         return self._monitor_features
 
     ##Not sure if a setter has to be applied here too
-    @base.Icon.icon_color.getter
+    # @base.Icon.icon_color.getter
+    @colorproperty
     def icon_color(self) -> ColorType:
         "Icon color. Returns the dynamic color due to backlight brightness if that setting is active"
-        if self.icon_feature != "backlight" or self.color_from_brightness == False:
+        if self.icon_feature != "backlight" or DeviceIcon.color_from_brightness.value(self) == False:
             return self._icon_color
         else:
             return self.get_brightness_color(self._icon_color)
@@ -294,7 +302,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
     @base.Icon.badge_settings.getter
     def badge_settings(self) -> dict:
         "Settings applied to the badge. Alters correct coloring if the badge_feature is the backlight"
-        if self.badge_feature != "backlight" or self.color_from_brightness == False:
+        if self.badge_feature != "backlight" or DeviceIcon.color_from_brightness.value(self) == False:
             return self._badge_settings.copy()
         else:
             settings = self._badge_settings.copy()
@@ -342,7 +350,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         else:
             self._badge_feature = value
 
-    @property
+    @styleproperty
     def battery_style(self) -> Literal["filled","bars"]:
         "Style of the battery icons, i.e. the mdi icon to use. Uses one of either styles: mdi:battery-50 or mdi:battery-medium"
         return self._battery_style
@@ -354,7 +362,18 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
             raise ValueError(f"{self}: battery_style must be one of 'filled' or 'bars")
         self._battery_style = value
 
-    @property
+    @styleproperty
+    def battery_icon_states(self) -> BatteryIconMapping:
+        "icons to use for specific battery states"
+        return self._battery_icon_states
+
+    @battery_icon_states.setter
+    def battery_icon_states(self, value : dict):
+        if v := [x for x in value if x not in ('default', 'charging', 'discharging', 'full')]:
+            msg = f"{self}: allowed keys for battery_icon_states are ('default', 'charging', 'discharging', 'full'). Using illegal keys {v}"
+            raise KeyError(msg)
+
+    @styleproperty
     def network_style(self) -> Literal["lines","signal"]:
         "Style of the network icon. Signal shows the signal strength, if available. Styles look like mdi:wifi mdi:wifi-strength-1 "
         return self._network_style
@@ -365,7 +384,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
             raise ValueError(f"{self}: network_style must be one of 'lines' or 'signal")
         self._network_style = value
 
-    @property
+    @styleproperty
     def backlight_icons(self) -> _backlightDict:
         "Icons to reflect the backlight state, dict with keys 'on' and 'off'"
         return self._backlight_icons
@@ -376,16 +395,18 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
             raise KeyError(f"{self}: backlight_icons must have both an on and off key defined")
         self._backlight_icons = value
 
-    @property
+    @styleproperty
     def color_from_brightness(self):
         "color the icon based on the backlight brightness, by default True, but not implemented"
         return self._color_from_brightness
     
     @color_from_brightness.setter
     def color_from_brightness(self, value):
-        self._color_from_brightness = bool(value)
+        if not isinstance(value, bool):
+            _LOGGER.warning(f"{self}: using non boolean values for color_from_brightness may lead to unexpected results")
+        self._color_from_brightness = value
 
-    @property
+    @styleproperty
     def icon_states(self) -> dict:
         "Additional styling options for the element mapping to the states of all possible device features, by default {}"
         return self._icon_states
@@ -416,7 +437,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         alpha_mult = (255-min_alpha)/100
 
         if isinstance(color, bool):
-            color = background_color if background_color != None else self.background_color
+            color = background_color if background_color != None else DeviceIcon.background_color.value(self)
             if color == None:
                 color = self.parentBackground
 
@@ -485,6 +506,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         ##Don't need to monitor if anything did change. This function is only called by monitor_device which means it needs to be updated anyhow
         _LOGGER.debug("Updating DeviceStatus Icon")
         newAttributes = {}
+
         if self.icon_feature == FEATURES.FEATURE_BATTERY:
             _icon = self.make_battery_icon()
         elif self.icon_feature == FEATURES.FEATURE_NETWORK:
@@ -508,7 +530,7 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         newAttributes["badge_icon"] = badge_icon
 
         iconDict = {}
-        for key,states in self.icon_states.items():
+        for key,states in DeviceIcon.icon_states.value(self).items():
             if key == "network":
                 state = self.parentPSSMScreen.device.network.state
             elif key == "battery":
@@ -541,9 +563,10 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         else:
             charge = 0
             state = None
-        batDict = {"style": self.battery_style}
-        batDict.update(self.battery_icon_states.get("default", {}))
-        batDict.update(self.battery_icon_states.get(state, {}))                
+        batDict = {"style": DeviceIcon.battery_style.value(self)}
+        battStates = DeviceIcon.battery_icon_states.value(self)
+        batDict.update(battStates.get("default", {}))
+        batDict.update(battStates.get(state, {}))                
         return mdi.make_battery_icon(charge, **batDict)
 
     def make_network_icon(self) -> mdiType:
@@ -552,7 +575,8 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         else:
             state = "off"
 
-        if self.network_style == "signal":
+        nw_style = DeviceIcon.network_style.value(self)
+        if DeviceIcon.network_style.value(self) == "signal":
             base = "wifi-strength"
             if state == "off":
                 wifiIcon = f"mdi:{base}-off-outline"
@@ -584,20 +608,20 @@ class DeviceIcon(_DeviceMonitor, base.Icon):
         
         state = self.monitor.backlight.state
 
-        icon = self.backlight_icons["on"] if state else self.backlight_icons["off"]
+        # icon = self.backlight_icons["on"] if state else self.backlight_icons["off"]
 
         if state:
-            icon = self.backlight_icons["on"]
+            icon = DeviceIcon.backlight_icons.value(self)["on"]
         else:
-            icon = self.backlight_icons["off"]
+            icon = DeviceIcon.backlight_icons.value(self)["off"]
         
         icon
 
-        if not self.color_from_brightness:
-            color = self.icon_color
-        else:
-            min_alpha = 155
-            alpha_mult = (255-min_alpha)/100
+        # if not DeviceIcon.color_from_brightness.value(self):
+        #     color = self.icon_color
+        # else:
+        #     min_alpha = 155
+        #     alpha_mult = (255-min_alpha)/100
 
         ##Apparently this does not continue. Implement later maybe
         return icon
