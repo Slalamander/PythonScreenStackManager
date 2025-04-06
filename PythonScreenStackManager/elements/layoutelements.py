@@ -1155,49 +1155,21 @@ class TabPages(base.TileElement):
             return
 
         if tl in {"top", "bottom"}:
-            _LOGGER.warning("Handle hide page handles etc as styling????")
-            # tab_w = "?" if self.hide_page_handles else "w*0.95"
-
-            # self.vertical_sizes = {"navigation": "h*0.05", "tab": "?", "inner": 0, "outer": 0}                
-            # self.horizontal_sizes = {"tab": tab_w,"navigation": "w"}
-
-            # col_size = self.navigation_tile_size
-            # if isinstance(col_size, float) and col_size < 1:
-            #     col_size = f"w*{col_size}"
 
             nav_dict = {"columns": None, "rows": 1, }
-                        # "column_sizes": col_size, "row_sizes" : "?",
-                        # "outer_margins": [3,"?",0,"w*0.025"]}
-
             line_or = "horizontal"
             line_al = "top"
             hide = ()
-            ##Should set all values here that are required
-            # horizontal_sizes = {"icon": "r", "inner": "r/3", "line": "w", "outer": 0}
-            # vertical_sizes = {"line": 7, "inner": 3, "outer": 0}
             upd_attr = {"hide": hide, 
                     "element_properties": {"line": {"orientation": line_or, "alignment": line_al}}}
         elif tl in {"left", "right"}:
-            # tab_h = "?" if self.hide_page_handles else "h*0.95"
-            
-            # self.vertical_sizes = {"navigation": "h", "tab": tab_h}
-            # self.horizontal_sizes = {"navigation": "w*0.05","tab": "?"}
-
-            # row_size = self.navigation_tile_size
-            # if isinstance(row_size, float) and row_size < 1:
-            #     row_size = f"h*{row_size}"
 
             nav_dict = {"columns": 1, "rows": None}
-                        # , "column_sizes": "?", "row_sizes": row_size,
-                        # "outer_margins": ["h*0.025",0,"?",0]}
 
             line_or = "vertical"
             line_al = "right" if tl == "left" else "left"
             hide = ("name",)
-            # horizontal_sizes = {"line": 7, "inner": 3, "outer": 3, "icon": "?"}
-            # vertical_sizes = {"line": "h", "outer": 0, "inner": "?"}
             upd_attr = {"hide": hide,
-                    # "horizontal_sizes": horizontal_sizes, "vertical_sizes": vertical_sizes, 
                     "element_properties": {"line": {"orientation": line_or, "alignment": line_al}}}
         else:
             return
@@ -1217,7 +1189,4 @@ class TabPages(base.TileElement):
             self._set_default_sizes()
             self._rebuild_area_matrix = True
         return await super().pre_generate(area, skipNonLayoutGen)
-
-    # async def async_update(self, updateAttributes={}, skipGen=False, forceGen: bool = False, skipPrint=False, reprintOnTop=False, updated: bool = False) -> bool:
-    #     return await super().async_update(updateAttributes, skipGen, forceGen, skipPrint, reprintOnTop, updated)
 
