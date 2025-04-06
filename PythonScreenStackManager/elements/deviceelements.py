@@ -168,9 +168,9 @@ class DeviceButton(_DeviceMonitor, base.Button):
         return self._Button__text
     
     ##Check if the setter can simply be removed?
-    @base.Button.text.setter
-    def text(self, value):
-        _LOGGER.warning("DeviceButton does not allow setting the text property directly")
+    # @base.Button.text.setter
+    # def text(self, value):
+    #     _LOGGER.warning("DeviceButton does not allow setting the text property directly")
 
     @property
     def typing(self) -> Optional[type]:
