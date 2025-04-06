@@ -56,28 +56,18 @@ class StatusBar(layouts.GridLayout):
                 element_properties : dict = {}, status_element_properties : dict = {},
                 **kwargs):
         
-        ##Considering the amount of things that shouldn't be set (i.e., no sizing etc.) Simply skip the gridLayout init and immediately go to base.Layout
-        ##Don't forget to allow for setting inner and outer margins however
-        ##And call build_layout
-
-        # if "ver" in orientation:
-        #     ##These should be handled via styling?
-        #     ##Yeah, add custom styleClass handler to StatusBar too
-        #     clock_args = {"text_y_position": "bottom"}
-        # else:
-        #     clock_args = {"text_x_position": "right"}
         self.orientation = orientation
         self.show_clock = show_clock        ##putting this on True if the orientation is vertical is not recommended until rotating text elements in implemented
         self.outer_margins = outer_margins
         self.inner_margins = inner_margins
         self._hide = set()
         self.hide = hide
+        self.__ClockElement = comps.DigitalClock(styleParent = self, orientation=self.orientation)
 
         self.element_size = element_size
         self.element_properties = element_properties
         self.status_element_properties = status_element_properties
-        self.__ClockElement = comps.DigitalClock(styleParent = self, orientation=self.orientation)
-        
+
         base.Layout.__init__(self,None, **kwargs)
 
         self.build_layout()
@@ -256,13 +246,6 @@ class StatusBar(layouts.GridLayout):
         "The size of the rows/columns depending on the orientation"    
         return self._element_size
     
-        if self._element_size != "default":
-            return self._element_size
-        if self.orientation == "horizontal":
-            return "r"
-        else:
-            return "w"
-    
     @element_size.setter
     def element_size(self, value):
         tools.test_dimension_string(value, ["r"])
@@ -356,7 +339,6 @@ class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
             "text_x_position": "left", 
             "resize": False,
             "fit_text": False,
-            # base.Button.background_color: None
         },
         base.Icon: {
             "background_shape": BACKGROUNDSHAPES.CIRCLE,
@@ -370,13 +352,9 @@ class UniquePopupMenu(base.PopupMenu, metaclass=Singleton):
             base.Layout.background_color: "accent"
         },
         "Menu.Button": {
-            # base.Button.background_color: None,
             base.Button.resize: base.Button.font_size.default(),
         }
     })
-    ##Want to use this as a base for DeviceMenu. So::??
-    ##It does not work rn since it only looks at the last moment in DeviceMenu tree
-    ##Which means it cannot find Icon in there and reverts back the the root tree
 
 class DeviceMenu(UniquePopupMenu): 
     """The menu for the device connected to the screen. 
