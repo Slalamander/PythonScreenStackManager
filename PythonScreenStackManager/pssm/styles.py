@@ -8,6 +8,7 @@ from copy import deepcopy
 from PIL import ImageFont
 from pathlib import Path
 import traceback
+from functools import partialmethod, partial
 
 from .. import tools
 from ..util import classproperty, T, R, customproperty
@@ -805,7 +806,7 @@ class styleproperty(customproperty):
         self.vnestdict = vnestdict
         self.__get_frame = None
         return
-
+    
     ##For __new__:
     ##Try and see if len(args) == 1 and not kwargs, that means a default @property call
     ##Otherwise, a call like @propery() is likely made. If so, make __new__ return a partial function with all kwargs etc. applied like partial(cls,arg,kwargs)
@@ -1183,7 +1184,7 @@ class _styleclasses(_childstyles, classproperty):
     def setter(self, fset):
         raise AttributeError("Setting styleclasses is not allowed")
 
-class colorproperty(styleproperty):
+class colorproperty(styleproperty, Generic[T,R]):
     """Decorator to indicate a property is defines the color of an element.
     
     This means it can automatically apply the default color_setter as the properties setter, and implements the logic parse the color values of parents when shorthands are used.
@@ -1209,7 +1210,7 @@ class colorproperty(styleproperty):
         return self._style_name
 
     def __init__(self,
-                fget=None, 
+                fget : Callable[[type[T]], R] = None, 
                 fset=None, 
                 fdel=None, 
                 doc=None,
@@ -1250,7 +1251,7 @@ class colorproperty(styleproperty):
     # def __call__(self, fget) -> "colorproperty":
     #     self.getter(fget)
 
-    def __get__(self, obj, objtype=None) -> Union["colorproperty", ColorType]:
+    def __get__(self, obj, objtype : type[T] = None) -> R:
         if obj is None:
             return super().__get__(obj, objtype)
         if self.fget is None:
@@ -1392,7 +1393,10 @@ class colorproperty(styleproperty):
         if allows_none is not Style.NONESTYLE:
             self._allows_none = allows_none
         return super().configure(default=default)
-    
+
+    def getter(self, fget : Callable[[type[T]], R]) -> "colorproperty":
+        return super().getter(fget)
+
     def post_setter(self, fset_post):
         return self._returner(fset_post=fset_post)
     
