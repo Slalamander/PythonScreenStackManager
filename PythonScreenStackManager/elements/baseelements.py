@@ -4323,6 +4323,9 @@ class Button(Element):
             font = Button.font.value(self)
 
         if Button.multiline.value(self):
+
+            ##Check the imagedraw.multiline_bbox function?
+            ##loaded_font.get_textbbox, may work for multiline too idk
             text_lines = text.split("\n")
             h_multiplier = len(text_lines)
 
