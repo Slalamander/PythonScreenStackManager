@@ -117,7 +117,7 @@ class customproperty(property, Generic[T, R]):
             raise AttributeError("can't delete attribute")
         self.fdel(obj)
 
-    def getter(self, fget):
+    def getter(self, fget : Callable[[type[T]], R]) -> "customproperty":
         return type(self)(fget, self.fset, self.fdel, self.__doc__)
 
     def setter(self, fset):
