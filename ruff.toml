@@ -1,0 +1,6 @@
+[lint]
+ignore = ["E711"]
+
+[lint.isort]
+force-wrap-aliases = true
+combine-as-imports = true
