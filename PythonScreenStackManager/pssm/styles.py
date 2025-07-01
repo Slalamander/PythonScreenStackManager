@@ -1416,3 +1416,10 @@ class colorproperty(styleproperty, Generic[T,R]):
 
 decorators.colorproperty = colorproperty
 decorators.styleproperty = styleproperty
+
+##Should simply allow loading from a dict I think?
+##just, what should be the data type? and should it merge from the basestyle by default?
+##
+class PSSMTheme:
+    def __init__(self):
+        return
