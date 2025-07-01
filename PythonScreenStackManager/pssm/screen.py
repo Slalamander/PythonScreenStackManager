@@ -25,12 +25,11 @@ from .. import tools
 from ..pssm_types import *
 from ..exceptions import *
 
-from ..constants import DEFAULT_BACKGROUND, DEBUG
+from ..constants import DEFAULT_BACKGROUND, DEBUG, FEATURES
 from .. import constants as const
 
 from ..pssm_settings import SETTINGS, settings_type
 
-from ..devices import PSSMdevice, FEATURES
 from .. import elements, devices
 from ..elements.baseelements import Element, Popup
 
@@ -96,7 +95,7 @@ class PSSMScreen:
             raise AttributeError("No screen instance has been defined yet")
         return PSSMScreen._instance
 
-    def __init__(self, device : PSSMdevice,  
+    def __init__(self, device : "PSSMdevice",  
                 touch_debounce_time: DurationType = const.DEFAULT_DEBOUNCE_TIME, minimum_hold_time: DurationType = const.DEFAULT_HOLD_TIME,
                 on_interact: Union[Callable[[dict, 'PSSMScreen', CoordType], None], bool,None] = None, on_interact_data : dict = {}, #stack=[], 
                 background : Union[str,ColorType] = DEFAULT_BACKGROUND, background_fit : Literal["contain", "cover", "crop", "resize"] = "cover", background_fit_arguments : dict = {}, 
@@ -151,6 +150,7 @@ class PSSMScreen:
         self.__popupRegister : dict[str,"elements.Popup"] = {}
         self.__elementRegister : dict[str: "elements.Element"] = {}
         self.__elementRegisterCallbacks : list[Callable[["elements.Element"],Any]] = []
+
 
         assert isinstance(device, devices.PSSMdevice), f"A device must be a subclass of PSSMdevice, type {type(device)} is not allowed."
 
