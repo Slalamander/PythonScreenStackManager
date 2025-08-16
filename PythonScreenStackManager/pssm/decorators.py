@@ -1,6 +1,8 @@
 """Useful decorators for pssm
 """
 
+#[ ]: Decorators should be in their own file/submodule (so disconnected from pssm/the screen)
+
 import logging
 import asyncio
 from typing import Callable, TYPE_CHECKING
