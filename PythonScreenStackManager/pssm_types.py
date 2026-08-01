@@ -68,7 +68,7 @@ class TouchEvent(NamedTuple):
     y: int
     "The y-coordinate of the touch"
 
-    touch_type: Literal[const.TOUCH_PRESS, const.TOUCH_RELEASE, const.TOUCH_TAP, const.TOUCH_LONG]
+    touch_type: Literal[const.TOUCH_PRESS, const.TOUCH_RELEASE, const.TOUCH_MOVE, const.TOUCH_TAP, const.TOUCH_LONG]
     "The type of touch"
 
 class InteractEvent(NamedTuple):
@@ -82,7 +82,7 @@ class InteractEvent(NamedTuple):
     "y coordinate of the interaction"
 
     action: str
-    "Type of interaction function that was registered. I.e. 'tap', 'hold' or 'hold_release'"
+    "Type of interaction function that was registered. I.e. 'tap', 'hold', 'hold_release' or 'drag'"
 
 class StyleStringDict(TypedDict):
     "Dict for styles. Mainly for backend purposes"
@@ -142,7 +142,7 @@ RotationValues = Literal["UR", "CW", "UD", "CCW"]
 textAlignmentType = tuple[TypeVar('horizontal'), TypeVar('vertical')]
 # "Text alignment type hint"
 
-TouchActionType = Literal["tap", "hold", "hold_release"]
+TouchActionType = Literal["tap", "hold", "hold_release", "drag"]
 
 class ScreenInit(TypedDict):
     "Type hint for the get_screen function, has all the arguments possible to initiate a screen instance."

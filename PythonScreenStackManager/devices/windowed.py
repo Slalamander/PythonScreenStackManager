@@ -29,6 +29,9 @@ from ..pssm.decorators import trigger_condition
 
 _LOGGER = logging.getLogger(__name__)
 
+MOTION_MIN_DISTANCE = 5
+"Minimum distance in pixels the mouse has to move before a new move event is passed on to PSSM"
+
 t = tk
 
 if tk._default_root:
@@ -140,6 +143,7 @@ class Device(PSSMdevice):
 
         if features == None:
             features = DeviceFeatures(**{FEATURES.FEATURE_INTERACTIVE: interactive, FEATURES.FEATURE_PRESS_RELEASE: interactive,
+                                        FEATURES.FEATURE_TOUCH_MOVE: interactive,
                                         FEATURES.FEATURE_BACKLIGHT: backlight_features, FEATURES.FEATURE_NETWORK: network_features})
 
         super().__init__(features, 
@@ -375,6 +379,8 @@ class Device(PSSMdevice):
             self._eventQueue = eventQueue
             self.canvas.bind("<Button-1>", self.canvas_event)
             self.canvas.bind("<ButtonRelease-1>", self.canvas_event)
+            if self.has_feature(FEATURES.FEATURE_TOUCH_MOVE):
+                self.canvas.bind("<B1-Motion>", self.canvas_event)
 
         if self.has_feature(FEATURES.FEATURE_BACKLIGHT):
             self.backlight : "Backlight"
@@ -387,9 +393,21 @@ class Device(PSSMdevice):
         _LOGGER.verbose(f"Got event {event} from tkinter, passing to PSSM")
         if event.type == tk.EventType.ButtonPress:
             touch_type = const.TOUCH_PRESS
+            self._lastMotionEvent = (event.x, event.y)
         elif event.type == tk.EventType.ButtonRelease:
             touch_type = const.TOUCH_RELEASE
-        
+        elif event.type == tk.EventType.Motion:
+            ##Tkinter reports a motion event for every pixel the mouse moves, which would flood the queue.
+            ##Mice are also a lot more precise than fingers, so small movements are not reported.
+            last_x, last_y = getattr(self, "_lastMotionEvent", (event.x, event.y))
+            if abs(event.x - last_x) < MOTION_MIN_DISTANCE and abs(event.y - last_y) < MOTION_MIN_DISTANCE:
+                return
+            self._lastMotionEvent = (event.x, event.y)
+            touch_type = const.TOUCH_MOVE
+        else:
+            _LOGGER.verbose(f"Not passing on event of type {event.type} to PSSM")
+            return
+
         touch_event = TouchEvent(event.x, event.y, touch_type)
         self.eventQueue.put_nowait(touch_event)
         _LOGGER.debug(f"Send touch event {touch_event}")   

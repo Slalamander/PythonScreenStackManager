@@ -436,6 +436,8 @@ class PSSMdevice(ABC):
         ----------
         touch_queue : asyncio.Queue, optional
             asyncio queue where touch events are put into. PSSM waits for items in this queue, by default None (for non interactive devices)
+            Devices with ``FEATURE_PRESS_RELEASE`` report ``TOUCH_PRESS`` and ``TOUCH_RELEASE`` events, and devices with ``FEATURE_TOUCH_MOVE`` also report the ``TOUCH_MOVE`` events in between those two.
+            Devices without either feature report ``TOUCH_TAP`` and ``TOUCH_LONG`` events.
         grabInput : bool, optional
             Prevent any other software from listening to touched, by default False. Not implemented for every device.
         """
