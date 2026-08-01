@@ -1568,43 +1568,122 @@ class PSSMScreen:
             await asyncio.sleep(0)
             self._interactEvent.set()
 
+    def _get_drag_element(self, x : int, y : int) -> Optional["elements.Element"]:
+        """Returns the element that captures the drag events of a touch pressed down on (x,y), if any.
+
+        Mirrors the way ``_async_interact_handler`` looks for the element to dispatch a click to, and asks it (and its children, for layouts) for the element handling drags.
+
+        Parameters
+        ----------
+        x : int
+            x coordinate of the press
+        y : int
+            y coordinate of the press
+
+        Returns
+        -------
+        Optional[elements.Element]
+            The element to send the drag events to, or None if nothing handles drags there
+        """
+        if self.popupsOnTop:
+            popup = self.popupsOnTop[-1]
+            if popup.area is not None and tools.coords_in_area(x, y, popup.area):
+                return popup._get_drag_target(x, y)
+            return None
+
+        n = len(self.stack)
+        for i in range(n):
+            elt = self.stack[n-1-i]     # We go through the stack in descending order
+            if elt.area is None:
+                continue
+
+            if tools.coords_in_area(x, y, elt.area) and hasattr(elt,"tap_action"):
+                return elt._get_drag_target(x, y)
+        return None
+
     async def __async_touch_handler(self, queue: asyncio.Queue):
-            "Handles devices that can report on touch and release"
+            """Handles devices that can report on touch and release
+
+            Devices with the ``FEATURE_TOUCH_MOVE`` feature can also report the touch moving in between the press and the release.
+            The element that is pressed down on captures those events, and keeps receiving them until the touch is released, even when it moves outside of that element.
+            Dragging suppresses the ``hold_action`` and the ``tap_action`` of that interaction, so an element only gets drag events (and, if it was already held down long enough, a ``hold_release_action``).
+            """
 
             ##Replace this with a setting for the device.
             debounce_time = self.__touchDebounceTime
             min_hold_time = self.__minimumHoldTime
-            while self.printing:
-                event: tools.TouchEvent = await queue.get()
+            handle_drags = self.device.has_feature(FEATURES.FEATURE_TOUCH_MOVE)
+            loop = asyncio.get_event_loop()
 
-                if event.touch_type != const.TOUCH_PRESS:
+            while self.printing:
+                press: tools.TouchEvent = await queue.get()
+
+                if press.touch_type != const.TOUCH_PRESS:
                     continue
-                
-                release_task = asyncio.create_task(coro=queue.get())    ##This has to be a task, otherwise the result is removed from the queue somewhere else
-                done, _ = await asyncio.wait([release_task], timeout=debounce_time)
-                if done:
-                    ##Should not have received a second touch before the debounce time elapsed
-                    _LOGGER.debug("Touch Debounced")
-                    continue
+
+                press_time = loop.time()
+                drag_element = self._get_drag_element(press.x, press.y) if handle_drags else None
+                dragging = False
+                hold_dispatched = False
+                event_task = None
 
                 self._interactEvent.clear()
-                done, _ = await asyncio.wait([release_task], timeout=min_hold_time)
 
-                if done:
-                    event = release_task.result()
-                    asyncio.create_task(self._async_interact_handler(event.x,event.y, "tap"))
-                else:
-                    asyncio.create_task(self._async_interact_handler(event.x,event.y, "hold"))
-                    event = await release_task
-                    asyncio.create_task(self._async_interact_handler(event.x,event.y, "hold_release"))
-                    ##Will maybe make a NamedTuple to pass instead of coords and action seperately?
-                _LOGGER.debug(f"Click at {(event.x,event.y)} dispatched")
-                
+                while True:
+                    ##Waiting out the hold time, unless the touch is already being dragged or has already been held.
+                    ##asyncio.wait (as opposed to wait_for) leaves the pending task alive when it times out, so no event is dropped.
+                    if dragging or hold_dispatched:
+                        timeout = None
+                    else:
+                        timeout = max(0, min_hold_time - (loop.time() - press_time))
+
+                    if event_task is None:
+                        event_task = asyncio.create_task(coro=queue.get())  ##This has to be a task, otherwise the result is removed from the queue somewhere else
+
+                    done, _ = await asyncio.wait([event_task], timeout=timeout)
+                    if not done:
+                        ##The touch was not released before the hold time elapsed
+                        asyncio.create_task(self._async_interact_handler(press.x,press.y, "hold"))
+                        hold_dispatched = True
+                        continue
+
+                    event : tools.TouchEvent = event_task.result()
+                    event_task = None
+
+                    if event.touch_type == const.TOUCH_MOVE:
+                        if drag_element is not None:
+                            ##Moving cancels the hold, since the touch is now considered to be dragging the element
+                            dragging = True
+                            asyncio.create_task(self._async_interact_handler(event.x,event.y, "drag", drag_element))
+                        continue
+
+                    if event.touch_type != const.TOUCH_RELEASE:
+                        ##Anything else (i.e. a second press) is not part of this interaction
+                        continue
+
+                    if dragging:
+                        ##Finalising the drag on the coordinates the touch was released on
+                        asyncio.create_task(self._async_interact_handler(event.x,event.y, "drag", drag_element))
+                        if hold_dispatched:
+                            asyncio.create_task(self._async_interact_handler(event.x,event.y, "hold_release"))
+                    elif hold_dispatched:
+                        asyncio.create_task(self._async_interact_handler(event.x,event.y, "hold_release"))
+                        ##Will maybe make a NamedTuple to pass instead of coords and action seperately?
+                    elif loop.time() - press_time < debounce_time:
+                        ##Should not have been released before the debounce time elapsed
+                        _LOGGER.debug("Touch Debounced")
+                        break
+                    else:
+                        asyncio.create_task(self._async_interact_handler(event.x,event.y, "tap"))
+
+                    _LOGGER.debug(f"Click at {(event.x,event.y)} dispatched")
+                    break
+
                 self._interactEvent.set()
 
             _LOGGER.warning("Touch listener has stopped")
 
-    async def _async_interact_handler(self, x : int, y : int, action: TouchActionType):
+    async def _async_interact_handler(self, x : int, y : int, action: TouchActionType, element : Optional["elements.Element"] = None):
         """
         Handles clicks. Builds a list of coroutines and awaits on them in a gather call.
 
@@ -1614,6 +1693,11 @@ class PSSMScreen:
             x coordinate
         y : int
             y coordinate
+        action : TouchActionType
+            The type of interaction, which determines the action that is called on the element
+        element : Optional[elements.Element]
+            Dispatch the interaction to this element, instead of looking for the element at the coordinates.
+            Used for drags, which are captured by the element that was pressed down on, by default None
 
         Raises
         ------
@@ -1641,7 +1725,11 @@ class PSSMScreen:
             except (TypeError, KeyError, IndexError, OSError) as exce:
                 _LOGGER.error(f"adding on_interact function {self.on_interact} raised exception: {exce}")
             
-        if self.popupsOnTop:
+        if element is not None:
+            _LOGGER.verbose(f"Passing {action} to the element that captured it")
+            coro_list.extend(
+                await self._dispatch_click_to_element(touch_event, element))
+        elif self.popupsOnTop:
             _LOGGER.verbose("Passing click to the popup on top")
             popup = self.popupsOnTop[-1]
             if tools.coords_in_area(x, y, popup.area):
@@ -1710,6 +1798,9 @@ class PSSMScreen:
 
         elt_action = elt._get_action(action)
         show_elt_fb = Element.show_feedback.value(elt)
+        if action == "drag":
+            ##Feedback is not shown for drags, as an element would keep flashing for the entire duration of it
+            show_elt_fb = False
         if isinstance(elt,elements.Layout):
             if elt_action:
                 func, kwargs = elt_action

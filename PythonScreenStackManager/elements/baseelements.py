@@ -92,6 +92,11 @@ class Element(ABC):
     tap_action : InteractionFunctionType, optional
         An action to call when interacting (tapping) this element, by default None
         See the docstring for the property on usage
+    drag_action : InteractionFunctionType, optional
+        An action to call when dragging over this element, by default None
+        Only usable on devices with ``FEATURE_TOUCH_MOVE``. See the docstring for the property on usage
+    drag_as_tap : bool, optional
+        Call this element's ``tap_action`` when it is dragged over, if no ``drag_action`` is set, by default False
     background_color : Optional[ColorType], optional
         color of the element's background, by default None
     isInverted : bool, optional
@@ -199,6 +204,8 @@ class Element(ABC):
                 tap_action: InteractionFunctionType = None,
                 hold_action: InteractionFunctionType = None,
                 hold_release_action: InteractionFunctionType = None,
+                drag_action: InteractionFunctionType = None,
+                drag_as_tap: bool = False,
                 background_color: Optional[ColorType] = "style::background_color",
                 inverted: bool = "style::inverted", 
                 show_feedback: bool = "style::show_feedback",
@@ -249,6 +256,12 @@ class Element(ABC):
         self.hold_release_action_data = {}
         self.hold_release_action_map = {}
         self.hold_release_action = hold_release_action
+
+        self._drag_action = None
+        self.drag_action_data = {}
+        self.drag_action_map = {}
+        self.drag_action = drag_action
+        self.drag_as_tap = drag_as_tap
 
         # self._isInverted = self.get_style_value(inverted)
         self.inverted = inverted
@@ -547,7 +560,31 @@ class Element(ABC):
         This function is only available on devices with the HOLD_RELEASE feature. Set to None to have nothing called.
         If set to a dict, the values for hold_release_action_data and hold_release_action_map will be overwritten if the respective key is present.
         """
-        return self._hold_release_action 
+        return self._hold_release_action
+
+    @elementaction
+    def drag_action(self) -> InteractionFunctionType:
+        """The function called when a touch is dragged over the element.
+
+        The element that is pressed down on captures the touch, i.e. it keeps receiving the drag events until the touch is released, even when it moves outside of the element's area.
+        Elements with a drag action do not receive a ``hold_action`` when the touch moves, and get a final drag event instead of a ``tap_action`` when it is released.
+        This function is only available on devices with the ``FEATURE_TOUCH_MOVE`` feature. Set to None to have nothing called.
+        If set to a dict, the values for drag_action_data and drag_action_map will be overwritten if the respective key is present.
+        """
+        return self._drag_action
+
+    @property
+    def drag_as_tap(self) -> bool:
+        """If True, dragging over the element calls its ``tap_action``, if no ``drag_action`` is set.
+
+        Convenience option for elements that should simply keep responding while a touch moves over them.
+        The interaction is still passed to the function as a drag, so functions can tell the two apart if they need to.
+        """
+        return self.__drag_as_tap
+
+    @drag_as_tap.setter
+    def drag_as_tap(self, value: bool):
+        self.__drag_as_tap = bool(value)
 
     @property
     def parentBackground(self) -> Union[ColorType,None]:
@@ -1258,12 +1295,36 @@ class Element(ABC):
         func_attr = f"_{attribute}"
         setattr(self,func_attr, func)
 
-    def _get_action(self, touch_type: Literal["tap", "hold","hold_release"]) -> Optional[tuple[InteractionFunctionType, dict]]:        
-        
+    def _get_action(self, touch_type: Literal["tap", "hold","hold_release","drag"]) -> Optional[tuple[InteractionFunctionType, dict]]:
+
+        if touch_type == "drag" and self.drag_as_tap and self.drag_action is None:
+            ##Elements can opt into having drags call their tap_action, instead of requiring a seperate function.
+            touch_type = "tap"
+
         if (func := getattr(self, f"{touch_type}_action", None)) != None:
             kwargs = getattr(self, f"{touch_type}_action_kwargs",{})
             if func:
                 return (func, kwargs)
+
+    def _get_drag_target(self, x: int, y: int) -> Optional["Element"]:
+        """Returns the element that captures a touch pressed down on the coordinates (x,y), if any.
+
+        Returns ``self`` if this element handles drags, and ``None`` otherwise. Layouts return the appropriate child element.
+        The returned element receives every drag event until the touch is released, regardless of where the touch moves to.
+
+        Parameters
+        ----------
+        x : int
+            x coordinate of the press
+        y : int
+            y coordinate of the press
+
+        Returns
+        -------
+        Optional[Element]
+            The element to capture the touch, or None if nothing handles drags there
+        """
+        return self if self._get_action("drag") else None
 
     @abstractmethod
     def generator(self, area : PSSMarea=None, skipNonLayoutGen : bool =False) -> Image.Image:
@@ -2184,6 +2245,37 @@ class Layout(Element):
         """Finds the element on which the user clicked and returns a list of the found onTap functions
         """
         return await self._dispatch_click_LINEAR(interaction)
+
+    def _get_element_at(self, x: int, y: int) -> Optional[Element]:
+        """Returns the element in this layout that is at the coordinates (x,y), if any.
+
+        Parameters
+        ----------
+        x : int
+            x coordinate to look at
+        y : int
+            y coordinate to look at
+
+        Returns
+        -------
+        Optional[Element]
+            The element at those coordinates, or None if the layout has no element there
+        """
+        try:
+            for i in range(len(self.areaMatrix)):
+                for j in range(len(self.areaMatrix[i])):
+                    if tools.coords_in_area(x, y, self.areaMatrix[i][j]):
+                        return self.layout[i][j+1][0]
+        except FuncExceptions as exce:
+            _LOGGER.warning(f"{self}: Cannot iterate fully to find the element at {(x,y)}: {exce}", exc_info=exce)
+        return None
+
+    def _get_drag_target(self, x: int, y: int) -> Optional[Element]:
+        "Passes on the request to the element at these coordinates, and falls back to the layout itself."
+        elt = self._get_element_at(x, y)
+        if elt is not None and (target := elt._get_drag_target(x, y)) is not None:
+            return target
+        return super()._get_drag_target(x, y)
 
     async def _dispatch_click_LINEAR(self, interaction: InteractEvent):
         """
@@ -5739,9 +5831,12 @@ class _BaseSlider(Element):
     value_type : int, float
         The type to return when calling Slider.Value, handy when requiring integers. Defaults to float
     interactive : bool, optional
-        whether the slider updates its position when it is clicked, by default True
+        whether the slider updates its position when it is clicked, or dragged on devices supporting it, by default True
     tap_action : Callable[elt, coords], optional
         function to call when tapping the slider, by default None
+    drag_action : Callable[elt, coords], optional
+        function to call when dragging the slider, by default None
+        Requires a device with ``FEATURE_TOUCH_MOVE``
     """
 
     @classproperty
@@ -5882,6 +5977,18 @@ class _BaseSlider(Element):
         return self.__tap_action
 
     @elementaction
+    def drag_action(self) -> InteractionFunctionType:
+        """Slider ``drag_action`` that allows dragging the slider to a new position.
+
+        Works like the ``tap_action``: it first updates the slider position, and then calls the set drag_action.
+        Only has an effect on devices with the ``FEATURE_TOUCH_MOVE`` feature.
+        Use Slider._drag_action to access the actual function after setting.
+        """
+        if not self.interactive and self._drag_action is None:
+            return None
+        return self.__drag_action
+
+    @elementaction
     def on_position_set(self) -> Callable[["_BaseSlider",Union[float,int]],Any]:
         """Action that is called whenever the slider's position changes.
         Passes the element and the new position."""
@@ -5897,6 +6004,15 @@ class _BaseSlider(Element):
         if self._tap_action == None:
             return
         await tools.wrap_to_coroutine(self._tap_action,elt,coords, **kwargs)
+
+    async def __drag_action(self, elt, coords, **kwargs):
+        if self.interactive:
+            await self._slider_interact(elt,coords)
+            kwargs.update(self.drag_action_kwargs)
+
+        if self._drag_action == None:
+            return
+        await tools.wrap_to_coroutine(self._drag_action,elt,coords, **kwargs)
 
     async def feedback_function(self):
         

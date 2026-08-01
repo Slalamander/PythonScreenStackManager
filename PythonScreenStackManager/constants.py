@@ -119,8 +119,15 @@ class FEATURES:
 
     FEATURE_PRESS_RELEASE = "FEATURE_PRESS_RELEASE"
     """Feature to indicate the device is interactive and can report the coordinates of a press and the coordinates of a release
-    
+
     This feature allows elements to use the ``hold_release_action``.
+    """
+
+    FEATURE_TOUCH_MOVE = "FEATURE_TOUCH_MOVE"
+    """Feature to indicate the device also reports the coordinates of a touch moving while it is pressed down.
+
+    Requires ``FEATURE_PRESS_RELEASE``, as the move events are reported in between a press and a release.
+    This feature allows elements to use the ``drag_action``.
     """
 
     @classmethod
@@ -168,6 +175,12 @@ TOUCH_PRESS = "TOUCH-PRESSED"
 
 TOUCH_RELEASE = "TOUCH-RELEASED"
 "Indicates the touch event is the object leaving the screen"
+
+TOUCH_MOVE = "TOUCH-MOVED"
+"""Indicates the touch event is the object moving while it stays pressed against the screen.
+
+Only reported by devices with ``FEATURE_TOUCH_MOVE``, in between a press and a release. Dispatches to the element's ``drag_action``.
+"""
 
 TOUCH_TAP = "TOUCH-TAP"
 "Indicates a short touch event, for devices that do not support reporting both press and release events"
